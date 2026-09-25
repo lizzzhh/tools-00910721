@@ -27,11 +27,11 @@ const emptyHash = 'D41D8CD98F00B204E9800998ECF8427E'
 
   <Card class="tool-card">
     <div class="input-mode" role="tablist" aria-label="输入类型">
-      <button class="mode-button active" type="button" role="tab" aria-selected="true" data-mode="text"><Icon name="lucide:text" width={17} />文本输入</button>
-      <button class="mode-button" type="button" role="tab" aria-selected="false" data-mode="file"><Icon name="lucide:file" width={17} />文件计算</button>
+      <button class="mode-button active" id="text-mode-tab" type="button" role="tab" aria-selected="true" aria-controls="text-mode-panel" data-mode="text"><Icon name="lucide:text" width={17} />文本输入</button>
+      <button class="mode-button" id="file-mode-tab" type="button" role="tab" aria-selected="false" aria-controls="file-mode-panel" data-mode="file"><Icon name="lucide:file" width={17} />文件计算</button>
     </div>
 
-    <div class="mode-panel active" data-panel="text">
+    <div class="mode-panel active" id="text-mode-panel" role="tabpanel" aria-labelledby="text-mode-tab" data-panel="text">
       <div class="field-heading">
         <label for="md5-input">输入文本</label>
         <div class="field-heading-actions">
@@ -45,7 +45,7 @@ const emptyHash = 'D41D8CD98F00B204E9800998ECF8427E'
       </div>
     </div>
 
-    <div class="mode-panel" data-panel="file">
+    <div class="mode-panel" id="file-mode-panel" role="tabpanel" aria-labelledby="file-mode-tab" data-panel="file" hidden>
       <input id="file-input" type="file" hidden />
       <label class="drop-zone" id="drop-zone" for="file-input" tabindex="0">
         <span class="drop-icon"><Icon name="lucide:upload-cloud" width={27} /></span>

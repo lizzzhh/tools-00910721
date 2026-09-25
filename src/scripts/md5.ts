@@ -3,6 +3,8 @@ import { createMD5 } from 'hash-wasm'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
 
+type InputMode = 'text' | 'file'
+
 const input = document.querySelector<HTMLTextAreaElement>('#md5-input')
 const textareaWrap = document.querySelector<HTMLElement>('.textarea-wrap')
 const charCount = document.querySelector<HTMLElement>('#char-count')
@@ -27,9 +29,12 @@ const fileProgressPercent = document.querySelector<HTMLElement>('#file-progress-
 const fileProgressBar = document.querySelector<HTMLElement>('#file-progress-bar')
 const fileProgressDetail = document.querySelector<HTMLElement>('#file-progress-detail')
 const workspace = document.querySelector<HTMLElement>('.tool-workspace')
+const inputMode = document.querySelector<HTMLElement>('.input-mode')
+const modeButtons = Array.from(inputMode?.querySelectorAll<HTMLButtonElement>('[data-mode]') ?? [])
+const modePanels = Array.from(workspace?.querySelectorAll<HTMLElement>('[data-panel]') ?? [])
 const emptyHash = 'D41D8CD98F00B204E9800998ECF8427E'
 const largeFileThreshold = 10 * 1024 ** 2
-let mode: 'text' | 'file' = 'text'
+let mode: InputMode = 'text'
 let selectedFile: File | undefined
 let result = ''
 let liveFrame = 0
@@ -118,17 +123,29 @@ function stopCalculation() {
   if (mode === 'file' && fileProgressLabel) fileProgressLabel.textContent = '已停止'
 }
 
-function setMode(nextMode: 'text' | 'file') {
-  if (isCalculating) return
+function setMode(nextMode: InputMode) {
+  if (mode === nextMode) return
+  if (isCalculating) stopCalculation()
   mode = nextMode
-  document.querySelectorAll<HTMLButtonElement>('.mode-button').forEach((button) => {
+  workspace?.setAttribute('data-mode', mode)
+  modeButtons.forEach((button) => {
     const active = button.dataset.mode === mode
     button.classList.toggle('active', active)
     button.setAttribute('aria-selected', String(active))
   })
-  document.querySelectorAll<HTMLElement>('.mode-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === mode))
-  if (mode === 'text' && realtimeToggle?.checked) calculateTextLive()
-  if (mode === 'file') fileInput?.click()
+  modePanels.forEach((panel) => {
+    const active = panel.dataset.panel === mode
+    panel.classList.toggle('active', active)
+    panel.hidden = !active
+  })
+  resetResult()
+  if (mode === 'text') {
+    if (realtimeToggle?.checked) calculateTextLive()
+    return
+  }
+  resetFileProgress()
+  if (status) status.textContent = selectedFile ? '等待计算' : '等待选择文件'
+  if (detail) detail.textContent = selectedFile ? `已选择：${selectedFile.name}` : '选择文件后计算文件摘要'
 }
 
 function calculateTextLive() {
@@ -162,14 +179,16 @@ function showResult(hash: string, source: string, muted = false) {
 async function calculate() {
   if (!calculateButton || isCalculating) return
   const runId = ++calculationRun
+  const calculationMode = mode
   setCalculating(true)
   calculateButton.disabled = true
-  if (mode === 'file') resetResult()
-  if (cancelCalculate) cancelCalculate.hidden = mode !== 'file' || !selectedFile || selectedFile.size <= largeFileThreshold
+  if (calculationMode === 'file') resetResult()
+  if (cancelCalculate) cancelCalculate.hidden = calculationMode !== 'file' || !selectedFile || selectedFile.size <= largeFileThreshold
   if (status) status.textContent = '正在计算…'
   await new Promise((resolve) => window.setTimeout(resolve, 60))
+  if (runId !== calculationRun) return
   try {
-    if (mode === 'text') {
+    if (calculationMode === 'text') {
       const value = input?.value ?? ''
       const bytes = new TextEncoder().encode(value).byteLength
       showResult(CryptoJS.MD5(value).toString(), value ? `来源：文本 · ${bytes} 字节` : '来源：空字符串', !value)
@@ -244,7 +263,14 @@ function selectFile(file: File | undefined) {
   resetFileProgress()
 }
 
-document.querySelectorAll<HTMLButtonElement>('.mode-button').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode as 'text' | 'file')))
+document.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) return
+  const modeButton = event.target.closest<HTMLButtonElement>('[data-mode]')
+  if (!modeButton || modeButton.closest('.tool-workspace') !== workspace) return
+  const nextMode = modeButton.dataset.mode
+  if (nextMode !== 'text' && nextMode !== 'file') return
+  setMode(nextMode)
+})
 input?.addEventListener('input', () => {
   if (isCalculating) return
   if (charCount) charCount.textContent = String(Array.from(input.value).length)
