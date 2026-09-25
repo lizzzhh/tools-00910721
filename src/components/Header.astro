@@ -1,0 +1,36 @@
+---
+import { Icon } from 'astro-icon/components'
+
+interface Props {
+  activeNav: 'home' | 'tools' | 'favorites' | 'about'
+}
+
+const { activeNav } = Astro.props
+---
+
+<header class="topbar" id="navbar">
+  <div class="nav-inner">
+    <button class="mobile-menu icon-button" id="mobile-menu" type="button" aria-label="打开工具菜单" aria-expanded="false">
+      <Icon name="lucide:menu" width={21} />
+    </button>
+    <a class="brand" href="/" aria-label="码间首页">
+      <span class="brand-mark"><Icon name="lucide:command" width={22} /></span>
+      <span class="brand-name">码间</span>
+      <span class="brand-divider"></span>
+      <span class="brand-desc">开发者工具箱</span>
+    </a>
+    <nav class="main-nav" aria-label="主导航">
+      <a class:list={{ active: activeNav === 'home' }} href="/"><Icon name="lucide:layout-dashboard" width={17} /><span>首页</span></a>
+      <a class:list={{ active: activeNav === 'tools' }} href="/tools/md5/"><Icon name="lucide:layout-grid" width={17} /><span>工具中心</span></a>
+      <a class:list={{ active: activeNav === 'favorites' }} href="/favorites/"><Icon name="lucide:star" width={17} /><span>我的收藏</span></a>
+      <a class:list={{ active: activeNav === 'about' }} href="/about/"><Icon name="lucide:info" width={17} /><span>关于</span></a>
+    </nav>
+    <div class="nav-actions">
+      <span class="status-pill"><i></i>工具持续扩展中</span>
+      <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="切换明暗主题">
+        <span class="theme-icon-light"><Icon name="lucide:sun" width={19} /></span>
+        <span class="theme-icon-dark"><Icon name="lucide:moon" width={18} /></span>
+      </button>
+    </div>
+  </div>
+</header>

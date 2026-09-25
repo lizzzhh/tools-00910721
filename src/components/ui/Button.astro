@@ -1,0 +1,20 @@
+---
+import { Icon } from 'astro-icon/components'
+
+interface Props {
+  id?: string
+  type?: 'button' | 'submit' | 'reset'
+  variant?: 'primary' | 'secondary'
+  class?: string
+  disabled?: boolean
+  hidden?: boolean
+  icon?: string
+}
+
+const { id, type = 'button', variant = 'secondary', class: className, disabled = false, hidden = false, icon } = Astro.props
+---
+
+<button id={id} class:list={['ui-button', variant === 'primary' ? 'primary-button' : 'secondary-button', className]} type={type} disabled={disabled} hidden={hidden}>
+  {icon && <Icon name={icon} width={17} />}
+  <slot />
+</button>

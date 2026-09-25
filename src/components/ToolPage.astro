@@ -1,0 +1,24 @@
+---
+import { Icon } from 'astro-icon/components'
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Md5Tool from '../components/tools/Md5Tool.astro'
+import type { Tool } from '../data/tools'
+
+interface Props {
+  tool: Tool
+}
+
+const { tool } = Astro.props
+---
+
+<BaseLayout title={`${tool.name} · 码间`} description={`${tool.name}：${tool.description}。在浏览器本地快速计算。`} activeTool={tool.id} activeNav="tools">
+  {tool.id === 'md5' ? <Md5Tool /> : (
+    <section class="simple-page card-base">
+      <span class="eyebrow">COMING SOON</span>
+      <div class="simple-page-icon"><Icon name={tool.icon} width={30} /></div>
+      <h1>{tool.name}</h1>
+      <p>该工具正在开发中，你可以先使用 MD5 计算工具。</p>
+      <a class="primary-button" href="/tools/md5/">使用 MD5 工具<Icon name="lucide:arrow-right" width={18} /></a>
+    </section>
+  )}
+</BaseLayout>

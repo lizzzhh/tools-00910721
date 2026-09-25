@@ -1,0 +1,19 @@
+---
+import { Icon } from 'astro-icon/components'
+
+interface Props {
+  id: string
+  label: string
+  name?: string
+  checked?: boolean
+  disabled?: boolean
+}
+
+const { id, label, name, checked = false, disabled = false } = Astro.props
+---
+
+<label class="ui-checkbox" for={id}>
+  <input id={id} name={name} type="checkbox" checked={checked} disabled={disabled} />
+  <span class="ui-checkbox-box" aria-hidden="true"><Icon name="lucide:check" width={12} /></span>
+  <span class="ui-checkbox-label">{label}</span>
+</label>

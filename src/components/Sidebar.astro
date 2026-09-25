@@ -1,0 +1,56 @@
+---
+import { Icon } from 'astro-icon/components'
+import { toolCategories, tools, plannedTools } from '../data/tools'
+
+interface Props {
+  activeTool: string
+}
+
+const { activeTool } = Astro.props
+const availableTools = Object.fromEntries(tools.map((tool) => [tool.id, tool]))
+---
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-mobile-head">
+    <strong>全部工具</strong>
+    <button class="icon-button" id="close-sidebar" type="button" aria-label="关闭工具菜单"><Icon name="lucide:x" width={20} /></button>
+  </div>
+  <label class="tool-search">
+    <Icon name="lucide:search" width={17} />
+    <input id="tool-search" type="search" placeholder="搜索工具" autocomplete="off" />
+    <kbd>⌘ K</kbd>
+  </label>
+  <div class="sidebar-scroll">
+    {toolCategories.map((category, categoryIndex) => (
+      <section class="tool-group" data-category={category.id}>
+        <div class="group-title">
+          <span>{category.name}</span>
+          <span>{String(categoryIndex + 1).padStart(2, '0')}</span>
+        </div>
+        {category.tools.map((toolId) => {
+          const tool = availableTools[toolId]
+          if (!tool) return null
+          const active = activeTool === tool.id
+          return (
+            <a class:list={['tool-item', { active }]} href={`/tools/${tool.id}/`} data-search={`${tool.name} ${tool.keywords.join(' ')}`} aria-current={active ? 'page' : undefined}>
+              <span class="tool-icon"><Icon name={tool.icon} width={19} /></span>
+              <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
+            </a>
+          )
+        })}
+        {category.id === 'coming' && plannedTools.map((tool) => (
+          <button class="tool-item disabled" type="button" disabled data-search={`${tool.name} ${tool.keywords.join(' ')}`}>
+            <span class="tool-icon"><Icon name={tool.icon} width={19} /></span>
+            <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
+            <em>即将上线</em>
+          </button>
+        ))}
+      </section>
+    ))}
+    <div class="empty-search" id="empty-search" hidden>没有找到相关工具</div>
+  </div>
+  <div class="sidebar-footer">
+    <span class="avatar">码</span>
+    <span><strong>持续更新中</strong><small>更多实用工具正在路上</small></span>
+  </div>
+</aside>

@@ -1,0 +1,14 @@
+---
+import { Icon } from 'astro-icon/components'
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="我的收藏 · 码间" description="管理你收藏的开发者工具。" activeNav="favorites">
+  <section class="simple-page card-base">
+    <span class="eyebrow">PERSONAL SPACE</span>
+    <div class="simple-page-icon"><Icon name="lucide:star" width={30} /></div>
+    <h1>我的收藏</h1>
+    <p>收藏功能正在完善中，你可以先浏览目前可用的开发者工具。</p>
+    <a class="primary-button" href="/tools/md5/">浏览全部工具<Icon name="lucide:arrow-right" width={18} /></a>
+  </section>
+</BaseLayout>

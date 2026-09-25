@@ -1,0 +1,25 @@
+{
+  "name": "code-space-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@iconify-json/lucide": "^1.2.71",
+    "astro": "^5.13.5",
+    "astro-icon": "^1.1.5",
+    "crypto-js": "^4.2.0",
+    "hash-wasm": "^4.12.0",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2"
+  }
+}

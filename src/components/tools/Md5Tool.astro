@@ -1,0 +1,88 @@
+---
+import { Icon } from 'astro-icon/components'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import IconButton from '../ui/IconButton.astro'
+
+const outputCaseOptions = [
+  { value: 'lower', label: '小写' },
+  { value: 'upper', label: '大写' }
+]
+const emptyHash = 'D41D8CD98F00B204E9800998ECF8427E'
+---
+
+<section class="tool-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>开发者工具</span><b>/</b><strong>MD5 计算</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:hash" width={25} /></span>
+        <div><h1>MD5 计算</h1><p>快速生成文本或文件的 MD5 摘要</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" width={16} />本地处理</span>
+  </div>
+
+  <Card class="tool-card">
+    <div class="input-mode" role="tablist" aria-label="输入类型">
+      <button class="mode-button active" type="button" role="tab" aria-selected="true" data-mode="text"><Icon name="lucide:text" width={17} />文本输入</button>
+      <button class="mode-button" type="button" role="tab" aria-selected="false" data-mode="file"><Icon name="lucide:file" width={17} />文件计算</button>
+    </div>
+
+    <div class="mode-panel active" data-panel="text">
+      <div class="field-heading">
+        <label for="md5-input">输入文本</label>
+        <div class="field-heading-actions">
+          <span><b id="char-count">0</b> 字符</span>
+          <CheckboxField id="realtime-toggle" label="实时计算" checked />
+        </div>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="md5-input" placeholder="在此输入需要计算 MD5 的文本…" spellcheck="false" autofocus></textarea>
+        <IconButton id="text-clear" class="textarea-clear" icon="lucide:trash-2" label="清空文本" hidden />
+      </div>
+    </div>
+
+    <div class="mode-panel" data-panel="file">
+      <input id="file-input" type="file" hidden />
+      <label class="drop-zone" id="drop-zone" for="file-input" tabindex="0">
+        <span class="drop-icon"><Icon name="lucide:upload-cloud" width={27} /></span>
+        <strong id="drop-title">拖放文件到这里，或点击选择</strong>
+        <small id="drop-meta">支持任意文件类型，文件不会离开你的设备</small>
+      </label>
+      <div class="file-progress" id="file-progress">
+        <div class="file-progress-heading"><span id="file-progress-label">准备计算</span><b id="file-progress-percent">0%</b></div>
+        <div class="file-progress-track"><i id="file-progress-bar"></i></div>
+        <small id="file-progress-detail">0 B / 0 B</small>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <Button id="calculate" class="calculate-button" variant="primary" icon="lucide:hash">计算 MD5</Button>
+      <Button id="cancel-calculate" hidden>停止计算</Button>
+      <Button id="clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card class="result-card" ariaLabel="计算结果">
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>计算结果</strong></div>
+      <span id="result-status">等待输入</span>
+    </div>
+    <div class="hash-output" id="hash-output" data-empty="true">
+      <code>{emptyHash}</code>
+      <button id="copy-result" type="button" aria-label="复制结果" disabled><Icon name="lucide:copy" width={16} />复制</button>
+    </div>
+    <div class="result-meta">
+      <span>MD5 · 128 bit</span>
+      <span id="result-detail">结果将以 32 位十六进制字符串显示</span>
+      <SelectField id="result-case" label="输出" value="upper" options={outputCaseOptions} />
+    </div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/md5'
+</script>

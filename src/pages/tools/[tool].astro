@@ -1,0 +1,14 @@
+---
+import { getTool, tools } from '../../data/tools'
+import ToolPage from '../../components/ToolPage.astro'
+
+export function getStaticPaths() {
+  return tools.map((tool) => ({ params: { tool: tool.id }, props: { tool } }))
+}
+
+const { tool } = Astro.props
+const pageTool = tool ?? getTool(Astro.params.tool ?? '')
+---
+
+{pageTool ? <ToolPage tool={pageTool} /> : <div class="not-found"><h1>工具不存在</h1><a href="/tools/md5/">返回 MD5 工具</a></div>}
+
