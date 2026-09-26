@@ -13,11 +13,9 @@ const { activeNav } = Astro.props
     <button class="mobile-menu icon-button" id="mobile-menu" type="button" aria-label="打开工具菜单" aria-expanded="false">
       <Icon name="lucide:menu" size={21} />
     </button>
-    <a class="brand" href="/" aria-label="码间首页">
+    <a class="brand" href="/" aria-label="透明质的工具箱首页">
       <span class="brand-mark"><Icon name="lucide:command" size={22} /></span>
-      <span class="brand-name">码间</span>
-      <span class="brand-divider"></span>
-      <span class="brand-desc">开发者工具箱</span>
+      <span class="brand-name">透明质的工具箱</span>
     </a>
     <nav class="main-nav" aria-label="主导航">
       <a class:list={{ active: activeNav === 'home' }} href="/"><Icon name="lucide:layout-dashboard" size={17} /><span>首页</span></a>

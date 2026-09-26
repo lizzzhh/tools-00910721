@@ -4,7 +4,7 @@ import { clearError, copyText, downloadText, setStat, setValue, showError, toggl
 
 type EntityAction = 'encode' | 'decode'
 
-const sample = '<a href="https://example.com?a=1&b=2" title=\'码间\'>\n  Tom & Jerry < 3 © 2026\n</a>'
+const sample = '<a href="https://example.com?a=1&b=2" title=\'透明质的工具箱\'>\n  Tom & Jerry < 3 © 2026\n</a>'
 
 const mountedRoots = new WeakSet<HTMLElement>()
 

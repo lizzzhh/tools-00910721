@@ -28,7 +28,7 @@ interface Props {
 const { tool } = Astro.props
 ---
 
-<BaseLayout title={`${tool.name} · 码间`} description={`${tool.name}：${tool.description}。所有处理均在浏览器本地完成。`} activeTool={tool.id} activeNav="tools">
+<BaseLayout title={`${tool.name} · 透明质的工具箱`} description={`${tool.name}：${tool.description}。所有处理均在浏览器本地完成。`} activeTool={tool.id} activeNav="tools">
   {tool.id === 'hash' ? <HashTool /> : tool.id === 'jwt-decode' ? <JwtDecodeTool /> : tool.id === 'password-generator' ? <PasswordGeneratorTool /> : tool.id === 'password-strength' ? <PasswordStrengthTool /> : tool.id === 'json-format' ? <JsonFormatTool /> : tool.id === 'base64' ? <Base64Tool /> : tool.id === 'url-encode' ? <UrlEncodeTool /> : tool.id === 'html-entity' ? <HtmlEntityTool /> : tool.id === 'unicode-escape' ? <UnicodeEscapeTool /> : tool.id === 'query-string' ? <QueryStringTool /> : tool.id === 'number-base' ? <NumberBaseTool /> : tool.id === 'uuid-generator' ? <UuidGeneratorTool /> : tool.id === 'uuid-parser' ? <UuidParserTool /> : tool.id === 'timestamp-converter' ? <TimestampTool /> : tool.id === 'text-case' ? <TextCaseTool /> : tool.id === 'text-counter' ? <TextCounterTool /> : tool.id === 'text-deduplicate' ? <TextDedupeTool /> : tool.id === 'text-replace' ? <TextReplaceTool /> : (
     <section class="simple-page card-base">
       <span class="eyebrow">COMING SOON</span>

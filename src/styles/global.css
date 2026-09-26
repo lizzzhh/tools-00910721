@@ -217,7 +217,8 @@ svg[data-icon='lucide:binary'] {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
-  min-width: 18rem;
+  min-width: 19.5rem;
+  padding-right: var(--spacing-xl);
   font-weight: 700;
 }
 
@@ -235,20 +236,6 @@ svg[data-icon='lucide:binary'] {
 .brand-name {
   font-size: 1.25rem;
   letter-spacing: 0.12em;
-}
-
-.brand-divider {
-  width: 1px;
-  height: 1.15rem;
-  margin: 0 var(--spacing-xs);
-  background: var(--meta-divider);
-}
-
-.brand-desc {
-  color: var(--content-meta);
-  font-size: 0.82rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
 }
 
 .main-nav {
@@ -3352,8 +3339,6 @@ textarea:focus {
     min-width: auto;
   }
 
-  .brand-divider,
-  .brand-desc,
   .status-pill {
     display: none;
   }

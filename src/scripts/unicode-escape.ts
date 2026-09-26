@@ -132,7 +132,7 @@ function init() {
     if (inputLabel) inputLabel.textContent = action === 'inspect' ? '输入待查询的文本' : action === 'encode' ? '输入文本' : '输入转义序列'
     if (runLabel) runLabel.textContent = action === 'inspect' ? '查询码点' : action === 'encode' ? '开始转义' : '开始还原'
     if (input) {
-      input.placeholder = action === 'encode' ? '码间 tools 😀' : action === 'decode' ? '\\u7801\\u95F4 \\uD83D\\uDE00' : '码间 tools 😀'
+      input.placeholder = action === 'encode' ? '透明质的工具箱 😀' : action === 'decode' ? '\\u7801\\u95F4 \\uD83D\\uDE00' : '透明质的工具箱 😀'
     }
     clearError(errorBox)
     resetResult()

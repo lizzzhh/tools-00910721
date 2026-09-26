@@ -2,7 +2,7 @@ import { analyzeText } from '../lib/text-stats'
 import { recordToolUsage } from './usage'
 import { formatBytes, formatNumber, setStat, toggleHidden } from './tool-panel'
 
-const sample = `码间 tools 是一套纯前端开发者工具箱。
+const sample = `透明质的工具箱是一套纯前端开发者工具箱。
 
 所有处理都在你的浏览器本地完成，不上传任何数据。
 Try typing, counting, and converting text safely.`
