@@ -2,18 +2,12 @@
 import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
-import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
 import { caseStyleHints, caseStyleLabels } from '../../lib/text'
 
 type Style = keyof typeof caseStyleLabels
 
 const caseOptions = (Object.keys(caseStyleLabels) as Style[]).map((value) => ({ value, label: `${caseStyleLabels[value]}（${caseStyleHints[value]}）` }))
-
-const widthOptions = [
-  { value: 'to-half', label: '全角转半角' },
-  { value: 'to-full', label: '半角转全角' }
-]
 
 const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant', 'dot', 'path', 'title']
 ---
@@ -24,7 +18,7 @@ const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant'
       <div class="breadcrumb"><span>文本处理</span><b>/</b><strong>大小写转换</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:case-sensitive" size={25} /></span>
-        <div><h1>大小写转换</h1><p>命名风格、全半角与字符顺序转换</p></div>
+        <div><h1>大小写转换</h1><p>命名风格与字符顺序转换</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
@@ -33,28 +27,18 @@ const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant'
   <div class="security-notice"><Icon name="lucide:info" size={16} />自动识别驼峰、下划线、连字符与空格分隔，并保留中英文数字混排的可读性。</div>
 
   <Card class="tool-card">
-    <div class="input-mode" role="tablist" aria-label="文本转换类型">
-      <button class="mode-button active" id="text-case-tab" type="button" role="tab" aria-selected="true" aria-controls="text-case-panel" data-mode="case"><Icon name="lucide:type" size={17} />命名风格</button>
-      <button class="mode-button" id="text-width-tab" type="button" role="tab" aria-selected="false" aria-controls="text-case-panel" data-mode="width"><Icon name="lucide:arrow-left-right" size={17} />全半角</button>
-    </div>
     <div class="tool-options">
-      <div class="tool-options-row" id="text-case-options">
+      <div class="tool-options-row">
         <SelectField id="text-case-style" label="目标风格" options={caseOptions} value="camel" />
         <span>常见命名风格会统一分隔符并按单词边界重新拼接。</span>
       </div>
-      <div class="tool-options-row" id="text-width-options" hidden>
-        <SelectField id="text-width-mode" label="转换方向" options={widthOptions} value="to-half" />
-        <CheckboxField id="text-width-space" label="半角转全角时保留半角空格" />
-      </div>
     </div>
-    <div class="mode-panel active" id="text-case-panel" role="tabpanel" aria-labelledby="text-case-tab" data-panel="case">
-      <div class="field-heading">
-        <label for="text-case-input">输入文本</label>
-        <span><b id="text-case-char-count">0</b> 字符</span>
-      </div>
-      <div class="textarea-wrap">
-        <textarea id="text-case-input" placeholder="hello world example" spellcheck="false" autocomplete="off" autofocus></textarea>
-      </div>
+    <div class="field-heading">
+      <label for="text-case-input">输入文本</label>
+      <span><b id="text-case-char-count">0</b> 字符</span>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="text-case-input" placeholder="hello world example" spellcheck="false" autocomplete="off" autofocus></textarea>
     </div>
     <div class="security-error" id="text-case-error" role="alert" hidden></div>
     <div class="action-row">
@@ -62,7 +46,7 @@ const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant'
       <Button id="text-case-sample" icon="lucide:wand-2">示例</Button>
       <Button id="text-case-clear" icon="lucide:trash-2">清空</Button>
     </div>
-    <div class="tool-option-section" id="text-case-shortcut-section">
+    <div class="tool-option-section">
       <span class="tool-option-heading">常用风格</span>
       <div class="tool-option-grid" id="text-case-shortcuts">
         {shortcutStyles.map((style) => (

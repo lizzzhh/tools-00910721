@@ -1,0 +1,78 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+
+const directionOptions = [
+  { value: 'to-half', label: '全角转半角' },
+  { value: 'to-full', label: '半角转全角' }
+]
+---
+
+<section class="tool-workspace fullwidth-workspace">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>文本处理</span><b>/</b><strong>全角半角转换</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:arrow-left-right" size={25} /></span>
+        <div><h1>全角半角转换</h1><p>在中文全角与西文半角字符之间转换</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />覆盖 ASCII 可见字符、中文标点、全角空格与假名（カタカナ），逐码点转换，不影响其他字符。</div>
+
+  <Card class="tool-card">
+    <div class="tool-options">
+      <div class="tool-options-row">
+        <SelectField id="fullwidth-mode" label="转换方向" options={directionOptions} value="to-half" />
+        <span>全角转半角适用于从中文系统复制出的文本，半角转全角适用于需要排版对齐的场景。</span>
+      </div>
+      <div class="tool-option-section">
+        <span class="tool-option-heading">选项</span>
+        <div class="tool-option-grid">
+          <CheckboxField id="fullwidth-keep-space" label="半角转全角时保留半角空格" />
+        </div>
+      </div>
+    </div>
+    <div class="field-heading">
+      <label for="fullwidth-input">输入文本</label>
+      <span><b id="fullwidth-char-count">0</b> 字符</span>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="fullwidth-input" spellcheck="false" autocomplete="off" autofocus placeholder="ＡＢＣ　カタカナ　你好，世界。（１２３）"></textarea>
+    </div>
+    <div class="security-error" id="fullwidth-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="fullwidth-run" class="calculate-button" variant="primary" icon="lucide:arrow-left-right"><span>开始转换</span></Button>
+      <Button id="fullwidth-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="fullwidth-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="fullwidth-result" class="result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>转换结果</strong></div>
+      <span id="fullwidth-result-status">等待处理</span>
+    </div>
+    <div class="result-subheading"><strong>结果</strong><span>只读结果</span></div>
+    <textarea id="fullwidth-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="全角半角转换结果"></textarea>
+    <div class="tool-result-actions">
+      <Button id="fullwidth-copy" icon="lucide:copy" disabled>复制结果</Button>
+      <Button id="fullwidth-download" icon="lucide:download" disabled>下载结果</Button>
+    </div>
+    <div class="tool-stats">
+      <div><span>转换字符</span><strong id="fullwidth-stat-converted">—</strong></div>
+      <div><span>未改动字符</span><strong id="fullwidth-stat-unchanged">—</strong></div>
+      <div><span>输入长度</span><strong id="fullwidth-stat-input">—</strong></div>
+      <div><span>输出长度</span><strong id="fullwidth-stat-output">—</strong></div>
+    </div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/fullwidth-halfwidth'
+</script>

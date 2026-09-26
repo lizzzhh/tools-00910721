@@ -141,7 +141,7 @@ export const tools: Tool[] = [
     description: '切换文本大小写与命名风格',
     category: '文本处理',
     icon: 'lucide:case-sensitive',
-    keywords: ['大小写', '文本', '转换', 'case', 'camel', 'snake', 'kebab', '全角半角'],
+    keywords: ['大小写', '文本', '转换', 'case', 'camel', 'snake', 'kebab', 'pascal'],
     available: true
   },
   {
@@ -170,6 +170,15 @@ export const tools: Tool[] = [
     icon: 'lucide:replace',
     keywords: ['查找', '替换', '文本', 'replace', '正则', 'regex', '批量'],
     available: true
+  },
+  {
+    id: 'fullwidth-halfwidth',
+    name: '全角半角转换',
+    description: '在中文全角与西文半角字符之间转换',
+    category: '文本处理',
+    icon: 'lucide:arrow-left-right',
+    keywords: ['全角', '半角', '全角半角', 'width', 'katakana', '假名', '标点', '空格', '转换'],
+    available: true
   }
 ]
 
@@ -191,7 +200,7 @@ function plannedTool(id: string, name: string, description: string, icon: string
 const plannedToolCategories = new Map<string, string>([
   ...['yaml-format', 'xml-format', 'sql-format', 'json-path', 'json-to-typescript', 'json-schema-validator'].map((id): [string, string] => [id, '编码与数据']),
   ...['cron-parser', 'regex-tester', 'markdown-preview', 'curl-builder', 'http-request', 'code-beautify', 'openapi-viewer', 'markdown-toc', 'docker-compose', 'nginx-config'].map((id): [string, string] => [id, '开发者工具']),
-  ...['diff-text', 'random-string', 'text-sort', 'fullwidth-halfwidth'].map((id): [string, string] => [id, '文本处理']),
+  ...['diff-text', 'random-string', 'text-sort'].map((id): [string, string] => [id, '文本处理']),
   ...['timezone-converter', 'date-calculator', 'scientific-calculator', 'contrast-checker', 'color-converter'].map((id): [string, string] => [id, '效率工具']),
   ...['image-compressor', 'image-cropper', 'image-converter', 'exif-viewer', 'audio-converter', 'qr-code'].map((id): [string, string] => [id, '媒体处理'])
 ])
@@ -217,7 +226,6 @@ const plannedToolList: PlannedToolInput[] = [
   plannedTool('date-calculator', '日期计算器', '计算日期差与加减天数', 'lucide:calendar-range', ['日期', 'date', '计算', '工作日']),
   plannedTool('scientific-calculator', '科学计算器', '计算函数与表达式', 'lucide:calculator', ['计算器', '数学', '科学', 'calculator']),
   plannedTool('text-sort', '文本排序', '按规则排列文本行', 'lucide:list-ordered', ['排序', '文本', 'sort', '行']),
-  plannedTool('fullwidth-halfwidth', '全角半角转换', '转换中文符号与字符', 'lucide:replace', ['全角', '半角', '字符', '转换']),
   plannedTool('color-converter', '颜色转换', '转换 HEX、RGB 与 HSL', 'lucide:palette', ['颜色', 'hex', 'rgb', 'hsl']),
   plannedTool('contrast-checker', '对比度检查', '检查文字颜色可读性', 'lucide:contrast', ['颜色', '对比度', '无障碍', '检查']),
   plannedTool('qr-code', '二维码生成', '生成与下载二维码', 'lucide:qr-code', ['二维码', 'qr', '生成', '图片']),

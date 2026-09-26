@@ -1,8 +1,6 @@
-import { convertCase, convertWidth, type CaseStyle, type WidthMode } from '../lib/text'
+import { convertCase, type CaseStyle } from '../lib/text'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, toggleHidden } from './tool-panel'
-
-type TextAction = 'case' | 'width'
 
 const sample = 'getUserNameFromHTTPServer v2'
 
@@ -24,13 +22,7 @@ function init() {
   const output = root?.querySelector<HTMLTextAreaElement>('#text-case-output')
   const copyButton = root?.querySelector<HTMLButtonElement>('#text-case-copy')
   const downloadButton = root?.querySelector<HTMLButtonElement>('#text-case-download')
-  const caseOptions = root?.querySelector<HTMLElement>('#text-case-options')
-  const widthOptions = root?.querySelector<HTMLElement>('#text-width-options')
-  const shortcutSection = root?.querySelector<HTMLElement>('#text-case-shortcut-section')
   const shortcuts = Array.from(root?.querySelectorAll<HTMLButtonElement>('[data-style]'))
-  const panel = root?.querySelector<HTMLElement>('#text-case-panel')
-  const modeButtons = Array.from(root?.querySelectorAll<HTMLButtonElement>('[data-mode]'))
-  let action: TextAction = 'case'
   let processed = ''
 
   function resetResult() {
@@ -49,12 +41,7 @@ function init() {
   function run() {
     clearError(errorBox)
     const value = input?.value ?? ''
-    const result =
-      action === 'case'
-        ? convertCase(value, (root?.querySelector<HTMLInputElement>('#text-case-style')?.value ?? 'camel') as CaseStyle)
-        : convertWidth(value, (root?.querySelector<HTMLInputElement>('#text-width-mode')?.value ?? 'to-half') as WidthMode, {
-            keepSpace: root?.querySelector<HTMLInputElement>('#text-width-space')?.checked ?? true
-          })
+    const result = convertCase(value, (root?.querySelector<HTMLInputElement>('#text-case-style')?.value ?? 'camel') as CaseStyle)
 
     processed = result.output
     setValue(output, result.output)
@@ -69,26 +56,8 @@ function init() {
     recordToolUsage('text-case')
   }
 
-  function setAction(next: TextAction) {
-    if (action === next) return
-    action = next
-    modeButtons.forEach((button) => {
-      const active = button.dataset.mode === action
-      button.classList.toggle('active', active)
-      button.setAttribute('aria-selected', String(active))
-    })
-    panel?.setAttribute('aria-labelledby', action === 'case' ? 'text-case-tab' : 'text-width-tab')
-    toggleHidden(caseOptions, action !== 'case')
-    toggleHidden(widthOptions, action !== 'width')
-    toggleHidden(shortcutSection, action !== 'case')
-    if (input) input.placeholder = action === 'case' ? 'hello world example' : 'ＡＢＣ　カタカナ　１２３'
-    clearError(errorBox)
-    resetResult()
-  }
-
   shortcuts.forEach((button) =>
     button.addEventListener('click', () => {
-      if (action !== 'case') setAction('case')
       const select = root?.querySelector<HTMLInputElement>('#text-case-style')
       const trigger = root?.querySelector<HTMLElement>(`#text-case-style-trigger > span`)
       if (select) select.value = button.dataset.style ?? select.value
@@ -97,7 +66,6 @@ function init() {
       if (button.dataset.style) run()
     })
   )
-  modeButtons.forEach((button) => button.addEventListener('click', () => setAction(button.dataset.mode as TextAction)))
   input?.addEventListener('input', () => {
     if (charCount) charCount.textContent = String(Array.from(input.value).length)
     clearError(errorBox)
@@ -111,7 +79,7 @@ function init() {
   })
   runButton?.addEventListener('click', run)
   sampleButton?.addEventListener('click', () => {
-    if (input) input.value = action === 'case' ? sample : 'ＡＢＣ　カタカナ　１２３（テスト）'
+    if (input) input.value = sample
     if (charCount) charCount.textContent = String(Array.from(input?.value ?? '').length)
     run()
   })
