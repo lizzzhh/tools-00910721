@@ -85,7 +85,7 @@ function createItem(template: HTMLTemplateElement, row: UuidParsedRow) {
       ? `${versionLabel(details)} · ${kindLabel(details.kind)}`
       : currentTranslator()('toolUi.uuid-parser.messages.unparsable')
   )
-  setHead('.uuid-parse-item-state', details ? shortTimestamp(details.timestamp) : (row.error ?? ''))
+  setHead('.uuid-parse-item-state', details ? shortTimestamp(details.timestamp) : (row.error ? currentTranslator()('toolUi.uuid-parser.messages.invalidShort') : ''))
 
   const fields = body.querySelector<HTMLElement>('.uuid-parse-item-fields')
   if (details) {
@@ -104,7 +104,9 @@ function createItem(template: HTMLTemplateElement, row: UuidParsedRow) {
   body.querySelector('.uuid-parse-item-actions')?.remove()
   const note = document.createElement('p')
   note.className = 'uuid-parse-item-note'
-  note.textContent = row.error ?? currentTranslator()('toolUi.uuid-parser.messages.invalidItem')
+  note.textContent = row.error
+    ? currentTranslator()(`uuidUi.errors.${row.error.code}`, row.error.params)
+    : currentTranslator()('toolUi.uuid-parser.messages.invalidItem')
   fields?.replaceChildren(note)
   return fragment
 }
@@ -146,7 +148,7 @@ function init() {
     const report = parseUuidList(value)
     if (report.rows.length === 0) {
       resetResult()
-      showError(errorBox, '请输入需要解析的 UUID')
+      showError(errorBox, currentTranslator()('toolUi.uuid-parser.messages.emptyInput'))
       return
     }
 

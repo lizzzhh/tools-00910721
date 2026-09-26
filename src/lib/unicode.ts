@@ -2,6 +2,11 @@ export type UnicodeStyle = 'short' | 'long' | 'hex' | 'decimal'
 
 export type UnicodeScope = 'non-ascii' | 'control'
 
+/** Codes the UI maps to `toolUi.unicode-escape.errors.*`. */
+export type UnicodeErrorCode = 'invalidCodePoint' | 'loneSurrogate'
+
+export type UnicodeErrorParams = { raw: string }
+
 export type UnicodeResult =
   | {
       ok: true
@@ -12,7 +17,8 @@ export type UnicodeResult =
     }
   | {
       ok: false
-      message: string
+      code: UnicodeErrorCode
+      params?: UnicodeErrorParams
       position?: number
     }
 
@@ -95,7 +101,9 @@ const controlEscapes: Record<string, string> = {
   $: '$'
 }
 
-type EscapeResult = { ok: true; character: string; surrogate: boolean } | { ok: false; message: string; position: number }
+type EscapeResult =
+  | { ok: true; character: string; surrogate: boolean }
+  | { ok: false; code: UnicodeErrorCode; params?: UnicodeErrorParams; position: number }
 
 function isSurrogateCodePoint(codePoint: number) {
   return codePoint >= 0xd800 && codePoint <= 0xdfff
@@ -130,7 +138,7 @@ function resolveEscape(raw: string, start: number): EscapeResult {
 
   const codePoint = Number.parseInt(digits, radix)
   if (!digits || !Number.isFinite(codePoint) || codePoint > 0x10ffff) {
-    return { ok: false, message: `无效的字符码点 ${raw}`, position: start + 1 }
+    return { ok: false, code: 'invalidCodePoint', params: { raw }, position: start + 1 }
   }
   if (isSurrogateCodePoint(codePoint)) {
     return { ok: true, character: String.fromCharCode(codePoint), surrogate: true }
@@ -173,7 +181,7 @@ export function decodeUnicode(input: string): UnicodeResult {
       }
 
       if (resolved.surrogate) {
-        return { ok: false, message: `代理项码点 ${raw} 缺少配对的低代理项`, position: start + 1 }
+        return { ok: false, code: 'loneSurrogate', params: { raw }, position: start + 1 }
       }
     }
 

@@ -1,3 +1,8 @@
+/** Codes the UI maps to `toolUi.query-string.errors.*`. */
+export type QueryErrorCode = 'badKeyEncoding' | 'badValueEncoding'
+
+export type QueryErrorParams = { index: number }
+
 export type QueryEntry = {
   key: string
   value: string
@@ -15,7 +20,8 @@ export type QueryParseResult =
     }
   | {
       ok: false
-      message: string
+      code: QueryErrorCode
+      params?: QueryErrorParams
       position?: number
     }
 
@@ -106,14 +112,14 @@ export function parseQueryString(input: string): QueryParseResult {
     const rawValue = equalsIndex >= 0 ? part.value.slice(equalsIndex + 1) : undefined
     const key = decodeComponent(rawKey)
     if (key === null) {
-      return { ok: false, message: `第 ${index + 1} 个参数的键不是合法的百分号编码`, position: bodyStart + part.offset + 1 }
+      return { ok: false, code: 'badKeyEncoding', params: { index: index + 1 }, position: bodyStart + part.offset + 1 }
     }
     let value = ''
     let hasValue = false
     if (rawValue !== undefined) {
       const decoded = decodeComponent(rawValue)
       if (decoded === null) {
-        return { ok: false, message: `第 ${index + 1} 个参数的值不是合法的百分号编码`, position: bodyStart + part.offset + 1 }
+        return { ok: false, code: 'badValueEncoding', params: { index: index + 1 }, position: bodyStart + part.offset + 1 }
       }
       value = decoded
       hasValue = true

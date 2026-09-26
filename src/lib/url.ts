@@ -1,5 +1,8 @@
 export type UrlMode = 'component' | 'uri'
 
+/** Codes the UI maps to `toolUi.url-encode.errors.*`. */
+export type UrlErrorCode = 'unencodable' | 'malformedPercent'
+
 export type UrlResult =
   | {
       ok: true
@@ -9,7 +12,7 @@ export type UrlResult =
     }
   | {
       ok: false
-      message: string
+      code: UrlErrorCode
       position?: number
     }
 
@@ -34,7 +37,7 @@ export function encodeUrl(input: string, mode: UrlMode = 'component'): UrlResult
   try {
     return success(mode === 'uri' ? encodeURI(input) : encodeURIComponent(input))
   } catch {
-    return { ok: false, message: '内容包含无法编码的字符' }
+    return { ok: false, code: 'unencodable' }
   }
 }
 
@@ -44,7 +47,7 @@ export function decodeUrl(input: string, mode: UrlMode = 'component'): UrlResult
   } catch {
     return {
       ok: false,
-      message: 'URL 编码格式无效，请检查百分号转义',
+      code: 'malformedPercent',
       ...(getMalformedPercentPosition(input) === undefined ? {} : { position: getMalformedPercentPosition(input) })
     }
   }

@@ -1,3 +1,4 @@
+import { currentIntlLocale, currentTranslator } from '../i18n/client'
 import { showToast } from './site'
 
 export function formatBytes(bytes: number) {
@@ -7,18 +8,19 @@ export function formatBytes(bytes: number) {
 }
 
 export function formatNumber(value: number) {
-  return new Intl.NumberFormat('zh-CN').format(value)
+  return new Intl.NumberFormat(currentIntlLocale()).format(value)
 }
 
-export async function copyText(value: string, successMessage = '结果已复制到剪贴板', fallbackMessage = '当前环境不支持自动复制，请手动选择内容') {
+export async function copyText(value: string, successMessage?: string, fallbackMessage?: string) {
   if (!value) return false
+  const t = currentTranslator()
   try {
     if (!navigator.clipboard) throw new Error('clipboard unavailable')
     await navigator.clipboard.writeText(value)
-    showToast(successMessage)
+    showToast(successMessage ?? t('workspace.copiedToClipboard'))
     return true
   } catch {
-    showToast(fallbackMessage)
+    showToast(fallbackMessage ?? t('workspace.clipboardUnsupported'))
     return false
   }
 }
@@ -31,7 +33,7 @@ export function downloadText(value: string, filename: string) {
   link.download = filename
   link.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
-  showToast('结果文件已准备下载')
+  showToast(currentTranslator()('workspace.downloadReady'))
 }
 
 export function setText(element: HTMLElement | null | undefined, value: string) {
@@ -58,7 +60,7 @@ export function toggleHidden(element: HTMLElement | null | undefined, hidden: bo
 
 export function showError(element: HTMLElement | null | undefined, message: string, position?: number) {
   if (!element) return
-  const prefix = position === undefined ? '' : `第 ${position} 个字符：`
+  const prefix = position === undefined ? '' : currentTranslator()('workspace.charPosition', { position })
   element.textContent = `${prefix}${message}`
   element.hidden = false
 }

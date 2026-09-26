@@ -1,4 +1,5 @@
 import { defaultPasswordOptions, estimatePasswordStrength, generatePassword, type PasswordOptions } from '../lib/security/passwords'
+import { currentTranslator } from '../i18n/client'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
 
@@ -42,7 +43,7 @@ function init() {
     const length = normalizeLength(Number(source.value))
     if (lengthRange) lengthRange.value = String(length)
     if (lengthNumber) lengthNumber.value = String(length)
-    if (lengthValue) lengthValue.textContent = `${length} 位`
+    if (lengthValue) lengthValue.textContent = currentTranslator()('toolUi.password-generator.runtime.lengthUnit', { count: length })
   }
 
   function getOptions(): PasswordOptions {
@@ -68,14 +69,15 @@ function init() {
 
   function resetResult() {
     generatedPassword = ''
-    if (outputValue) outputValue.textContent = '点击生成密码'
+    if (outputValue) outputValue.textContent = currentTranslator()('toolUi.password-generator.runtime.placeholder')
     output?.setAttribute('data-empty', 'true')
     if (copyButton) copyButton.disabled = true
-    if (status) status.textContent = '等待生成'
-    if (strengthLabel) strengthLabel.textContent = '等待生成'
+    const t = currentTranslator()
+    if (status) status.textContent = t('toolUi.password-generator.runtime.waiting')
+    if (strengthLabel) strengthLabel.textContent = t('toolUi.password-generator.runtime.strengthWaiting')
     if (strengthScore) strengthScore.textContent = '—'
     if (strengthBar) strengthBar.style.width = '0%'
-    if (strengthDetail) strengthDetail.textContent = '生成后显示强度估算'
+    if (strengthDetail) strengthDetail.textContent = t('toolUi.password-generator.runtime.strengthHint')
   }
 
   function renderStrength(password: string) {
@@ -89,7 +91,7 @@ function init() {
       strengthBar.style.width = `${result.score}%`
       strengthBar.dataset.level = result.level
     }
-    if (strengthDetail) strengthDetail.textContent = `估算熵值 ${result.entropy} bits · 字符池约 ${result.poolSize} 个`
+    if (strengthDetail) strengthDetail.textContent = currentTranslator()('toolUi.password-generator.runtime.entropy', { bits: result.entropy, pool: result.poolSize })
   }
 
   function generate() {
@@ -100,12 +102,12 @@ function init() {
       if (outputValue) outputValue.textContent = password
       output?.setAttribute('data-empty', 'false')
       if (copyButton) copyButton.disabled = false
-      if (status) status.textContent = '生成完成'
+      if (status) status.textContent = currentTranslator()('toolUi.password-generator.runtime.done')
       renderStrength(password)
       recordToolUsage('password-generator')
     } catch (error) {
       resetResult()
-      showError(error instanceof Error ? error.message : '密码生成失败')
+      showError(error instanceof Error ? error.message : currentTranslator()('toolUi.password-generator.runtime.failed'))
     }
   }
 
@@ -114,9 +116,9 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(generatedPassword)
-      showToast('密码已复制')
+      showToast(currentTranslator()('toolUi.password-generator.runtime.copied'))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择密码')
+      showToast(currentTranslator()('toolUi.password-generator.runtime.manualCopy'))
     }
   }
 
@@ -127,7 +129,7 @@ function init() {
     if (uppercase) uppercase.checked = defaultPasswordOptions.uppercase
     if (numbers) numbers.checked = defaultPasswordOptions.numbers
     if (symbols) symbols.checked = defaultPasswordOptions.symbols
-    if (lengthValue) lengthValue.textContent = '20 位'
+    if (lengthValue) lengthValue.textContent = currentTranslator()('toolUi.password-generator.runtime.lengthUnit', { count: 20 })
     resetResult()
     clearError()
   }

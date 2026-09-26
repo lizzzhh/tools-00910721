@@ -82,8 +82,8 @@ function init() {
   function showError(result: Extract<JsonFormatResult, { ok: false }>) {
     if (!errorBox) return
     const t = currentTranslator()
-    const position = t('toolUi.json-format.errorPosition', { line: result.line, column: result.column })
-    errorBox.textContent = `${position}${t(`toolUi.json-format.errors.${result.code}`, result.params)}`
+    const message = t(`toolUi.json-format.errors.${result.code}`, result.params)
+    errorBox.textContent = t('toolUi.json-format.runtime.position', { line: result.line, column: result.column, message })
     errorBox.hidden = false
   }
 
@@ -96,7 +96,7 @@ function init() {
     }
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
-    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.json-format.status.waiting')
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.json-format.runtime.waiting')
     if (repairSummary) {
       repairSummary.textContent = ''
       repairSummary.hidden = true
@@ -120,11 +120,11 @@ function init() {
     if (resultCard) resultCard.hidden = false
     const t = currentTranslator()
     const notes = result.repairs.map((repair) => t(`toolUi.json-format.repairs.${repair.code}`, repair.params))
-    if (result.commentCount) notes.push(t('toolUi.json-format.repairs.commentsRemoved', { count: result.commentCount }))
-    if (resultStatus) resultStatus.textContent = notes.length ? t('toolUi.json-format.status.autoFixed') : t('toolUi.json-format.status.valid')
+    if (result.commentCount) notes.push(t('toolUi.json-format.runtime.commentsRemoved', { count: result.commentCount }))
+    if (resultStatus) resultStatus.textContent = notes.length ? t('toolUi.json-format.runtime.autoFixed') : t('toolUi.json-format.runtime.valid')
     if (repairSummary) {
       repairSummary.textContent = notes.length
-        ? t('toolUi.json-format.autoFixedSummary', { notes: notes.join(t('toolUi.json-format.separator')) })
+        ? t('toolUi.json-format.runtime.autoFixedNotes', { notes: notes.join(t('toolUi.json-format.runtime.separator')) })
         : ''
       repairSummary.hidden = notes.length === 0
     }
@@ -161,9 +161,9 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(formattedOutput)
-      showToast(currentTranslator()('toolUi.json-format.toast.copied'))
+      showToast(currentTranslator()('toolUi.json-format.runtime.copied'))
     } catch {
-      showToast(currentTranslator()('toolUi.json-format.toast.manualCopy'))
+      showToast(currentTranslator()('toolUi.json-format.runtime.copyUnsupported'))
     }
   }
 
@@ -175,7 +175,7 @@ function init() {
     link.download = 'formatted.json'
     link.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    showToast(currentTranslator()('toolUi.json-format.toast.downloadReady'))
+    showToast(currentTranslator()('toolUi.json-format.runtime.downloaded'))
   }
 
   function clearAll() {

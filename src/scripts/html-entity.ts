@@ -1,4 +1,5 @@
 import { decodeHtml, encodeHtml, type EntityFormat, type EntityMode, type HtmlResult } from '../lib/html-entities'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, setStat, setValue, showError, toggleHidden } from './tool-panel'
 
@@ -48,7 +49,7 @@ function init() {
     processed = ''
     toggleHidden(resultCard, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'html-entity-stat-input', '—')
@@ -60,8 +61,9 @@ function init() {
   function renderResult(result: Extract<HtmlResult, { ok: true }>) {
     processed = result.output
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = action === 'encode' ? '转义完成' : '还原完成'
-    if (outputLabel) outputLabel.textContent = action === 'encode' ? '转义结果' : '还原结果'
+    const t = currentTranslator()
+    if (resultStatus) resultStatus.textContent = action === 'encode' ? t('toolUi.html-entity.runtime.encodeDone') : t('toolUi.html-entity.runtime.decodeDone')
+    if (outputLabel) outputLabel.textContent = action === 'encode' ? t('toolUi.html-entity.runtime.encodedResult') : t('toolUi.html-entity.runtime.decodedResult')
     setValue(output, result.output)
     if (copyButton) copyButton.disabled = false
     if (downloadButton) downloadButton.disabled = false
@@ -78,7 +80,7 @@ function init() {
     const result = action === 'encode' ? encodeHtml(value, readMode(), readFormat()) : decodeHtml(value, root?.querySelector<HTMLInputElement>('#html-lenient')?.checked ?? false)
     if (!result.ok) {
       resetResult()
-      showError(errorBox, result.message, result.position)
+      showError(errorBox, currentTranslator()(`toolUi.html-entity.errors.${result.code}`, result.params), result.position)
       return
     }
     renderResult(result)
@@ -94,8 +96,9 @@ function init() {
       button.setAttribute('aria-selected', String(active))
     })
     panel?.setAttribute('aria-labelledby', action === 'encode' ? 'html-encode-tab' : 'html-decode-tab')
-    if (inputLabel) inputLabel.textContent = action === 'encode' ? '输入文本' : '输入 HTML 实体'
-    if (runLabel) runLabel.textContent = action === 'encode' ? '开始转义' : '开始还原'
+    const t = currentTranslator()
+    if (inputLabel) inputLabel.textContent = action === 'encode' ? t('toolUi.html-entity.runtime.inputEncodeLabel') : t('toolUi.html-entity.runtime.inputDecodeLabel')
+    if (runLabel) runLabel.textContent = action === 'encode' ? t('toolUi.html-entity.runtime.runEncode') : t('toolUi.html-entity.runtime.runDecode')
     if (input) input.placeholder = action === 'encode' ? '<div class="a">Tom & Jerry</div>' : '&lt;div&gt;Tom &amp; Jerry&lt;/div&gt;'
     clearError(errorBox)
     resetResult()

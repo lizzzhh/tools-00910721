@@ -1,4 +1,5 @@
 import { decodeUrl, encodeUrl, type UrlMode, type UrlResult } from '../lib/url'
+import { currentTranslator } from '../i18n/client'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
 
@@ -50,8 +51,9 @@ function init() {
 
   function showError(result: Extract<UrlResult, { ok: false }>) {
     if (!errorBox) return
-    const position = result.position === undefined ? '' : `第 ${result.position} 个字符：`
-    errorBox.textContent = `${position}${result.message}`
+    const t = currentTranslator()
+    const position = result.position === undefined ? '' : t('workspace.charPosition', { position: result.position })
+    errorBox.textContent = `${position}${t(`toolUi.url-encode.errors.${result.code}`)}`
     errorBox.hidden = false
   }
 
@@ -80,8 +82,9 @@ function init() {
   function renderResult(result: Extract<UrlResult, { ok: true }>) {
     processedOutput = result.output
     if (resultCard) resultCard.hidden = false
-    if (resultStatus) resultStatus.textContent = mode === 'encode' ? '编码完成' : '解码完成'
-    if (outputLabel) outputLabel.textContent = mode === 'encode' ? '编码结果' : '解码结果'
+    const t = currentTranslator()
+    if (resultStatus) resultStatus.textContent = mode === 'encode' ? t('toolUi.url-encode.runtime.doneEncode') : t('toolUi.url-encode.runtime.doneDecode')
+    if (outputLabel) outputLabel.textContent = mode === 'encode' ? t('toolUi.url-encode.runtime.encodedResult') : t('toolUi.url-encode.runtime.decodedResult')
     if (output) {
       output.value = result.output
       output.dataset.empty = 'false'
@@ -91,7 +94,7 @@ function init() {
     if (statInput) statInput.textContent = String(getInputLength())
     if (statOutput) statOutput.textContent = String(result.outputLength)
     if (statBytes) statBytes.textContent = formatBytes(result.byteLength)
-    if (statRule) statRule.textContent = getRule() === 'uri' ? '完整 URL' : 'URL 组件'
+    if (statRule) statRule.textContent = getRule() === 'uri' ? t('toolUi.url-encode.runtime.ruleUri') : t('toolUi.url-encode.runtime.ruleComponent')
   }
 
   function setMode(nextMode: OperationMode) {
@@ -103,9 +106,10 @@ function init() {
       button.setAttribute('aria-selected', String(active))
     })
     panel?.setAttribute('aria-labelledby', mode === 'encode' ? 'url-encode-tab' : 'url-decode-tab')
-    if (inputLabel) inputLabel.textContent = mode === 'encode' ? '输入文本或 URL' : '输入编码内容'
-    if (processLabel) processLabel.textContent = mode === 'encode' ? '开始编码' : '开始解码'
-    if (input) input.placeholder = mode === 'encode' ? '输入需要编码的 URL 或文本…' : '输入需要解码的 URL 编码…'
+    const t = currentTranslator()
+    if (inputLabel) inputLabel.textContent = mode === 'encode' ? t('toolUi.url-encode.runtime.inputEncodeLabel') : t('toolUi.url-encode.runtime.inputDecodeLabel')
+    if (processLabel) processLabel.textContent = mode === 'encode' ? t('toolUi.url-encode.runtime.startEncode') : t('toolUi.url-encode.runtime.startDecode')
+    if (input) input.placeholder = mode === 'encode' ? t('toolUi.url-encode.runtime.placeholderEncode') : t('toolUi.url-encode.runtime.placeholderDecode')
     clearError()
     resetResult()
   }
@@ -116,7 +120,7 @@ function init() {
     if (mode === 'decode' && !value.trim()) {
       resetResult()
       if (errorBox) {
-        errorBox.textContent = '请输入 URL 编码内容'
+        errorBox.textContent = currentTranslator()('toolUi.url-encode.runtime.needInput')
         errorBox.hidden = false
       }
       return
@@ -136,9 +140,9 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(processedOutput)
-      showToast('处理结果已复制')
+      showToast(currentTranslator()('toolUi.url-encode.runtime.toastCopied'))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择内容')
+      showToast(currentTranslator()('toolUi.url-encode.runtime.toastManual'))
     }
   }
 
@@ -150,7 +154,7 @@ function init() {
     link.download = mode === 'encode' ? 'encoded-url.txt' : 'decoded-url.txt'
     link.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    showToast('结果文件已准备下载')
+    showToast(currentTranslator()('toolUi.url-encode.runtime.toastDownload'))
   }
 
   function clearAll() {

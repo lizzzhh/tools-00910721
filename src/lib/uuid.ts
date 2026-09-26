@@ -57,7 +57,8 @@ export type UuidParsedRow = {
   index: number
   input: string
   details: UuidDetails | null
-  error: string | null
+  /** Maps to `uuidUi.errors.invalidBatchItem`; null when the row parsed. */
+  error: { code: 'invalidBatchItem'; params: { index: number } } | null
 }
 
 export type UuidListResult = {
@@ -430,7 +431,7 @@ export function parseUuidList(input: string): UuidListResult {
       index,
       input: token,
       details,
-      error: details ? null : `第 ${index} 项不是合法 UUID，需要 32 位十六进制字符`
+      error: details ? null : { code: 'invalidBatchItem', params: { index } }
     }
   })
 

@@ -1,4 +1,5 @@
 import { convertCase, type CaseStyle } from '../lib/text'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, toggleHidden } from './tool-panel'
 
@@ -29,7 +30,7 @@ function init() {
     processed = ''
     toggleHidden(resultCard, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'text-case-stat-words', '—')
@@ -46,7 +47,7 @@ function init() {
     processed = result.output
     setValue(output, result.output)
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = '转换完成'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.text-case.runtime.done')
     if (copyButton) copyButton.disabled = false
     if (downloadButton) downloadButton.disabled = false
     setStat(root, 'text-case-stat-words', formatNumber(result.words))

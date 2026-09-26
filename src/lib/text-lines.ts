@@ -26,6 +26,11 @@ export type ReplaceOptions = {
   wholeWord?: boolean
 }
 
+/** Codes the UI maps to `toolUi.text-replace.errors.*`. */
+export type ReplaceErrorCode = 'needInput' | 'invalidRegex'
+
+export type ReplaceErrorParams = { message?: string }
+
 export type ReplaceResult =
   | {
       ok: true
@@ -35,7 +40,8 @@ export type ReplaceResult =
     }
   | {
       ok: false
-      message: string
+      code: ReplaceErrorCode
+      params?: ReplaceErrorParams
     }
 
 function splitLines(input: string) {
@@ -128,7 +134,7 @@ function escapeRegExp(value: string) {
 export function replaceText(input: string, pattern: string, replacement: string, options: ReplaceOptions = {}): ReplaceResult {
   const { regex = false, caseSensitive = true, wholeWord = false } = options
 
-  if (!pattern) return { ok: false, message: '请输入要查找的内容' }
+  if (!pattern) return { ok: false, code: 'needInput' }
 
   let source = regex ? pattern : escapeRegExp(pattern)
   if (wholeWord) source = `(?<![\\p{L}\\p{N}_])${source}(?![\\p{L}\\p{N}_])`
@@ -143,7 +149,7 @@ export function replaceText(input: string, pattern: string, replacement: string,
   }
 
   const probe = createMatcher()
-  if (probe instanceof Error) return { ok: false, message: `正则表达式无效：${probe.message}` }
+  if (probe instanceof Error) return { ok: false, code: 'invalidRegex', params: { message: probe.message } }
 
   let matches = 0
   const groups: string[] = []

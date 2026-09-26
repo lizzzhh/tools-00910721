@@ -46,7 +46,8 @@ test('reports unknown entities with their position and supports lenient mode', (
 
   assert.equal(strict.ok, false)
   if (!strict.ok) {
-    assert.match(strict.message, /未知的实体/)
+    assert.equal(strict.code, 'unknownEntity')
+    assert.equal(strict.params.raw, '&bogus;')
     assert.equal(strict.position, 3)
   }
   assert.equal(lenient.ok && lenient.output, 'a &bogus; b')
@@ -59,7 +60,7 @@ test('reports numeric code points that are out of range', () => {
   const noDigits = decodeHtml('&#;')
 
   assert.equal(tooLarge.ok, false)
-  if (!tooLarge.ok) assert.match(tooLarge.message, /无效的字符码点/)
+  if (!tooLarge.ok) assert.equal(tooLarge.code, 'invalidCodePoint')
   assert.equal(noDigits.ok, true)
   if (noDigits.ok) assert.equal(noDigits.output, '&#;')
 })

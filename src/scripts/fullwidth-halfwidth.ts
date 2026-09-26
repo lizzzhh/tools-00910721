@@ -1,10 +1,12 @@
 import { convertWidth, type WidthMode } from '../lib/fullwidth'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, toggleHidden } from './tool-panel'
 
-const samples: Record<WidthMode, string> = {
-  'to-half': 'ＡＢＣ　カタカナ　你好，世界。（１２３）',
-  'to-full': 'ABC カタカナ 你好,世界.(123)'
+// The sample text is read on demand so it always matches the active locale.
+function getSample(mode: WidthMode) {
+  const t = currentTranslator()
+  return mode === 'to-full' ? t('toolUi.fullwidth-halfwidth.runtime.placeholderToFull') : t('toolUi.fullwidth-halfwidth.runtime.placeholderToHalf')
 }
 
 const mountedRoots = new WeakSet<HTMLElement>()
@@ -37,7 +39,7 @@ function init() {
     processed = ''
     toggleHidden(resultCard, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'fullwidth-stat-converted', '—')
@@ -57,7 +59,7 @@ function init() {
     processed = result.output
     setValue(output, result.output)
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = '转换完成'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.fullwidth-halfwidth.runtime.done')
     if (copyButton) copyButton.disabled = false
     if (downloadButton) downloadButton.disabled = false
     setStat(root, 'fullwidth-stat-converted', formatNumber(result.converted))
@@ -80,7 +82,7 @@ function init() {
   })
   runButton?.addEventListener('click', run)
   sampleButton?.addEventListener('click', () => {
-    if (input) input.value = samples[readMode()]
+    if (input) input.value = getSample(readMode())
     if (charCount) charCount.textContent = String(Array.from(input?.value ?? '').length)
     run()
   })

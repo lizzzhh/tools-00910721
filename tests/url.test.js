@@ -33,5 +33,6 @@ test('reports malformed percent escapes and unencodable surrogate pairs', () => 
   assert.equal(truncated.ok, false)
   assert.equal(loneSurrogate.ok, false)
   if (!malformed.ok) assert.equal(malformed.position, 21)
-  if (!loneSurrogate.ok) assert.match(loneSurrogate.message, /无法编码/)
+  if (!malformed.ok) assert.equal(malformed.code, 'malformedPercent')
+  if (!loneSurrogate.ok) assert.equal(loneSurrogate.code, 'unencodable')
 })

@@ -1,4 +1,5 @@
 import { dedupeLines, shuffleLines, sortLines, type SortMode } from '../lib/text-lines'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, showError, toggleHidden } from './tool-panel'
 
@@ -44,7 +45,7 @@ function init() {
     processed = ''
     toggleHidden(resultCard, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'text-dedupe-stat-total', '—')
@@ -58,7 +59,7 @@ function init() {
     const value = input?.value ?? ''
     if (value.trim().length === 0) {
       resetResult()
-      showError(errorBox, '请输入要处理的文本')
+      showError(errorBox, currentTranslator()('toolUi.text-deduplicate.runtime.needInput'))
       return
     }
 
@@ -75,7 +76,7 @@ function init() {
     processed = result.output
     setValue(output, result.output)
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = '处理完成'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.text-deduplicate.runtime.done')
     if (copyButton) copyButton.disabled = false
     if (downloadButton) downloadButton.disabled = false
     setStat(root, 'text-dedupe-stat-total', formatNumber(result.total))

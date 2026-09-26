@@ -49,12 +49,12 @@ test('reports invalid code points in escape sequences', () => {
 
   assert.equal(surrogate.ok, false)
   if (!surrogate.ok) {
-    assert.match(surrogate.message, /代理项/)
+    assert.equal(surrogate.code, 'loneSurrogate')
     assert.equal(surrogate.position, 1)
   }
   assert.equal(tooLarge.ok, false)
   assert.equal(badHex.ok, false)
-  if (!badHex.ok) assert.match(badHex.message, /无效的字符码点/)
+  if (!badHex.ok) assert.equal(badHex.code, 'invalidCodePoint')
 })
 
 test('inspects code points with UTF-8 bytes', () => {

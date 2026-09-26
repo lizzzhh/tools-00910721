@@ -1,6 +1,7 @@
 import { buildQueryString, countDuplicateKeys, parseQueryString, selectEntries, type QueryEntry } from '../lib/query-string'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, readCheckbox, setDisabled, setStat, setText, showError, toggleHidden } from './tool-panel'
+import { currentTranslator } from '../i18n/client'
 
 const sample = 'https://example.com/list?utm_source=weibo&utm_medium=%E7%A4%BE%E4%BA%A4&tags=%E4%B8%AD%E6%96%87&tags=%E6%8A%80%E6%9C%AF&draft&q=hello+world#section'
 
@@ -203,7 +204,7 @@ function init() {
       base = ''
       renderRows()
       sync()
-      showError(errorBox, result.message, result.position)
+      showError(errorBox, currentTranslator()(`toolUi.query-string.errors.${result.code}`, result.params), result.position)
       return
     }
 

@@ -1,4 +1,5 @@
 import { analyzeText } from '../lib/text-stats'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { formatBytes, formatNumber, setStat, toggleHidden } from './tool-panel'
 
@@ -28,14 +29,14 @@ function init() {
 
     if (value.length === 0) {
       toggleHidden(resultCard, true)
-      if (resultStatus) resultStatus.textContent = '等待输入'
+      if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waitingInput')
       used = false
       return
     }
 
     const stats = analyzeText(value)
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = '实时统计中'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.text-counter.runtime.liveCounting')
     setStat(root, 'text-counter-stat-characters', formatNumber(stats.characters))
     setStat(root, 'text-counter-stat-no-spaces', formatNumber(stats.charactersNoSpaces))
     setStat(root, 'text-counter-stat-words', formatNumber(stats.words))
@@ -50,7 +51,7 @@ function init() {
     setStat(root, 'text-counter-stat-punctuation', formatNumber(stats.punctuation))
     setStat(root, 'text-counter-stat-whitespace', formatNumber(stats.whitespace))
     setStat(root, 'text-counter-stat-longest', formatNumber(stats.longestWord))
-    setStat(root, 'text-counter-stat-reading', `${formatNumber(stats.readingMinutes)} 分钟`)
+    setStat(root, 'text-counter-stat-reading', currentTranslator()('toolUi.text-counter.runtime.minutesUnit', { count: formatNumber(stats.readingMinutes) }))
 
     if (!used) {
       used = true

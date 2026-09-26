@@ -16,7 +16,7 @@ const jaLatinAllow = new Set([
   'Docker', 'Compose', 'Nginx', 'Markdown', 'EXIF', 'OpenAPI', 'JSONPath', 'TypeScript', 'Schema',
   'SHA', 'HMAC', 'GUID', 'ULID', 'CSV', 'XML', 'YAML', 'SQL', 'Cron', 'API', 'APIs', 'HEX', 'RGB',
   'HSL', 'QR', 'TODO', 'OAuth', 'CRC32', 'bcrypt', 'argon2', 'AES', 'RSA', 'EC', 'ES', 'HS', 'PS',
-  'none', 'PBKDF2', 'scrypt', 'HTTPS', 'iOS', 'Web', 'ISO', 'RFC', 'plain', 'DEFLATE', 'GZIP',
+  'none', 'bits', 'PBKDF2', 'scrypt', 'HTTPS', 'iOS', 'Web', 'ISO', 'RFC', 'plain', 'DEFLATE', 'GZIP',
   'eyJ', 'ey', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'Nil', 'Max', 'NilUUID', 'MaxUUID',
   'UTF', 'Bitcoin', 'RFC', 'DNS', 'Punycode', 'IDN', 'Nginx', 'WebP', 'SVG', 'PDF', 'OCR',
   'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
@@ -47,6 +47,13 @@ const problems = []
 // fullwidth/halfwidth converter placeholder.
 const cjkPattern = /[\u3005\u3007\u3041-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff01-\uff0f\uff1a-\uff20\uff3b-\uff40\uff5b-\uff65]/
 
+/**
+ * Keys that hold conversion samples rather than prose. The fullwidth/halfwidth
+ * and Unicode tools intentionally mix scripts in their placeholders, so CJK in
+ * an English value and Latin in a Japanese value are both correct there.
+ */
+const SAMPLE_KEY = /\.(?:placeholderSample|placeholderToHalf|placeholderToFull|placeholder)$/
+
 const warn = []
 
 for (const [tag, table] of Object.entries(tables)) {
@@ -59,7 +66,8 @@ for (const [tag, table] of Object.entries(tables)) {
   for (const [key, value] of Object.entries(table)) {
     if (typeof value !== 'string' || !value.trim()) problems.push(`${tag}.${key}: empty or non-string value`)
     if (/[\u0400-\u04ff]/.test(value)) problems.push(`${tag}.${key}: CYRILLIC -> ${value}`)
-    if (tag === 'en' && cjkPattern.test(value)) problems.push(`${tag}.${key}: CJK in english -> ${value}`)
+    const isSample = SAMPLE_KEY.test(key)
+    if (tag === 'en' && !isSample && cjkPattern.test(value)) problems.push(`${tag}.${key}: CJK in english -> ${value}`)
     if (tag === 'ja') {
       const bad = [...value].find((ch) => simplifiedOnly.includes(ch) && !jaKanjiAllow.has(ch))
       if (bad) problems.push(`${tag}.${key}: SIMPLIFIED "${bad}" -> ${value}`)
@@ -67,6 +75,7 @@ for (const [tag, table] of Object.entries(tables)) {
       // (camelCase, path/case, an eyebrow label) and cannot contain stray Latin.
       const hasJapanese = /[\u3040-\u30ff\u4e00-\u9fff]/.test(value)
       if (!key.endsWith('.eyebrow') && hasJapanese) {
+        if (isSample) continue
         const stray = (value.replace(/\{\w+\}/g, '').match(/[A-Za-z]{2,}/g) ?? []).find((run) => !jaLatinAllow.has(run))
         if (stray) problems.push(`${tag}.${key}: STRAY LATIN "${stray}" -> ${value}`)
       }

@@ -82,7 +82,8 @@ test('reports malformed percent escapes with the segment position', () => {
 
   assert.equal(result.ok, false)
   if (!result.ok) {
-    assert.match(result.message, /第 2 个参数/)
+    assert.equal(result.code, 'badValueEncoding')
+    assert.equal(result.params.index, 2)
     assert.equal(result.position, 5)
   }
 })

@@ -1,4 +1,5 @@
 import { replaceText } from '../lib/text-lines'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, showError, toggleHidden } from './tool-panel'
 
@@ -54,7 +55,7 @@ function init() {
     toggleHidden(resultCard, true)
     toggleHidden(groupsWrap, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'text-replace-stat-matches', '—')
@@ -75,14 +76,15 @@ function init() {
 
     if (!result.ok) {
       resetResult()
-      showError(errorBox, result.message)
+      showError(errorBox, currentTranslator()(`toolUi.text-replace.errors.${result.code}`, result.params))
       return
     }
 
     processed = result.output
     setValue(output, result.output)
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = result.matches > 0 ? '替换完成' : '未找到匹配'
+    const t = currentTranslator()
+    if (resultStatus) resultStatus.textContent = result.matches > 0 ? t('toolUi.text-replace.runtime.done') : t('toolUi.text-replace.runtime.noMatch')
     if (copyButton) copyButton.disabled = false
     if (downloadButton) downloadButton.disabled = false
     setStat(root, 'text-replace-stat-matches', formatNumber(result.matches))

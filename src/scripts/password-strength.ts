@@ -1,4 +1,5 @@
 import { estimatePasswordStrength } from '../lib/security/passwords'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 
 const mountedRoots = new WeakSet<HTMLElement>()
@@ -32,7 +33,7 @@ function init() {
     if (!values.length) {
       const item = document.createElement('li')
       item.className = 'security-empty'
-      item.textContent = '暂无'
+      item.textContent = currentTranslator()('toolUi.password-strength.runtime.none')
       element.append(item)
       return
     }
@@ -46,14 +47,14 @@ function init() {
   function render(password: string) {
     const value = estimatePasswordStrength(password)
     if (result) result.dataset.level = value.level
-    if (status) status.textContent = password ? '评估完成' : '等待输入'
+    if (status) status.textContent = currentTranslator()(password ? 'toolUi.password-strength.runtime.done' : 'workspace.waitingInput')
     if (score) score.textContent = password ? String(value.score) : '—'
     if (label) label.textContent = value.label
     if (bar) {
       bar.style.width = password ? `${value.score}%` : '0%'
       bar.dataset.level = value.level
     }
-    if (entropy) entropy.textContent = password ? `估算熵值 ${value.entropy} bits · 字符池约 ${value.poolSize} 个` : '输入密码后显示熵值估算'
+    if (entropy) entropy.textContent = currentTranslator()(password ? 'toolUi.password-strength.runtime.entropy' : 'toolUi.password-strength.runtime.entropyHint', { bits: value.entropy, pool: value.poolSize })
     if (metrics) metrics.hidden = !password
     if (length) length.textContent = String(value.length)
     if (classes) classes.textContent = String(value.poolSize ? [/[a-z]/, /[A-Z]/, /[0-9]/].filter((pattern) => pattern.test(password)).length + ([...password].some((character) => !/[A-Za-z0-9\s]/.test(character)) ? 1 : 0) : 0)

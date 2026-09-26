@@ -1,4 +1,5 @@
 import { decodeUnicode, encodeUnicode, inspectCodePoints, type UnicodeResult, type UnicodeScope, type UnicodeStyle } from '../lib/unicode'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, showError, toggleHidden } from './tool-panel'
 
@@ -62,7 +63,7 @@ function init() {
     toggleHidden(resultCard, true)
     toggleHidden(tableWrap, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'unicode-stat-input', '—')
@@ -98,7 +99,8 @@ function init() {
       const report = inspectCodePoints(value)
       processed = report.rows.map((row) => `${row.character}\t${row.hex}\t${row.decimal}\t${row.utf8}`).join('\n')
       setValue(output, value)
-      showResult('码点解析完成', '原始文本')
+      const t = currentTranslator()
+    showResult(t('toolUi.unicode-escape.runtime.inspectDone'), t('toolUi.unicode-escape.runtime.originalText'))
       toggleHidden(tableWrap, false)
       if (rows) renderRows(rows, report.rows)
       setStat(root, 'unicode-stat-input', String(Array.from(value).length))
@@ -112,10 +114,11 @@ function init() {
     const result = action === 'encode' ? encodeUnicode(value, readStyle(), readScope()) : decodeUnicode(value)
     if (!result.ok) {
       resetResult()
-      showError(errorBox, result.message, result.position)
+      showError(errorBox, currentTranslator()(`toolUi.unicode-escape.errors.${result.code}`, result.params), result.position)
       return
     }
-    renderText(result, action === 'encode' ? '转义完成' : '还原完成', action === 'encode' ? '转义结果' : '还原结果')
+    const t = currentTranslator()
+    renderText(result, action === 'encode' ? t('toolUi.unicode-escape.runtime.encodeDone') : t('toolUi.unicode-escape.runtime.decodeDone'), action === 'encode' ? t('toolUi.unicode-escape.runtime.encodedResult') : t('toolUi.unicode-escape.runtime.decodedResult'))
     recordToolUsage('unicode-escape')
   }
 
@@ -129,10 +132,11 @@ function init() {
     })
     panel?.setAttribute('aria-labelledby', `unicode-${action === 'encode' ? 'escape' : action === 'decode' ? 'decode' : 'inspect'}-tab`)
     if (options) options.hidden = action !== 'encode'
-    if (inputLabel) inputLabel.textContent = action === 'inspect' ? '输入待查询的文本' : action === 'encode' ? '输入文本' : '输入转义序列'
-    if (runLabel) runLabel.textContent = action === 'inspect' ? '查询码点' : action === 'encode' ? '开始转义' : '开始还原'
+    const t = currentTranslator()
+    if (inputLabel) inputLabel.textContent = action === 'inspect' ? t('toolUi.unicode-escape.runtime.inputInspectLabel') : action === 'encode' ? t('toolUi.unicode-escape.runtime.inputEncodeLabel') : t('toolUi.unicode-escape.runtime.inputDecodeLabel')
+    if (runLabel) runLabel.textContent = action === 'inspect' ? t('toolUi.unicode-escape.runtime.runInspect') : action === 'encode' ? t('toolUi.unicode-escape.runtime.runEncode') : t('toolUi.unicode-escape.runtime.runDecode')
     if (input) {
-      input.placeholder = action === 'encode' ? '透明质的工具箱 😀' : action === 'decode' ? '\\u7801\\u95F4 \\uD83D\\uDE00' : '透明质的工具箱 😀'
+      input.placeholder = action === 'decode' ? '\\u7801\\u95F4 \\uD83D\\uDE00' : t('toolUi.unicode-escape.runtime.placeholderSample')
     }
     clearError(errorBox)
     resetResult()

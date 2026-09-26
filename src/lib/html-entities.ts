@@ -2,6 +2,11 @@ export type EntityMode = 'basic' | 'named' | 'all'
 
 export type EntityFormat = 'named' | 'decimal' | 'hex'
 
+/** Codes the UI maps to `toolUi.html-entity.errors.*`. */
+export type HtmlErrorCode = 'invalidCodePoint' | 'invalidSurrogate' | 'unknownEntity'
+
+export type HtmlErrorParams = { raw: string }
+
 export type HtmlResult =
   | {
       ok: true
@@ -12,7 +17,8 @@ export type HtmlResult =
     }
   | {
       ok: false
-      message: string
+      code: HtmlErrorCode
+      params?: HtmlErrorParams
       position?: number
     }
 
@@ -303,10 +309,10 @@ export function decodeHtml(input: string, lenient = false): HtmlResult {
       const isHex = body[1] === 'x' || body[1] === 'X'
       const codePoint = Number.parseInt(isHex ? body.slice(2) : body.slice(1), isHex ? 16 : 10)
       if (!Number.isFinite(codePoint) || codePoint > 0x10ffff) {
-        return { ok: false, message: `无效的字符码点 ${body}`, position: ampersand + 1 }
+        return { ok: false, code: 'invalidCodePoint', params: { raw: body }, position: ampersand + 1 }
       }
       if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
-        return { ok: false, message: `代理项码点 ${body} 不是有效字符`, position: ampersand + 1 }
+        return { ok: false, code: 'invalidSurrogate', params: { raw: body }, position: ampersand + 1 }
       }
       character = String.fromCodePoint(codePoint)
     } else {
@@ -318,7 +324,7 @@ export function decodeHtml(input: string, lenient = false): HtmlResult {
         searchFrom = ampersand + 1
         continue
       }
-      return { ok: false, message: `未知的实体 ${entity}`, position: ampersand + 1 }
+      return { ok: false, code: 'unknownEntity', params: { raw: entity }, position: ampersand + 1 }
     }
 
     output += input.slice(cursor, ampersand) + character

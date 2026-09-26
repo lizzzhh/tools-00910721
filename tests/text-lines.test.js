@@ -84,9 +84,9 @@ test('reports an empty search pattern and invalid regular expressions', () => {
   const invalid = replaceText('abc', '(unclosed', 'x', { regex: true })
 
   assert.equal(empty.ok, false)
-  if (!empty.ok) assert.match(empty.message, /请输入要查找的内容/)
+  if (!empty.ok) assert.equal(empty.code, 'needInput')
   assert.equal(invalid.ok, false)
-  if (!invalid.ok) assert.match(invalid.message, /正则表达式无效/)
+  if (!invalid.ok) assert.equal(invalid.code, 'invalidRegex')
 })
 
 test('deletes matches when the replacement is empty', () => {
