@@ -1,12 +1,13 @@
 ---
 import { Icon } from 'astro-icon/components'
 import BaseLayout from '../../layouts/BaseLayout.astro'
-import { prefixedLocales } from '../../i18n/config'
+import { localeMeta, prefixedLocales } from '../../i18n/config'
 import { createTranslator } from '../../i18n'
 import { localePath } from '../../i18n/config'
 
 export function getStaticPaths() {
-  return prefixedLocales.map((locale) => ({ params: { locale } }))
+  // the route param is the URL prefix (e.g. zh-tw), not the locale id
+  return prefixedLocales.map((locale) => ({ params: { locale: localeMeta[locale].prefix } }))
 }
 
 const locale = Astro.locals.locale

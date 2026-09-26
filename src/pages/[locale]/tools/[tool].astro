@@ -1,12 +1,15 @@
 ---
 import { getTool, localizeTool, tools } from '../../../data/tools'
 import ToolPage from '../../../components/ToolPage.astro'
-import { prefixedLocales } from '../../../i18n/config'
+import { localeMeta, prefixedLocales } from '../../../i18n/config'
 import { createTranslator } from '../../../i18n'
 import { localePath } from '../../../i18n/config'
 
 export function getStaticPaths() {
-  return prefixedLocales.flatMap((locale) => tools.map((tool) => ({ params: { locale, tool: tool.id } })))
+  // the route param is the URL prefix (e.g. zh-tw), not the locale id
+  return prefixedLocales.flatMap((locale) =>
+    tools.map((tool) => ({ params: { locale: localeMeta[locale].prefix, tool: tool.id } }))
+  )
 }
 
 const toolId = Astro.params.tool ?? ''
