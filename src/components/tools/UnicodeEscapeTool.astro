@@ -6,60 +6,60 @@ import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
 import { createTranslator } from '../../i18n'
 
-const styleOptions = [
-  { value: 'short', label: '\\uXXXX（代理对）' },
-  { value: 'long', label: '\\u{XXXXX}（码点）' },
-  { value: 'hex', label: '十六进制列表' },
-  { value: 'decimal', label: '十进制列表' }
-]
-
 const t = createTranslator(Astro.locals.locale)
+
+const styleOptions = [
+  { value: 'short', label: t('toolUi.unicode-escape.styleShort') },
+  { value: 'long', label: t('toolUi.unicode-escape.styleLong') },
+  { value: 'hex', label: t('toolUi.unicode-escape.styleHex') },
+  { value: 'decimal', label: t('toolUi.unicode-escape.styleDecimal') }
+]
 ---
 
 <section class="tool-workspace unicode-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>Unicode 转义</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>{t('tools.unicode-escape.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:scan-text" size={25} /></span>
-        <div><h1>Unicode 转义</h1><p>转义、还原与查询字符码点</p></div>
+        <div><h1>{t('tools.unicode-escape.name')}</h1><p>{t('toolUi.unicode-escape.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />支持 {'\\uXXXX'}、{'\\u{XXXXX}'}、{'\\xXX'}、{'\\0NN'}、<code>%uXXXX</code> 与 <code>{'&#nnn;'}</code> 形式的还原，处理均在浏览器本地完成。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.unicode-escape.notice')}</div>
 
   <Card class="tool-card">
-    <div class="input-mode" role="tablist" aria-label="Unicode 操作">
-      <button class="mode-button active" id="unicode-escape-tab" type="button" role="tab" aria-selected="true" aria-controls="unicode-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />转义</button>
-      <button class="mode-button" id="unicode-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="unicode-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />还原</button>
-      <button class="mode-button" id="unicode-inspect-tab" type="button" role="tab" aria-selected="false" aria-controls="unicode-panel" data-mode="inspect"><Icon name="lucide:search" size={17} />码点</button>
+    <div class="input-mode" role="tablist" aria-label={t('toolUi.unicode-escape.operationLabel')}>
+      <button class="mode-button active" id="unicode-escape-tab" type="button" role="tab" aria-selected="true" aria-controls="unicode-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />{t('toolUi.unicode-escape.opEncode')}</button>
+      <button class="mode-button" id="unicode-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="unicode-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />{t('toolUi.unicode-escape.opDecode')}</button>
+      <button class="mode-button" id="unicode-inspect-tab" type="button" role="tab" aria-selected="false" aria-controls="unicode-panel" data-mode="inspect"><Icon name="lucide:search" size={17} />{t('toolUi.unicode-escape.opCodepoints')}</button>
     </div>
     <div class="tool-options" id="unicode-encode-options">
       <div class="tool-options-row">
-        <SelectField id="unicode-style" label="转义形式" options={styleOptions} value="short" />
-        <span>代理对形式兼容 JSON 与 JavaScript 字符串，码点形式更易读。</span>
+        <SelectField id="unicode-style" label={t('toolUi.unicode-escape.styleLabel')} options={styleOptions} value="short" />
+        <span>{t('toolUi.unicode-escape.styleHint')}</span>
       </div>
       <div class="tool-option-section">
-        <span class="tool-option-heading">转义范围</span>
+        <span class="tool-option-heading">{t('toolUi.unicode-escape.scopeLabel')}</span>
         <div class="tool-option-grid">
-          <CheckboxField id="unicode-control" label="同时转义控制字符" />
+          <CheckboxField id="unicode-control" label={t('toolUi.unicode-escape.optControl')} />
         </div>
       </div>
     </div>
     <div class="mode-panel active" id="unicode-panel" role="tabpanel" aria-labelledby="unicode-escape-tab" data-panel="encode">
       <div class="field-heading">
-        <label for="unicode-input" id="unicode-input-label">输入文本</label>
+        <label for="unicode-input" id="unicode-input-label">{t('toolUi.unicode-escape.inputLabel')}</label>
         <span><b id="unicode-char-count">0</b> {t('common.charactersUnit')}</span>
       </div>
       <div class="textarea-wrap">
-        <textarea id="unicode-input" placeholder="透明质的工具箱 😀" spellcheck="false" autocomplete="off" autofocus></textarea>
+        <textarea id="unicode-input" placeholder={t('toolUi.unicode-escape.inputPlaceholder')} spellcheck="false" autocomplete="off" autofocus></textarea>
       </div>
     </div>
     <div class="security-error" id="unicode-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="unicode-run" class="calculate-button" variant="primary" icon="lucide:scan-text"><span id="unicode-run-label">开始转义</span></Button>
+      <Button id="unicode-run" class="calculate-button" variant="primary" icon="lucide:scan-text"><span id="unicode-run-label">{t('toolUi.unicode-escape.encodeButton')}</span></Button>
       <Button id="unicode-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
@@ -69,20 +69,20 @@ const t = createTranslator(Astro.locals.locale)
       <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
       <span id="unicode-result-status">{t('workspace.waiting')}</span>
     </div>
-    <div class="result-subheading" id="unicode-output-heading"><strong id="unicode-output-label">转义结果</strong><span>只读结果</span></div>
-    <textarea id="unicode-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="Unicode 处理结果"></textarea>
+    <div class="result-subheading" id="unicode-output-heading"><strong id="unicode-output-label">{t('toolUi.unicode-escape.resultTitle')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="unicode-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.unicode-escape.resultLabel')}></textarea>
     <div class="tool-result-actions">
-      <Button id="unicode-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="unicode-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="unicode-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="unicode-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
     </div>
     <div class="tool-stats" id="unicode-stats">
-      <div><span>输入字符</span><strong id="unicode-stat-input">—</strong></div>
-      <div><span>输出字符</span><strong id="unicode-stat-output">—</strong></div>
-      <div><span>处理数量</span><strong id="unicode-stat-count">—</strong></div>
-      <div><span>字符种类</span><strong id="unicode-stat-distinct">—</strong></div>
+      <div><span>{t('workspace.inputChars')}</span><strong id="unicode-stat-input">—</strong></div>
+      <div><span>{t('workspace.outputChars')}</span><strong id="unicode-stat-output">—</strong></div>
+      <div><span>{t('toolUi.unicode-escape.statHandled')}</span><strong id="unicode-stat-count">—</strong></div>
+      <div><span>{t('toolUi.unicode-escape.statDistinct')}</span><strong id="unicode-stat-distinct">—</strong></div>
     </div>
     <div id="unicode-table-wrap" hidden>
-      <div class="result-subheading tool-subsection"><strong>码点明细</strong><span>最多显示 500 个字符</span></div>
+      <div class="result-subheading tool-subsection"><strong>{t('toolUi.unicode-escape.tableTitle')}</strong><span>{t('toolUi.unicode-escape.tableHint')}</span></div>
       <div class="tool-rows" id="unicode-rows" data-columns="4"></div>
     </div>
   </Card>

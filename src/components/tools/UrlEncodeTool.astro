@@ -5,49 +5,49 @@ import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
 import { createTranslator } from '../../i18n'
 
-const ruleOptions = [
-  { value: 'component', label: 'URL 组件（encodeURIComponent）' },
-  { value: 'uri', label: '完整 URL（encodeURI）' }
-]
-
 const t = createTranslator(Astro.locals.locale)
+
+const ruleOptions = [
+  { value: 'component', label: t('toolUi.url-encode.ruleComponent') },
+  { value: 'uri', label: t('toolUi.url-encode.ruleUri') }
+]
 ---
 
 <section class="tool-workspace encoding-workspace url-workspace" aria-live="polite">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>URL 编解码</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>{t('tools.url-encode.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:link-2" size={25} /></span>
-        <div><h1>URL 编解码</h1><p>处理链接、路径与查询参数中的特殊字符</p></div>
+        <div><h1>{t('tools.url-encode.name')}</h1><p>{t('toolUi.url-encode.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />URL 组件模式会转义分隔符；完整 URL 模式会保留链接结构，所有处理均在本地完成。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.url-encode.notice')}</div>
 
   <Card class="tool-card">
-    <div class="input-mode" role="tablist" aria-label="URL 操作">
-      <button class="mode-button active" id="url-encode-tab" type="button" role="tab" aria-selected="true" aria-controls="url-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />编码</button>
-      <button class="mode-button" id="url-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="url-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />解码</button>
+    <div class="input-mode" role="tablist" aria-label={t('toolUi.url-encode.operationLabel')}>
+      <button class="mode-button active" id="url-encode-tab" type="button" role="tab" aria-selected="true" aria-controls="url-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />{t('toolUi.url-encode.opEncode')}</button>
+      <button class="mode-button" id="url-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="url-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />{t('toolUi.url-encode.opDecode')}</button>
     </div>
     <div class="encoding-options url-options">
-      <SelectField id="url-rule" label="处理规则" options={ruleOptions} value="component" />
-      <span>空格会编码为 %20；查询参数中的加号不会被当作空格。</span>
+      <SelectField id="url-rule" label={t('toolUi.url-encode.ruleLabel')} options={ruleOptions} value="component" />
+      <span>{t('toolUi.url-encode.ruleHint')}</span>
     </div>
     <div class="mode-panel active" id="url-panel" role="tabpanel" aria-labelledby="url-encode-tab" data-panel="encode">
       <div class="field-heading">
-        <label for="url-input" id="url-input-label">输入文本或 URL</label>
+        <label for="url-input" id="url-input-label">{t('toolUi.url-encode.inputLabel')}</label>
         <span><b id="url-char-count">0</b> {t('common.charactersUnit')}</span>
       </div>
       <div class="textarea-wrap">
-        <textarea id="url-input" placeholder="输入需要编码的 URL 或文本…" spellcheck="false" autocomplete="off" autofocus></textarea>
+        <textarea id="url-input" placeholder={t('toolUi.url-encode.inputPlaceholder')} spellcheck="false" autocomplete="off" autofocus></textarea>
       </div>
     </div>
     <div class="security-error" id="url-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="url-process" class="calculate-button" variant="primary" icon="lucide:link-2"><span id="url-process-label">开始编码</span></Button>
+      <Button id="url-process" class="calculate-button" variant="primary" icon="lucide:link-2"><span id="url-process-label">{t('toolUi.url-encode.encodeButton')}</span></Button>
       <Button id="url-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
@@ -57,17 +57,17 @@ const t = createTranslator(Astro.locals.locale)
       <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
       <span id="url-result-status">{t('workspace.waiting')}</span>
     </div>
-    <div class="result-subheading encoding-output-heading"><strong id="url-output-label">编码结果</strong><span>只读结果</span></div>
-    <textarea id="url-output" class="encoding-output" data-empty="true" readonly spellcheck="false" aria-label="URL 处理结果"></textarea>
+    <div class="result-subheading encoding-output-heading"><strong id="url-output-label">{t('toolUi.url-encode.resultTitle')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="url-output" class="encoding-output" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.url-encode.resultLabel')}></textarea>
     <div class="encoding-result-actions">
-      <Button id="url-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="url-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="url-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="url-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
     </div>
     <div class="encoding-stats">
-      <div><span>输入字符</span><strong id="url-stat-input">—</strong></div>
-      <div><span>输出字符</span><strong id="url-stat-output">—</strong></div>
-      <div><span>字节数</span><strong id="url-stat-bytes">—</strong></div>
-      <div><span>规则</span><strong id="url-stat-rule">—</strong></div>
+      <div><span>{t('workspace.inputChars')}</span><strong id="url-stat-input">—</strong></div>
+      <div><span>{t('workspace.outputChars')}</span><strong id="url-stat-output">—</strong></div>
+      <div><span>{t('workspace.bytes')}</span><strong id="url-stat-bytes">—</strong></div>
+      <div><span>{t('toolUi.url-encode.statRule')}</span><strong id="url-stat-rule">—</strong></div>
     </div>
   </Card>
 </section>

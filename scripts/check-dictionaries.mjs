@@ -21,6 +21,7 @@ const jaLatinAllow = new Set([
   'UTF', 'Bitcoin', 'RFC', 'DNS', 'Punycode', 'IDN', 'Nginx', 'WebP', 'SVG', 'PDF', 'OCR',
   'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
   'BigInt', 'base', 'kebab', 'camel', 'snake', 'pascal', 'train', 'dot', 'path', 'alternating',
+  'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8',, 'encodeURIComponent', 'encodeURI',
   'RAW', 'UTC', 'GMT', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
 ])
 
@@ -41,6 +42,11 @@ const simplifiedOnly = `这说过时会对没义产务问简转换语录码验�
 
 const source = tables['zh-CN']
 const problems = []
+// Ideographs, kana and CJK punctuation only. Fullwidth ASCII (\uff01-\uff5e
+// letters/digits/punctuation) is legitimate in English samples such as the
+// fullwidth/halfwidth converter placeholder.
+const cjkPattern = /[\u3005\u3007\u3041-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff01-\uff0f\uff1a-\uff20\uff3b-\uff40\uff5b-\uff65]/
+
 const warn = []
 
 for (const [tag, table] of Object.entries(tables)) {
@@ -53,7 +59,7 @@ for (const [tag, table] of Object.entries(tables)) {
   for (const [key, value] of Object.entries(table)) {
     if (typeof value !== 'string' || !value.trim()) problems.push(`${tag}.${key}: empty or non-string value`)
     if (/[\u0400-\u04ff]/.test(value)) problems.push(`${tag}.${key}: CYRILLIC -> ${value}`)
-    if (tag === 'en' && /[\u3000-\u9fff\uff00-\uffef]/.test(value)) problems.push(`${tag}.${key}: CJK in english -> ${value}`)
+    if (tag === 'en' && cjkPattern.test(value)) problems.push(`${tag}.${key}: CJK in english -> ${value}`)
     if (tag === 'ja') {
       const bad = [...value].find((ch) => simplifiedOnly.includes(ch) && !jaKanjiAllow.has(ch))
       if (bad) problems.push(`${tag}.${key}: SIMPLIFIED "${bad}" -> ${value}`)

@@ -11,41 +11,41 @@ const t = createTranslator(Astro.locals.locale)
 <section class="tool-workspace query-string-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>Query String 解析</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>{t('tools.query-string.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:list-ordered" size={25} /></span>
-        <div><h1>Query String 解析</h1><p>粘贴查询串，逐条编辑参数，实时同步结果</p></div>
+        <div><h1>{t('tools.query-string.name')}</h1><p>{t('toolUi.query-string.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />支持粘贴完整 URL、<code>?</code> 开头或纯查询串，边输入边解析；百分号编码与 <code>+</code> 空格会显示为解码后的值，所有处理在浏览器本地完成。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.query-string.noticeLead1')}<code>{t('toolUi.query-string.noticeCode1')}</code>{t('toolUi.query-string.noticeMid1')}<code>{t('toolUi.query-string.noticeCode2')}</code>{t('toolUi.query-string.noticeLead2')}</div>
 
   <Card class="tool-card">
     <div class="field-heading">
-      <label for="query-input">查询字符串</label>
+      <label for="query-input">{t('toolUi.query-string.inputLabel')}</label>
       <span><b id="query-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
-      <textarea id="query-input" spellcheck="false" autocomplete="off" autofocus placeholder="https://example.com/list?utm_source=weibo&tags=a&tags=b&draft#section"></textarea>
+      <textarea id="query-input" spellcheck="false" autocomplete="off" autofocus placeholder={t('toolUi.query-string.inputPlaceholder')}></textarea>
     </div>
     <div class="security-error" id="query-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="query-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="query-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="query-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
-      <span class="action-row-hint">输入即解析，编辑参数表会实时同步下方结果</span>
+      <span class="action-row-hint">{t('toolUi.query-string.editHint')}</span>
     </div>
     <div class="tool-options">
       <div class="tool-option-section">
-        <span class="tool-option-heading">输出选项</span>
+        <span class="tool-option-heading">{t('toolUi.query-string.outputLabel')}</span>
         <div class="tool-option-grid">
-          <CheckboxField id="query-encode" label="百分号编码" checked />
-          <CheckboxField id="query-plus" label="空格编码为 +" />
-          <CheckboxField id="query-keep-empty" label="包含无值参数" checked />
-          <CheckboxField id="query-sort" label="按键排序" />
-          <CheckboxField id="query-prefix" label="输出带 ? 前缀" />
-          <CheckboxField id="query-append-hash" label="附加哈希片段" />
+          <CheckboxField id="query-encode" label={t('toolUi.query-string.optEncode')} checked />
+          <CheckboxField id="query-plus" label={t('toolUi.query-string.optPlus')} />
+          <CheckboxField id="query-keep-empty" label={t('toolUi.query-string.optKeepEmpty')} checked />
+          <CheckboxField id="query-sort" label={t('toolUi.query-string.optSort')} />
+          <CheckboxField id="query-prefix" label={t('toolUi.query-string.optPrefix')} />
+          <CheckboxField id="query-append-hash" label={t('toolUi.query-string.optAppendHash')} />
         </div>
       </div>
     </div>
@@ -53,29 +53,29 @@ const t = createTranslator(Astro.locals.locale)
 
   <Card id="query-result" class="result-card">
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>参数表</strong></div>
+      <div><span class="status-dot"></span><strong>{t('toolUi.query-string.tableTitle')}</strong></div>
       <span id="query-result-status">{t('workspace.waiting')}</span>
     </div>
 
     <div class="field-heading tool-filter-bar">
-      <label for="query-filter">筛选参数</label>
+      <label for="query-filter">{t('toolUi.query-string.filterLabel')}</label>
       <div class="field-heading-actions">
-        <input id="query-filter" type="text" placeholder="按键或值筛选" autocomplete="off" spellcheck="false" />
-        <Button id="query-add" icon="lucide:plus">添加参数</Button>
+        <input id="query-filter" type="text" placeholder={t('toolUi.query-string.filterPlaceholder')} autocomplete="off" spellcheck="false" />
+        <Button id="query-add" icon="lucide:plus">{t('toolUi.query-string.addButton')}</Button>
       </div>
     </div>
 
     <div class="query-source" id="query-source" hidden>
-      <span class="query-source-label">来源</span>
+      <span class="query-source-label">{t('toolUi.query-string.sourceLabel')}</span>
       <code id="query-source-value"></code>
     </div>
 
     <div class="query-table">
       <div class="query-row query-row-head">
         <span>#</span>
-        <span>键</span>
-        <span>值</span>
-        <span class="query-row-head-actions">操作</span>
+        <span>{t('toolUi.query-string.colKey')}</span>
+        <span>{t('toolUi.query-string.colValue')}</span>
+        <span class="query-row-head-actions">{t('toolUi.query-string.colActions')}</span>
       </div>
       <div id="query-rows"></div>
       <p class="tool-empty-note" id="query-empty-state" hidden></p>
@@ -83,16 +83,16 @@ const t = createTranslator(Astro.locals.locale)
 
     <div class="security-error query-warning" id="query-duplicate-warning" role="status" hidden></div>
 
-    <div class="result-subheading tool-subsection"><strong>查询字符串</strong><span>点击即可复制</span></div>
+    <div class="result-subheading tool-subsection"><strong>{t('toolUi.query-string.outputHeading')}</strong><span>{t('toolUi.query-string.outputHeadingHint')}</span></div>
     <div class="query-output-row">
-      <input id="query-output" class="query-output" type="text" readonly spellcheck="false" autocomplete="off" title="点击复制查询字符串" placeholder="解析后在此显示纯查询字符串" aria-label="查询字符串" />
-      <Button id="query-download" icon="lucide:download" disabled>下载</Button>
+      <input id="query-output" class="query-output" type="text" readonly spellcheck="false" autocomplete="off" title={t('toolUi.query-string.outputTitle')} placeholder={t('toolUi.query-string.outputPlaceholder')} aria-label={t('toolUi.query-string.outputAria')} />
+      <Button id="query-download" icon="lucide:download" disabled>{t('toolUi.query-string.downloadButton')}</Button>
     </div>
     <div class="tool-stats">
-      <div><span>输出参数</span><strong id="query-stat-count">—</strong></div>
-      <div><span>键数量</span><strong id="query-stat-keys">—</strong></div>
-      <div><span>重复键</span><strong id="query-stat-duplicates">—</strong></div>
-      <div><span>输出长度</span><strong id="query-stat-length">—</strong></div>
+      <div><span>{t('toolUi.query-string.statCount')}</span><strong id="query-stat-count">—</strong></div>
+      <div><span>{t('toolUi.query-string.statKeys')}</span><strong id="query-stat-keys">—</strong></div>
+      <div><span>{t('toolUi.query-string.statDuplicates')}</span><strong id="query-stat-duplicates">—</strong></div>
+      <div><span>{t('toolUi.query-string.statLength')}</span><strong id="query-stat-length">—</strong></div>
     </div>
   </Card>
 </section>

@@ -6,55 +6,55 @@ import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
 import { createTranslator } from '../../i18n'
 
+const t = createTranslator(Astro.locals.locale)
+
 const modeOptions = [
-  { value: 'basic', label: '基础转义（< > & " \'）' },
-  { value: 'named', label: '常见符号命名实体' },
-  { value: 'all', label: '全部非 ASCII 字符' }
+  { value: 'basic', label: t('toolUi.html-entity.modeBasic') },
+  { value: 'named', label: t('toolUi.html-entity.modeNamed') },
+  { value: 'all', label: t('toolUi.html-entity.modeAll') }
 ]
 
 const formatOptions = [
-  { value: 'named', label: '命名实体' },
-  { value: 'decimal', label: '十进制码点' },
-  { value: 'hex', label: '十六进制码点' }
+  { value: 'named', label: t('toolUi.html-entity.formatNamed') },
+  { value: 'decimal', label: t('toolUi.html-entity.formatDecimal') },
+  { value: 'hex', label: t('toolUi.html-entity.formatHex') }
 ]
-
-const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace html-entity-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>HTML 实体转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>{t('tools.html-entity.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:code-xml" size={25} /></span>
-        <div><h1>HTML 实体转换</h1><p>在 HTML 特殊字符与实体之间转换</p></div>
+        <div><h1>{t('tools.html-entity.name')}</h1><p>{t('toolUi.html-entity.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />支持命名实体、十进制与十六进制码点，全部转换在浏览器本地完成。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.html-entity.notice')}</div>
 
   <Card class="tool-card">
-    <div class="input-mode" role="tablist" aria-label="HTML 实体操作">
-      <button class="mode-button active" id="html-encode-tab" type="button" role="tab" aria-selected="true" aria-controls="html-entity-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />转义</button>
-      <button class="mode-button" id="html-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="html-entity-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />还原</button>
+    <div class="input-mode" role="tablist" aria-label={t('toolUi.html-entity.operationLabel')}>
+      <button class="mode-button active" id="html-encode-tab" type="button" role="tab" aria-selected="true" aria-controls="html-entity-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />{t('toolUi.html-entity.opEncode')}</button>
+      <button class="mode-button" id="html-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="html-entity-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />{t('toolUi.html-entity.opDecode')}</button>
     </div>
     <div class="tool-options">
       <div class="tool-options-row">
-        <SelectField id="html-entity-mode" label="转义范围" options={modeOptions} value="basic" />
-        <SelectField id="html-entity-format" label="码点格式" options={formatOptions} value="named" />
+        <SelectField id="html-entity-mode" label={t('toolUi.html-entity.scopeLabel')} options={modeOptions} value="basic" />
+        <SelectField id="html-entity-format" label={t('toolUi.html-entity.formatLabel')} options={formatOptions} value="named" />
       </div>
       <div class="tool-option-section">
-        <span class="tool-option-heading">还原选项</span>
+        <span class="tool-option-heading">{t('toolUi.html-entity.decodeLabel')}</span>
         <div class="tool-option-grid">
-          <CheckboxField id="html-lenient" label="宽松模式（跳过未知实体）" />
+          <CheckboxField id="html-lenient" label={t('toolUi.html-entity.optLenient')} />
         </div>
       </div>
     </div>
     <div class="mode-panel active" id="html-entity-panel" role="tabpanel" aria-labelledby="html-encode-tab" data-panel="encode">
       <div class="field-heading">
-        <label for="html-entity-input" id="html-entity-input-label">输入文本</label>
+        <label for="html-entity-input" id="html-entity-input-label">{t('toolUi.html-entity.inputLabel')}</label>
         <span><b id="html-entity-char-count">0</b> {t('common.charactersUnit')}</span>
       </div>
       <div class="textarea-wrap">
@@ -63,8 +63,8 @@ const t = createTranslator(Astro.locals.locale)
     </div>
     <div class="security-error" id="html-entity-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="html-entity-run" class="calculate-button" variant="primary" icon="lucide:code-xml"><span id="html-entity-run-label">开始转义</span></Button>
-      <Button id="html-entity-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="html-entity-run" class="calculate-button" variant="primary" icon="lucide:code-xml"><span id="html-entity-run-label">{t('toolUi.html-entity.encodeButton')}</span></Button>
+      <Button id="html-entity-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="html-entity-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
@@ -74,17 +74,17 @@ const t = createTranslator(Astro.locals.locale)
       <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
       <span id="html-entity-result-status">{t('workspace.waiting')}</span>
     </div>
-    <div class="result-subheading"><strong id="html-entity-output-label">转义结果</strong><span>只读结果</span></div>
-    <textarea id="html-entity-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="HTML 实体处理结果"></textarea>
+    <div class="result-subheading"><strong id="html-entity-output-label">{t('toolUi.html-entity.resultTitle')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="html-entity-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.html-entity.resultLabel')}></textarea>
     <div class="tool-result-actions">
-      <Button id="html-entity-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="html-entity-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="html-entity-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="html-entity-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
     </div>
     <div class="tool-stats">
-      <div><span>输入字符</span><strong id="html-entity-stat-input">—</strong></div>
-      <div><span>输出字符</span><strong id="html-entity-stat-output">—</strong></div>
-      <div><span>替换数量</span><strong id="html-entity-stat-replaced">—</strong></div>
-      <div><span>长度变化</span><strong id="html-entity-stat-delta">—</strong></div>
+      <div><span>{t('workspace.inputChars')}</span><strong id="html-entity-stat-input">—</strong></div>
+      <div><span>{t('workspace.outputChars')}</span><strong id="html-entity-stat-output">—</strong></div>
+      <div><span>{t('toolUi.html-entity.statReplaced')}</span><strong id="html-entity-stat-replaced">—</strong></div>
+      <div><span>{t('toolUi.html-entity.statDelta')}</span><strong id="html-entity-stat-delta">—</strong></div>
     </div>
   </Card>
 </section>
