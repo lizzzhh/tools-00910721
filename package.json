@@ -13,6 +13,7 @@
   "dependencies": {
     "@astrojs/check": "^0.9.4",
     "@iconify-json/lucide": "^1.2.71",
+    "@iconify-json/mdi": "^1.2.3",
     "astro": "^5.13.5",
     "astro-icon": "^1.1.5",
     "crypto-js": "^4.2.0",

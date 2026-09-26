@@ -1,0 +1,72 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+
+const unitOptions = [
+  { value: 'auto', label: '自动识别' },
+  { value: 'seconds', label: '秒（10 位）' },
+  { value: 'milliseconds', label: '毫秒（13 位）' }
+]
+---
+
+<section class="tool-workspace timestamp-workspace">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>时间戳转换</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:calendar-clock" size={25} /></span>
+        <div><h1>时间戳转换</h1><p>Unix 时间戳与日期时间互转</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />时区取自浏览器本地设置，同时展示 UTC 与本地时间，转换在浏览器本地完成。</div>
+
+  <Card class="tool-card">
+    <div class="input-mode" role="tablist" aria-label="时间转换方向">
+      <button class="mode-button active" id="timestamp-from-tab" type="button" role="tab" aria-selected="true" aria-controls="timestamp-panel" data-mode="from-timestamp"><Icon name="lucide:hash" size={17} />时间戳转日期</button>
+      <button class="mode-button" id="timestamp-date-tab" type="button" role="tab" aria-selected="false" aria-controls="timestamp-panel" data-mode="from-date"><Icon name="lucide:calendar" size={17} />日期转时间戳</button>
+    </div>
+    <div class="tool-options">
+      <div class="tool-options-row" id="timestamp-unit-row">
+        <SelectField id="timestamp-unit" label="时间戳单位" options={unitOptions} value="auto" />
+        <span id="timestamp-hint">自动识别秒与毫秒，10 位以下按秒处理。</span>
+      </div>
+      <div class="tool-options-row" id="timestamp-utc-row" hidden>
+        <CheckboxField id="timestamp-assume-utc" label="无时区时按 UTC 解析" />
+      </div>
+    </div>
+    <div class="mode-panel active" id="timestamp-panel" role="tabpanel" aria-labelledby="timestamp-from-tab" data-panel="from-timestamp">
+      <div class="field-heading">
+        <label for="timestamp-input" id="timestamp-input-label">时间戳</label>
+        <span>支持负数与前后空格</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="timestamp-input" class="textarea-compact" spellcheck="false" autocomplete="off" placeholder="1767225600" autofocus></textarea>
+      </div>
+    </div>
+    <div class="security-error" id="timestamp-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="timestamp-run" class="calculate-button" variant="primary" icon="lucide:calendar-clock"><span>开始转换</span></Button>
+      <Button id="timestamp-now" icon="lucide:clock">当前时间</Button>
+      <Button id="timestamp-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="timestamp-result" class="result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>转换结果</strong></div>
+      <span id="timestamp-result-status">等待处理</span>
+    </div>
+    <div class="result-subheading"><strong>时间详情</strong><span>点击任意一行复制取值</span></div>
+    <div class="tool-rows" id="timestamp-rows"></div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/timestamp'
+</script>

@@ -3,11 +3,12 @@ interface Props {
   class?: string
   id?: string
   ariaLabel?: string
+  hidden?: boolean
 }
 
-const { class: className, id, ariaLabel } = Astro.props
+const { class: className, id, ariaLabel, hidden = false } = Astro.props
 ---
 
-<section id={id} class:list={['card-base', className]} aria-label={ariaLabel}>
+<section id={id} class:list={['card-base', className]} aria-label={ariaLabel} hidden={hidden}>
   <slot />
 </section>

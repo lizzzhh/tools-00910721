@@ -5,15 +5,16 @@ interface Props {
   id: string
   label: string
   name?: string
+  value?: string
   checked?: boolean
   disabled?: boolean
 }
 
-const { id, label, name, checked = false, disabled = false } = Astro.props
+const { id, label, name, value, checked = false, disabled = false } = Astro.props
 ---
 
 <label class="ui-checkbox" for={id}>
-  <input id={id} name={name} type="checkbox" checked={checked} disabled={disabled} />
-  <span class="ui-checkbox-box" aria-hidden="true"><Icon name="lucide:check" width={12} /></span>
+  <input id={id} name={name} value={value} type="checkbox" checked={checked} disabled={disabled} />
+  <span class="ui-checkbox-box" aria-hidden="true"><Icon name="lucide:check" size={12} /></span>
   <span class="ui-checkbox-label">{label}</span>
 </label>

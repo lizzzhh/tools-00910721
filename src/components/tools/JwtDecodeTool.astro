@@ -1,0 +1,60 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+
+---
+
+<section class="tool-workspace security-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>安全与加密</span><b>/</b><strong>JWT 解析</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:key-round" size={25} /></span>
+        <div><h1>JWT 解析</h1><p>查看令牌头部、载荷与时间声明</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />只解析内容，不验证签名；请勿粘贴真实密钥或隐私数据。</div>
+
+  <Card class="tool-card">
+    <div class="field-heading">
+      <label for="jwt-input">JWT 令牌</label>
+      <span><b id="jwt-char-count">0</b> 字符</span>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="jwt-input" placeholder="粘贴以 eyJ 开头的 JWT 令牌…" spellcheck="false" autocomplete="off" autofocus></textarea>
+    </div>
+    <div class="security-error" id="jwt-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="jwt-decode" class="calculate-button" variant="primary" icon="lucide:scan-line">解析令牌</Button>
+      <Button id="jwt-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="jwt-result" class="result-card security-result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>解析结果</strong></div>
+      <span id="jwt-result-status">等待解析</span>
+    </div>
+    <div class="jwt-state" id="jwt-state" data-level="unknown">等待输入</div>
+    <div class="jwt-claim-grid" id="jwt-claims"></div>
+    <div class="jwt-json-grid">
+      <div class="jwt-json-panel">
+        <div class="result-subheading"><strong>Header</strong><button id="jwt-copy-header" type="button" class="inline-copy" disabled><Icon name="lucide:copy" size={14} />复制</button></div>
+        <pre id="jwt-header" class="security-code"></pre>
+      </div>
+      <div class="jwt-json-panel">
+        <div class="result-subheading"><strong>Payload</strong><button id="jwt-copy-payload" type="button" class="inline-copy" disabled><Icon name="lucide:copy" size={14} />复制</button></div>
+        <pre id="jwt-payload" class="security-code"></pre>
+      </div>
+    </div>
+    <ul class="security-warnings" id="jwt-warnings"></ul>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/jwt-decode'
+</script>

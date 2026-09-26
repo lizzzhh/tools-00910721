@@ -1,0 +1,27 @@
+---
+import { Icon } from 'astro-icon/components'
+import type { Tool } from '../data/tools'
+
+interface Props {
+  tool: Tool
+}
+
+const { tool } = Astro.props
+---
+
+<article class:list={['catalog-tool', 'card-base', { planned: !tool.available }]} data-tool-card data-tool-id={tool.id} data-tool-search={`${tool.name} ${tool.description} ${tool.keywords.join(' ')}`} data-tool-category={tool.category}>
+  {tool.available ? (
+    <a class="catalog-tool-link" href={`/tools/${tool.id}/`}>
+      <span class="catalog-tool-icon"><Icon name={tool.icon} size={21} /></span>
+      <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{tool.category}</em></span>
+      <Icon name="lucide:arrow-up-right" size={16} />
+    </a>
+  ) : (
+    <div class="catalog-tool-link">
+      <span class="catalog-tool-icon"><Icon name={tool.icon} size={21} /></span>
+      <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{tool.category}</em></span>
+      <span class="catalog-planned-label">即将上线</span>
+    </div>
+  )}
+  {tool.available && <button class="catalog-favorite" type="button" data-favorite aria-label={`收藏${tool.name}`} aria-pressed="false"><span class="favorite-icon-empty"><Icon name="lucide:star" size={16} /></span><span class="favorite-icon-filled"><Icon name="mdi:star" size={16} /></span></button>}
+</article>

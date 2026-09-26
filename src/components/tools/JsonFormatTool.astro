@@ -1,0 +1,103 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+
+const indentOptions = [
+  { value: '2', label: '2 个空格' },
+  { value: '4', label: '4 个空格' },
+  { value: 'tab', label: 'Tab' }
+]
+
+const quoteOptions = [
+  { value: 'double', label: '双引号' },
+  { value: 'single', label: '单引号' }
+]
+---
+
+<section class="tool-workspace json-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>JSON 格式化</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:braces" size={25} /></span>
+        <div><h1>JSON 格式化</h1><p>格式化、压缩与校验 JSON 数据</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />所有解析和格式化均在浏览器本地完成，内容不会上传到服务器。</div>
+
+  <Card class="tool-card">
+    <div class="json-options">
+      <div class="json-options-selects">
+        <SelectField id="json-indent" label="缩进" options={indentOptions} value="2" />
+        <SelectField id="json-quote" label="字符串引号" options={quoteOptions} value="double" />
+      </div>
+      <div class="json-option-section">
+        <span class="json-option-heading">解析容错</span>
+        <div class="json-option-grid">
+          <CheckboxField id="json-relaxed" label="宽松解析" checked />
+          <CheckboxField id="json-allow-comments" label="允许注释" checked />
+          <CheckboxField id="json-allow-single-quotes" label="允许单引号" checked />
+          <CheckboxField id="json-allow-unquoted-keys" label="允许无引号键" checked />
+          <CheckboxField id="json-allow-trailing-commas" label="允许输入尾逗号" checked />
+          <CheckboxField id="json-allow-missing-commas" label="允许缺失逗号" checked />
+          <CheckboxField id="json-allow-missing-colons" label="允许缺失冒号" checked />
+          <CheckboxField id="json-allow-undefined" label="允许 undefined/NaN" checked />
+        </div>
+      </div>
+      <div class="json-option-section">
+        <span class="json-option-heading">输出选项</span>
+        <div class="json-option-grid">
+          <CheckboxField id="json-sort-keys" label="排序对象键" />
+          <CheckboxField id="json-escape-unicode" label="转义 Unicode" />
+          <CheckboxField id="json-trailing-commas" label="输出尾逗号" />
+          <CheckboxField id="json-array-line-breaks" label="数组逐项换行" checked />
+        </div>
+      </div>
+    </div>
+    <div class="field-heading">
+      <label for="json-input">输入 JSON</label>
+      <span><b id="json-char-count">0</b> 字符</span>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="json-input" placeholder={'{\n  "name": "码间",\n  "enabled": true\n}'} spellcheck="false" autocomplete="off" autofocus></textarea>
+    </div>
+    <div class="security-error" id="json-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="json-format" class="calculate-button" variant="primary" icon="lucide:braces">格式化</Button>
+      <Button id="json-minify" icon="lucide:minimize-2">压缩</Button>
+      <Button id="json-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="json-result" class="result-card json-result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>处理结果</strong></div>
+      <span id="json-result-status">等待处理</span>
+    </div>
+    <div class="json-repairs" id="json-repairs" role="status" hidden></div>
+    <div class="result-subheading json-output-heading"><strong>输出 JSON</strong><span>只读结果</span></div>
+    <textarea id="json-output" class="json-output" data-empty="true" readonly spellcheck="false" aria-label="格式化后的 JSON 输出"></textarea>
+    <div class="json-result-actions">
+      <Button id="json-copy" icon="lucide:copy" disabled>复制结果</Button>
+      <Button id="json-download" icon="lucide:download" disabled>下载 JSON</Button>
+    </div>
+    <div class="json-stats" id="json-stats">
+      <div><span>类型</span><strong id="json-stat-type">—</strong></div>
+      <div><span>深度</span><strong id="json-stat-depth">—</strong></div>
+      <div><span>对象键</span><strong id="json-stat-keys">—</strong></div>
+      <div><span>数组</span><strong id="json-stat-arrays">—</strong></div>
+      <div><span>值数量</span><strong id="json-stat-values">—</strong></div>
+      <div><span>大小</span><strong id="json-stat-bytes">—</strong></div>
+    </div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/json-format'
+</script>

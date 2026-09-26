@@ -1,0 +1,47 @@
+---
+import { Icon } from 'astro-icon/components'
+import { toolCategories, tools, plannedTools } from '../data/tools'
+import ToolCard from './ToolCard.astro'
+
+interface Props {
+  favoritesOnly?: boolean
+}
+
+const { favoritesOnly = false } = Astro.props
+const allTools = [...tools, ...plannedTools]
+---
+
+<section class="tool-catalog" data-catalog data-favorites-only={favoritesOnly ? 'true' : 'false'}>
+  <div class="catalog-heading">
+    <div>
+      <span class="eyebrow">TOOL DIRECTORY</span>
+      <h1>{favoritesOnly ? '我的收藏' : '工具中心'}</h1>
+      <p>{favoritesOnly ? '收藏常用工具，快速返回工作流。' : '按需选择工具，提升日常开发效率。'}</p>
+    </div>
+    <span class="catalog-count" id="catalog-count">{tools.length} 个可用 · {plannedTools.length} 个即将上线</span>
+  </div>
+
+  <div class="catalog-toolbar">
+    <label class="catalog-search">
+      <Icon name="lucide:search" size={17} />
+      <input id="catalog-search-input" type="search" placeholder="搜索工具名称或功能" autocomplete="off" />
+    </label>
+    <div class="catalog-filters" role="group" aria-label="工具分类">
+      <button class="catalog-filter active" type="button" data-category="all">全部</button>
+      {toolCategories.map((category) => <button class="catalog-filter" type="button" data-category={category.name}>{category.name}</button>)}
+    </div>
+  </div>
+
+  <div class="catalog-grid">
+    {allTools.map((tool) => <ToolCard tool={tool} />)}
+  </div>
+  <div class="catalog-empty" id="catalog-empty" hidden>
+    <Icon name={favoritesOnly ? 'lucide:star' : 'lucide:search-x'} size={22} />
+    <strong>{favoritesOnly ? '还没有收藏工具' : '没有找到相关工具'}</strong>
+    <span>{favoritesOnly ? '在工具中心点击星标即可收藏。' : '试试其他关键词或分类。'}</span>
+  </div>
+</section>
+
+<script>
+  import '../scripts/catalog'
+</script>

@@ -1,25 +1,27 @@
 ---
 import { Icon } from 'astro-icon/components'
-import { toolCategories, tools, plannedTools } from '../data/tools'
+import { allTools, toolCategories } from '../data/tools'
 
 interface Props {
   activeTool: string
+  activeNav: 'home' | 'tools' | 'favorites' | 'about'
 }
 
-const { activeTool } = Astro.props
-const availableTools = Object.fromEntries(tools.map((tool) => [tool.id, tool]))
+const { activeTool, activeNav } = Astro.props
+const categoryTools = new Map(toolCategories.map((category) => [category.name, allTools.filter((tool) => tool.category === category.name)]))
 ---
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-mobile-head">
     <strong>全部工具</strong>
-    <button class="icon-button" id="close-sidebar" type="button" aria-label="关闭工具菜单"><Icon name="lucide:x" width={20} /></button>
+    <button class="icon-button" id="close-sidebar" type="button" aria-label="关闭工具菜单"><Icon name="lucide:x" size={20} /></button>
   </div>
   <label class="tool-search">
-    <Icon name="lucide:search" width={17} />
+    <Icon name="lucide:search" size={17} />
     <input id="tool-search" type="search" placeholder="搜索工具" autocomplete="off" />
     <kbd>⌘ K</kbd>
   </label>
+  <a class:list={['tool-center-link', { active: activeNav === 'tools' }]} href="/tools/"><Icon name="lucide:layout-grid" size={17} /><span>工具中心</span></a>
   <div class="sidebar-scroll">
     {toolCategories.map((category, categoryIndex) => (
       <section class="tool-group" data-category={category.id}>
@@ -27,24 +29,24 @@ const availableTools = Object.fromEntries(tools.map((tool) => [tool.id, tool]))
           <span>{category.name}</span>
           <span>{String(categoryIndex + 1).padStart(2, '0')}</span>
         </div>
-        {category.tools.map((toolId) => {
-          const tool = availableTools[toolId]
-          if (!tool) return null
-          const active = activeTool === tool.id
+        {(categoryTools.get(category.name) ?? []).map((tool) => {
+          const active = tool.available && activeTool === tool.id
+          if (tool.available) {
+            return (
+              <a class:list={['tool-item', { active }]} href={`/tools/${tool.id}/`} data-search={`${tool.name} ${tool.description} ${tool.keywords.join(' ')}`} aria-current={active ? 'page' : undefined}>
+                <span class="tool-icon"><Icon name={tool.icon} size={19} /></span>
+                <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
+              </a>
+            )
+          }
           return (
-            <a class:list={['tool-item', { active }]} href={`/tools/${tool.id}/`} data-search={`${tool.name} ${tool.keywords.join(' ')}`} aria-current={active ? 'page' : undefined}>
-              <span class="tool-icon"><Icon name={tool.icon} width={19} /></span>
+            <button class="tool-item disabled" type="button" disabled data-search={`${tool.name} ${tool.description} ${tool.keywords.join(' ')}`}>
+              <span class="tool-icon"><Icon name={tool.icon} size={19} /></span>
               <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
-            </a>
+              <em>即将上线</em>
+            </button>
           )
         })}
-        {category.id === 'coming' && plannedTools.map((tool) => (
-          <button class="tool-item disabled" type="button" disabled data-search={`${tool.name} ${tool.keywords.join(' ')}`}>
-            <span class="tool-icon"><Icon name={tool.icon} width={19} /></span>
-            <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
-            <em>即将上线</em>
-          </button>
-        ))}
       </section>
     ))}
     <div class="empty-search" id="empty-search" hidden>没有找到相关工具</div>

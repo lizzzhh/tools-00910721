@@ -2,6 +2,7 @@
 import Header from '../components/Header.astro'
 import Sidebar from '../components/Sidebar.astro'
 import Footer from '../components/Footer.astro'
+import { ClientRouter } from 'astro:transitions'
 import '../styles/global.css'
 
 interface Props {
@@ -30,12 +31,13 @@ const { title, description, activeTool = '', activeNav = 'tools' } = Astro.props
         document.documentElement.classList.toggle('dark', dark)
       } catch {}
     </script>
+    <ClientRouter />
   </head>
   <body>
     <Header activeNav={activeNav} />
     <div class="mobile-backdrop" id="mobile-backdrop"></div>
     <div class="app-shell">
-      <Sidebar activeTool={activeTool} />
+      <Sidebar activeTool={activeTool} activeNav={activeNav} />
       <main class="main-content">
         <slot />
         <Footer />
@@ -49,6 +51,21 @@ const { title, description, activeTool = '', activeNav = 'tools' } = Astro.props
       <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
       <symbol id="icon-hash" viewBox="0 0 24 24"><path d="M10 3 8 21M16 3l-2 18M4 9h16M3 15h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></symbol>
     </svg>
+    <script is:inline>
+      (function () {
+        try {
+          var raw = sessionStorage.getItem('code-space-tool-switch-scroll')
+          if (!raw) return
+          sessionStorage.removeItem('code-space-tool-switch-scroll')
+          var saved = JSON.parse(raw)
+          var y = Number(saved && saved.y)
+          if (Number.isFinite(y) && y > 0) window.scrollTo(0, y)
+          var sidebarScroll = document.querySelector('.sidebar-scroll')
+          var sidebarTop = Number(saved && saved.sidebarTop)
+          if (sidebarScroll && Number.isFinite(sidebarTop)) sidebarScroll.scrollTop = sidebarTop
+        } catch (e) {}
+      })()
+    </script>
     <script>
       import '../scripts/site'
     </script>

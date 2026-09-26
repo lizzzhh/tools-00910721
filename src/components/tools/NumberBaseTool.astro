@@ -1,0 +1,63 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import SelectField from '../ui/SelectField.astro'
+import { baseLabels, numberBases } from '../../lib/number-base'
+
+const baseOptions = numberBases.map((base) => ({ value: String(base), label: `${base} · ${baseLabels[base]}` }))
+---
+
+<section class="tool-workspace number-base-workspace">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>进制转换</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:binary" size={25} /></span>
+        <div><h1>进制转换</h1><p>在 2、8、10、16、32、36 进制之间转换</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />使用 BigInt 计算，支持任意精度整数与 0b、0o、0x 前缀，可识别空格、下划线与千位分隔符。</div>
+
+  <Card class="tool-card">
+    <div class="tool-field-grid">
+      <SelectField id="number-base-from" label="输入进制" options={baseOptions} value="10" />
+      <div class="tool-field">
+        <label for="number-base-input">输入数字</label>
+        <input id="number-base-input" type="text" placeholder="1234567890" autocomplete="off" spellcheck="false" autofocus />
+      </div>
+    </div>
+    <div class="security-error" id="number-base-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="number-base-run" class="calculate-button" variant="primary" icon="lucide:arrow-right-left"><span>开始转换</span></Button>
+      <Button id="number-base-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="number-base-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="number-base-result" class="result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>转换结果</strong></div>
+      <span id="number-base-result-status">等待处理</span>
+    </div>
+    <div class="result-subheading"><strong>各进制表示</strong><span>点击任意一行即可复制</span></div>
+    <div class="tool-rows" id="number-base-rows"></div>
+    <div class="tool-result-actions">
+      <Button id="number-base-copy" icon="lucide:copy" disabled>复制结果</Button>
+      <Button id="number-base-download" icon="lucide:download" disabled>下载结果</Button>
+    </div>
+    <div class="tool-stats">
+      <div><span>十进制值</span><strong id="number-base-stat-decimal">—</strong></div>
+      <div><span>输入长度</span><strong id="number-base-stat-input">—</strong></div>
+      <div><span>二进制长度</span><strong id="number-base-stat-bits">—</strong></div>
+      <div><span>符号</span><strong id="number-base-stat-sign">—</strong></div>
+    </div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/number-base'
+</script>

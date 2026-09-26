@@ -1,6 +1,6 @@
 ---
 import { Icon } from 'astro-icon/components'
-import { tools } from '../data/tools'
+import { plannedTools, tools } from '../data/tools'
 import Button from './ui/Button.astro'
 import Card from './ui/Card.astro'
 import SectionHeading from './ui/SectionHeading.astro'
@@ -13,7 +13,7 @@ import SectionHeading from './ui/SectionHeading.astro'
       <h1>开发者工作台</h1>
       <p>欢迎回来，今天也保持专注，让工具处理琐碎，让代码保持清晰。</p>
     </div>
-    <a class="primary-button" href="/tools/md5/"><Icon name="lucide:grid-2x2" width={17} />进入工具中心</a>
+    <a class="primary-button" href="/tools/"><Icon name="lucide:grid-2x2" size={17} />进入工具中心</a>
   </div>
 
   <div class="dashboard-grid">
@@ -35,20 +35,22 @@ import SectionHeading from './ui/SectionHeading.astro'
     <Card class="usage-card">
       <SectionHeading eyebrow="LOCAL ACTIVITY" title="工具使用统计">
         <span class="local-label"><i></i>仅当前设备</span>
+        <span class="activity-count">TOP 5</span>
       </SectionHeading>
       <div class="usage-metrics">
         <div><span>累计使用</span><strong id="total-usage">0</strong><small>次</small></div>
         <div><span>今日使用</span><strong id="today-usage">0</strong><small>次</small></div>
         <div><span>最常用</span><strong id="favorite-tool">暂无</strong><small id="favorite-count">0 次</small></div>
       </div>
-      <div class="usage-bars" id="usage-bars">
+      <div class="usage-bars" id="usage-bars" hidden>
         {tools.map((tool) => (
           <div class="usage-bar-row" data-tool-id={tool.id}>
-            <div><span><Icon name={tool.icon} width={14} />{tool.name}</span><b data-tool-count>0</b></div>
+            <div><span><Icon name={tool.icon} size={14} />{tool.name}</span><b data-tool-count>0</b></div>
             <i><span data-tool-bar></span></i>
           </div>
         ))}
       </div>
+      <div class="usage-empty" id="usage-empty"><Icon name="lucide:chart-no-axes-column" size={18} /><span>还没有使用记录<br /><small>使用工具后这里会按次数显示前五名</small></span></div>
     </Card>
   </div>
 
@@ -58,16 +60,18 @@ import SectionHeading from './ui/SectionHeading.astro'
       <div class="quick-tool-list">
         {tools.map((tool) => (
           <a class="quick-tool" href={`/tools/${tool.id}/`}>
-            <span class="quick-tool-icon"><Icon name={tool.icon} width={19} /></span>
+            <span class="quick-tool-icon"><Icon name={tool.icon} size={19} /></span>
             <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
-            <Icon name="lucide:arrow-up-right" width={16} />
+            <Icon name="lucide:arrow-up-right" size={16} />
           </a>
         ))}
-        <div class="quick-tool coming">
-          <span class="quick-tool-icon"><Icon name="lucide:braces" width={19} /></span>
-          <span><strong>JSON 格式化</strong><small>格式化与校验</small></span>
-          <em>即将上线</em>
-        </div>
+        {plannedTools.slice(0, 3).map((tool) => (
+          <div class="quick-tool coming">
+            <span class="quick-tool-icon"><Icon name={tool.icon} size={19} /></span>
+            <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
+            <em>即将上线</em>
+          </div>
+        ))}
       </div>
     </Card>
 
@@ -75,7 +79,7 @@ import SectionHeading from './ui/SectionHeading.astro'
       <SectionHeading eyebrow="RECENT ACTIVITY" title="最近使用">
         <span class="activity-count" id="activity-count">0 条记录</span>
       </SectionHeading>
-      <div class="activity-empty" id="activity-empty"><Icon name="lucide:history" width={18} /><span>还没有使用记录<br /><small>去工具中心试试第一个工具吧</small></span></div>
+      <div class="activity-empty" id="activity-empty"><Icon name="lucide:history" size={18} /><span>还没有使用记录<br /><small>去工具中心试试第一个工具吧</small></span></div>
       <ol class="activity-list" id="activity-list" hidden></ol>
     </Card>
   </div>

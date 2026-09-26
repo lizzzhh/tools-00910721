@@ -1,7 +1,24 @@
 ---
 import { Icon } from 'astro-icon/components'
 import BaseLayout from '../layouts/BaseLayout.astro'
-import Md5Tool from '../components/tools/Md5Tool.astro'
+import JwtDecodeTool from '../components/tools/JwtDecodeTool.astro'
+import PasswordGeneratorTool from '../components/tools/PasswordGeneratorTool.astro'
+import PasswordStrengthTool from '../components/tools/PasswordStrengthTool.astro'
+import HashTool from '../components/tools/HashTool.astro'
+import JsonFormatTool from '../components/tools/JsonFormatTool.astro'
+import Base64Tool from '../components/tools/Base64Tool.astro'
+import UrlEncodeTool from '../components/tools/UrlEncodeTool.astro'
+import HtmlEntityTool from '../components/tools/HtmlEntityTool.astro'
+import UnicodeEscapeTool from '../components/tools/UnicodeEscapeTool.astro'
+import QueryStringTool from '../components/tools/QueryStringTool.astro'
+import NumberBaseTool from '../components/tools/NumberBaseTool.astro'
+import UuidGeneratorTool from '../components/tools/UuidGeneratorTool.astro'
+import UuidParserTool from '../components/tools/UuidParserTool.astro'
+import TimestampTool from '../components/tools/TimestampTool.astro'
+import TextCaseTool from '../components/tools/TextCaseTool.astro'
+import TextCounterTool from '../components/tools/TextCounterTool.astro'
+import TextDedupeTool from '../components/tools/TextDedupeTool.astro'
+import TextReplaceTool from '../components/tools/TextReplaceTool.astro'
 import type { Tool } from '../data/tools'
 
 interface Props {
@@ -11,14 +28,14 @@ interface Props {
 const { tool } = Astro.props
 ---
 
-<BaseLayout title={`${tool.name} · 码间`} description={`${tool.name}：${tool.description}。在浏览器本地快速计算。`} activeTool={tool.id} activeNav="tools">
-  {tool.id === 'md5' ? <Md5Tool /> : (
+<BaseLayout title={`${tool.name} · 码间`} description={`${tool.name}：${tool.description}。所有处理均在浏览器本地完成。`} activeTool={tool.id} activeNav="tools">
+  {tool.id === 'hash' ? <HashTool /> : tool.id === 'jwt-decode' ? <JwtDecodeTool /> : tool.id === 'password-generator' ? <PasswordGeneratorTool /> : tool.id === 'password-strength' ? <PasswordStrengthTool /> : tool.id === 'json-format' ? <JsonFormatTool /> : tool.id === 'base64' ? <Base64Tool /> : tool.id === 'url-encode' ? <UrlEncodeTool /> : tool.id === 'html-entity' ? <HtmlEntityTool /> : tool.id === 'unicode-escape' ? <UnicodeEscapeTool /> : tool.id === 'query-string' ? <QueryStringTool /> : tool.id === 'number-base' ? <NumberBaseTool /> : tool.id === 'uuid-generator' ? <UuidGeneratorTool /> : tool.id === 'uuid-parser' ? <UuidParserTool /> : tool.id === 'timestamp-converter' ? <TimestampTool /> : tool.id === 'text-case' ? <TextCaseTool /> : tool.id === 'text-counter' ? <TextCounterTool /> : tool.id === 'text-deduplicate' ? <TextDedupeTool /> : tool.id === 'text-replace' ? <TextReplaceTool /> : (
     <section class="simple-page card-base">
       <span class="eyebrow">COMING SOON</span>
-      <div class="simple-page-icon"><Icon name={tool.icon} width={30} /></div>
+      <div class="simple-page-icon"><Icon name={tool.icon} size={30} /></div>
       <h1>{tool.name}</h1>
-      <p>该工具正在开发中，你可以先使用 MD5 计算工具。</p>
-      <a class="primary-button" href="/tools/md5/">使用 MD5 工具<Icon name="lucide:arrow-right" width={18} /></a>
+      <p>该工具正在开发中，你可以先使用其他工具。</p>
+      <a class="primary-button" href="/tools/">浏览工具中心<Icon name="lucide:arrow-right" size={18} /></a>
     </section>
   )}
 </BaseLayout>

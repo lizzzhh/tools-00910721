@@ -1,0 +1,98 @@
+---
+import { Icon } from 'astro-icon/components'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import { digestAlgorithms, hmacAlgorithms } from '../../lib/security/digests'
+
+const outputCaseOptions = [
+  { value: 'lower', label: '小写' },
+  { value: 'upper', label: '大写' }
+]
+---
+
+<section class="tool-workspace security-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>安全与加密</span><b>/</b><strong>哈希计算</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:hash" size={25} /></span>
+        <div><h1>哈希计算</h1><p>同时计算多种摘要与 HMAC 签名</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />可同时勾选多种算法，文本或文件均会一次计算全部结果；HMAC 需要填写密钥。</div>
+
+  <Card class="tool-card">
+    <div class="input-mode" role="tablist" aria-label="输入类型">
+      <button class="mode-button active" id="hash-text-tab" type="button" role="tab" aria-selected="true" aria-controls="hash-text-panel" data-mode="text"><Icon name="lucide:text" size={17} />文本输入</button>
+      <button class="mode-button" id="hash-file-tab" type="button" role="tab" aria-selected="false" aria-controls="hash-file-panel" data-mode="file"><Icon name="lucide:file" size={17} />文件计算</button>
+    </div>
+
+    <div class="algorithm-section">
+      <span class="security-label">摘要算法</span>
+      <div class="security-option-grid">
+        {digestAlgorithms.map((algorithm) => <CheckboxField id={`hash-algo-${algorithm.id}`} name="hash-algorithms" value={algorithm.id} label={algorithm.label} checked={algorithm.id === 'md5' || algorithm.id === 'sha-256'} />)}
+      </div>
+    </div>
+
+    <div class="algorithm-section">
+      <span class="security-label">HMAC 签名<i class="security-label-note">需填写密钥</i></span>
+      <div class="security-option-grid">
+        {hmacAlgorithms.map((algorithm) => <CheckboxField id={`hash-algo-${algorithm.id}`} name="hash-algorithms" value={algorithm.id} label={algorithm.label} />)}
+      </div>
+    </div>
+
+    <div class="security-field hash-key-field" id="hash-key-field" hidden>
+      <div class="field-heading"><label for="hash-key">密钥</label><div class="field-heading-actions"><CheckboxField id="hash-show-key" label="显示密钥" /></div></div>
+      <input class="security-input" id="hash-key" type="password" placeholder="输入用于 HMAC 的密钥…" spellcheck="false" autocomplete="new-password" />
+    </div>
+
+    <div class="mode-panel active" id="hash-text-panel" role="tabpanel" aria-labelledby="hash-text-tab" data-panel="text">
+      <div class="field-heading">
+        <label for="hash-input">输入文本</label>
+        <div class="field-heading-actions"><span><b id="hash-char-count">0</b> 字符</span><CheckboxField id="hash-realtime" label="实时计算" checked /></div>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="hash-input" placeholder="在此输入需要计算哈希的文本…" spellcheck="false" autocomplete="off" autofocus></textarea>
+      </div>
+    </div>
+
+    <div class="mode-panel" id="hash-file-panel" role="tabpanel" aria-labelledby="hash-file-tab" data-panel="file" hidden>
+      <input id="hash-file-input" type="file" hidden />
+      <label class="drop-zone" id="hash-drop-zone" for="hash-file-input" tabindex="0">
+        <span class="drop-icon"><Icon name="lucide:upload-cloud" size={27} /></span>
+        <strong id="hash-drop-title">拖放文件到这里，或点击选择</strong>
+        <small id="hash-drop-meta">支持任意文件类型，文件不会离开你的设备</small>
+      </label>
+      <div class="file-progress" id="hash-progress" hidden>
+        <div class="file-progress-heading"><span id="hash-progress-label">准备计算</span><b id="hash-progress-percent">0%</b></div>
+        <div class="file-progress-track"><i id="hash-progress-bar"></i></div>
+        <small id="hash-progress-detail">0 B / 0 B</small>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <Button id="hash-calculate" class="calculate-button" variant="primary" icon="lucide:hash">计算摘要</Button>
+      <Button id="hash-cancel" hidden>停止计算</Button>
+      <Button id="hash-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card class="result-card security-result-card" ariaLabel="哈希结果">
+    <div class="result-heading"><div><span class="status-dot"></span><strong>计算摘要</strong></div><span id="hash-result-status">等待输入</span></div>
+    <div class="hash-result-list" id="hash-results"></div>
+    <div class="hash-result-actions">
+      <Button id="hash-copy-all" icon="lucide:copy">复制全部</Button>
+      <SelectField id="hash-output-case" label="输出" value="lower" options={outputCaseOptions} />
+    </div>
+    <div class="result-meta"><span id="hash-algorithm-count">未选择算法</span><span id="hash-detail">选择算法后计算摘要</span></div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/hash'
+</script>

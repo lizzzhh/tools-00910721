@@ -1,0 +1,78 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import SelectField from '../ui/SelectField.astro'
+
+const encodingOptions = [
+  { value: 'base32', label: 'Base32（RFC 4648）' },
+  { value: 'base58', label: 'Base58（Bitcoin）' },
+  { value: 'base62', label: 'Base62' },
+  { value: 'base64', label: 'Base64（标准）' },
+  { value: 'base85', label: 'Base85（Ascii85）' },
+  { value: 'base91', label: 'Base91' }
+]
+---
+
+<section class="tool-workspace encoding-workspace base64-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>Base 编解码</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:binary" size={25} /></span>
+        <div><h1>Base 编解码</h1><p>在文本与 Base 编码之间转换</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />支持 UTF-8 文本、Base32、Base58、Base62、标准 Base64、Ascii85 与 Base91；内容不会离开当前设备。</div>
+
+  <Card class="tool-card">
+    <div class="input-mode" role="tablist" aria-label="Base 编码操作">
+      <button class="mode-button active" id="base64-encode-tab" type="button" role="tab" aria-selected="true" aria-controls="base64-panel" data-mode="encode"><Icon name="lucide:arrow-up-from-line" size={17} />编码</button>
+      <button class="mode-button" id="base64-decode-tab" type="button" role="tab" aria-selected="false" aria-controls="base64-panel" data-mode="decode"><Icon name="lucide:arrow-down-to-line" size={17} />解码</button>
+    </div>
+    <div class="encoding-options base-encoding-options">
+      <SelectField id="base-encoding" label="算法" options={encodingOptions} value="base64" />
+      <span>支持 Base32、Base58、Base62、标准 Base64、Ascii85 和 Base91</span>
+    </div>
+    <div class="mode-panel active" id="base64-panel" role="tabpanel" aria-labelledby="base64-encode-tab" data-panel="encode">
+      <div class="field-heading">
+        <label for="base64-input" id="base64-input-label">输入文本</label>
+        <span><b id="base64-char-count">0</b> 字符</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="base64-input" placeholder="输入要编码的文本…" spellcheck="false" autocomplete="off" autofocus></textarea>
+      </div>
+    </div>
+    <div class="security-error" id="base64-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="base64-process" class="calculate-button" variant="primary" icon="lucide:binary"><span id="base64-process-label">开始编码</span></Button>
+      <Button id="base64-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="base64-result" class="result-card encoding-result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>处理结果</strong></div>
+      <span id="base64-result-status">等待处理</span>
+    </div>
+    <div class="result-subheading encoding-output-heading"><strong id="base64-output-label">编码结果</strong><span>只读结果</span></div>
+    <textarea id="base64-output" class="encoding-output" data-empty="true" readonly spellcheck="false" aria-label="Base 编码处理结果"></textarea>
+    <div class="encoding-result-actions">
+      <Button id="base64-copy" icon="lucide:copy" disabled>复制结果</Button>
+      <Button id="base64-download" icon="lucide:download" disabled>下载结果</Button>
+    </div>
+    <div class="encoding-stats">
+      <div><span>输入字符</span><strong id="base64-stat-input">—</strong></div>
+      <div><span>输出字符</span><strong id="base64-stat-output">—</strong></div>
+      <div><span>字节数</span><strong id="base64-stat-bytes">—</strong></div>
+      <div><span>格式</span><strong id="base64-stat-format">—</strong></div>
+    </div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/base64'
+</script>

@@ -1,0 +1,92 @@
+const storageKey = 'code-space-favorites'
+const mountedCatalogs = new WeakSet<HTMLElement>()
+
+function getFavorites() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(storageKey) ?? '[]')
+    return new Set(Array.isArray(stored) ? stored.filter((item): item is string => typeof item === 'string') : [])
+  } catch {
+    return new Set<string>()
+  }
+}
+
+function saveFavorites(favorites: Set<string>) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify([...favorites]))
+  } catch {}
+}
+
+function initCatalog() {
+  const catalog = document.querySelector<HTMLElement>('[data-catalog]')
+  if (!catalog || mountedCatalogs.has(catalog)) return
+  mountedCatalogs.add(catalog)
+
+  const searchInput = catalog.querySelector<HTMLInputElement>('#catalog-search-input')
+  const cards = Array.from(catalog.querySelectorAll<HTMLElement>('[data-tool-card]'))
+  const filters = Array.from(catalog.querySelectorAll<HTMLButtonElement>('[data-category]'))
+  const empty = catalog.querySelector<HTMLElement>('#catalog-empty')
+  const count = catalog.querySelector<HTMLElement>('#catalog-count')
+  const favoritesOnly = catalog.dataset.favoritesOnly === 'true'
+  const availableCount = cards.filter((card) => !card.classList.contains('planned')).length
+  const plannedCount = cards.length - availableCount
+  const favorites = getFavorites()
+
+  function syncFavoriteState() {
+    cards.forEach((card) => {
+      const favorite = favorites.has(card.dataset.toolId ?? '')
+      card.classList.toggle('is-favorite', favorite)
+      const button = card.querySelector<HTMLButtonElement>('[data-favorite]')
+      if (!button) return
+      button.setAttribute('aria-pressed', String(favorite))
+      const label = favorite ? '取消收藏' : '收藏'
+      button.setAttribute('aria-label', `${label}${card.querySelector('strong')?.textContent ?? ''}`)
+    })
+  }
+
+  function applyFilters() {
+    const keyword = searchInput?.value.trim().toLocaleLowerCase() ?? ''
+    const selectedCategory = filters.find((filter) => filter.classList.contains('active'))?.dataset.category ?? 'all'
+    let visibleCount = 0
+    cards.forEach((card) => {
+      const searchText = card.dataset.toolSearch?.toLocaleLowerCase() ?? ''
+      const categoryMatch = selectedCategory === 'all' || card.dataset.toolCategory === selectedCategory
+      const favoriteMatch = !favoritesOnly || favorites.has(card.dataset.toolId ?? '')
+      const keywordMatch = !keyword || searchText.includes(keyword)
+      const visible = categoryMatch && favoriteMatch && keywordMatch
+      card.hidden = !visible
+      if (visible) visibleCount += 1
+    })
+    if (empty) empty.hidden = visibleCount > 0
+    if (count) {
+      if (favoritesOnly) count.textContent = `${visibleCount} 个收藏工具`
+      else if (!keyword && selectedCategory === 'all') count.textContent = `${availableCount} 个可用 · ${plannedCount} 个即将上线`
+      else count.textContent = `${visibleCount} 个结果`
+    }
+  }
+
+  catalog.addEventListener('click', (event) => {
+    const favoriteButton = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-favorite]')
+    if (favoriteButton) {
+      const card = favoriteButton.closest<HTMLElement>('[data-tool-card]')
+      const toolId = card?.dataset.toolId
+      if (!toolId) return
+      if (favorites.has(toolId)) favorites.delete(toolId)
+      else favorites.add(toolId)
+      saveFavorites(favorites)
+      syncFavoriteState()
+      applyFilters()
+      return
+    }
+    const filter = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-category]')
+    if (!filter) return
+    filters.forEach((item) => item.classList.toggle('active', item === filter))
+    applyFilters()
+  })
+
+  searchInput?.addEventListener('input', applyFilters)
+  syncFavoriteState()
+  applyFilters()
+}
+
+document.addEventListener('astro:page-load', initCatalog)
+initCatalog()

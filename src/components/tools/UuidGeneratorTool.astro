@@ -1,0 +1,115 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import SelectField from '../ui/SelectField.astro'
+import { uuidDomains, uuidNamespaces, uuidVersions } from '../../lib/uuid'
+
+const versionOptions = uuidVersions.map((spec) => ({ value: String(spec.version), label: spec.label }))
+const namespaceOptions = uuidNamespaces.map((item) => ({ value: item.id, label: item.label }))
+const domainOptions = uuidDomains.map((item) => ({ value: String(item.value), label: item.label }))
+const caseOptions = [
+  { value: 'lower', label: '小写' },
+  { value: 'upper', label: '大写' }
+]
+const formatOptions = [
+  { value: 'standard', label: '标准 8-4-4-4-12' },
+  { value: 'compact', label: '无连字符' },
+  { value: 'braces', label: '花括号包裹' }
+]
+---
+
+<section class="tool-workspace uuid-workspace">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>UUID 生成</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:fingerprint" size={25} /></span>
+        <div><h1>UUID 生成</h1><p>批量生成 v1 至 v8 全部版本的唯一标识</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} /><span>v1、v2、v6、v7、v8 带时间戳，v3、v5 由命名空间与名称派生，v4 完全随机。需要查看某个 UUID 的版本与字段，请前往 <a href="/tools/uuid-parser/">UUID 解析</a>。</span></div>
+
+  <Card class="tool-card">
+    <div class="tool-field-grid">
+      <SelectField id="uuid-version" label="版本" options={versionOptions} value="4" />
+      <div class="tool-field">
+        <label for="uuid-count">生成数量</label>
+        <input id="uuid-count" type="number" min="1" max="1000" value="5" autocomplete="off" />
+      </div>
+    </div>
+    <div class="tool-options">
+      <div class="tool-options-row">
+        <SelectField id="uuid-case" label="大小写" options={caseOptions} value="lower" />
+        <SelectField id="uuid-format" label="输出格式" options={formatOptions} value="standard" />
+        <div class="tool-field">
+          <label for="uuid-prefix">自定义前缀</label>
+          <input id="uuid-prefix" type="text" value="" placeholder="可选，例如 user_" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="tool-option-section" id="uuid-name-section" hidden>
+        <span class="tool-option-heading">命名空间与名称</span>
+        <div class="tool-options-row">
+          <SelectField id="uuid-namespace" label="命名空间" options={namespaceOptions} value="dns" />
+          <div class="tool-field">
+            <label for="uuid-name">名称</label>
+            <input id="uuid-name" type="text" value="" placeholder="例如 www.example.com" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+        <div class="tool-field" id="uuid-namespace-field" hidden>
+          <div class="field-heading"><label for="uuid-namespace-hex">命名空间值</label><span>32 位十六进制字符</span></div>
+          <input id="uuid-namespace-hex" type="text" value="" placeholder="6ba7b8109dad11d180b400c04fd430c8" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="tool-option-section" id="uuid-domain-section" hidden>
+        <span class="tool-option-heading">DCE 本地域</span>
+        <div class="tool-options-row">
+          <SelectField id="uuid-domain" label="域编号" options={domainOptions} value="0" />
+        </div>
+      </div>
+    </div>
+    <div class="security-error" id="uuid-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="uuid-run" class="calculate-button" variant="primary" icon="lucide:fingerprint"><span>生成 UUID</span></Button>
+      <Button id="uuid-clear" icon="lucide:trash-2">清空</Button>
+    </div>
+  </Card>
+
+  <Card id="uuid-result" class="result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>生成结果</strong></div>
+      <span id="uuid-result-status">等待生成</span>
+    </div>
+    <div class="result-subheading"><strong>UUID 列表</strong><span>每行一个</span></div>
+    <textarea id="uuid-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="生成的 UUID 列表"></textarea>
+    <div class="tool-result-actions">
+      <Button id="uuid-copy" icon="lucide:copy" disabled>复制结果</Button>
+      <Button id="uuid-download" icon="lucide:download" disabled>下载结果</Button>
+    </div>
+    <div class="tool-stats">
+      <div><span>生成数量</span><strong id="uuid-stat-count">—</strong></div>
+      <div><span>版本</span><strong id="uuid-stat-version">—</strong></div>
+      <div><span>类型</span><strong id="uuid-stat-kind">—</strong></div>
+      <div><span>总字符</span><strong id="uuid-stat-length">—</strong></div>
+    </div>
+  </Card>
+
+  <Card class="tool-card">
+    <div class="result-subheading tool-subsection"><strong>版本说明</strong><span>时间、名称与随机来源的差异</span></div>
+    <div class="tool-rows">
+      {uuidVersions.map((spec) => (
+        <div class="tool-row">
+          <span>{spec.label}</span>
+          <span>{spec.summary}</span>
+        </div>
+      ))}
+    </div>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/uuid-generator'
+</script>

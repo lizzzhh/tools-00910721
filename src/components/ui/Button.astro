@@ -15,6 +15,6 @@ const { id, type = 'button', variant = 'secondary', class: className, disabled =
 ---
 
 <button id={id} class:list={['ui-button', variant === 'primary' ? 'primary-button' : 'secondary-button', className]} type={type} disabled={disabled} hidden={hidden}>
-  {icon && <Icon name={icon} width={17} />}
+  {icon && <Icon name={icon} size={17} />}
   <slot />
 </button>
