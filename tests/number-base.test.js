@@ -80,7 +80,9 @@ test('rejects digits that are out of range for the selected base', () => {
 
   assert.equal(binary.ok, false)
   if (!binary.ok) {
-    assert.match(binary.message, /不是 2 进制的有效数字/)
+    assert.equal(binary.code, 'invalidDigit')
+    assert.equal(binary.char, '2')
+    assert.equal(binary.base, 2)
     assert.equal(binary.position, 3)
   }
   assert.equal(ternary.ok, false)
@@ -97,7 +99,10 @@ test('rejects empty input, bare prefixes and fractional values', () => {
   assert.equal(empty.ok, false)
   assert.equal(barePrefix.ok, false)
   assert.equal(fraction.ok, false)
-  if (!fraction.ok) assert.match(fraction.message, /仅支持整数/)
+  if (!fraction.ok) {
+    assert.equal(fraction.code, 'decimalNotSupported')
+    assert.equal(fraction.position, 2)
+  }
 })
 
 test('identifies supported bases and rejects out-of-range ones', () => {

@@ -13,6 +13,13 @@ export const commonBases: number[] = [2, 8, 10, 16, 32, 36, 58, 62]
 
 export type NumberBase = number
 
+export type NumberBaseErrorCode =
+  | 'emptyInput'
+  | 'prefixOnly'
+  | 'decimalNotSupported'
+  | 'invalidDigit'
+  | 'unsupportedBase'
+
 export type NumberResult =
   | {
       ok: true
@@ -23,7 +30,9 @@ export type NumberResult =
     }
   | {
       ok: false
-      message: string
+      code: NumberBaseErrorCode
+      char?: string
+      base?: number
       position?: number
     }
 
@@ -31,21 +40,35 @@ export type NumberResult =
 const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 const base62Alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
-const namedBases: Record<number, string> = {
-  2: '二进制',
-  8: '八进制',
-  10: '十进制',
-  16: '十六进制',
-  32: 'Base32',
-  36: 'Base36',
-  58: 'Base58',
-  62: 'Base62'
+export type NamedBaseId =
+  | 'binary'
+  | 'octal'
+  | 'decimal'
+  | 'hexadecimal'
+  | 'base32'
+  | 'base36'
+  | 'base58'
+  | 'base62'
+
+const namedBaseIds: Record<number, NamedBaseId> = {
+  2: 'binary',
+  8: 'octal',
+  10: 'decimal',
+  16: 'hexadecimal',
+  32: 'base32',
+  36: 'base36',
+  58: 'base58',
+  62: 'base62'
 }
 
 const prefixedBases: Record<number, string> = { 2: '0b', 8: '0o', 16: '0x' }
 
-export function baseLabel(base: number) {
-  return namedBases[base] ?? `${base} 进制`
+export function baseNameId(base: number): NamedBaseId | undefined {
+  return namedBaseIds[base]
+}
+
+export function baseIsSigned(base: number) {
+  return base === 10
 }
 
 export function basePrefix(base: number) {
@@ -91,18 +114,21 @@ function formatWithAlphabet(value: bigint, base: number, alphabet: string) {
 export function toDigits(value: bigint, base: number): string {
   if (base === 58) return formatWithAlphabet(value, base, base58Alphabet)
   if (base === 62) return formatWithAlphabet(value, base, base62Alphabet)
-  if (base < minBase || base > maxBase) throw new RangeError(`不支持 ${base} 进制`)
+  if (base < minBase || base > maxBase) throw new RangeError(`unsupported base ${base}`)
   return value.toString(base).toUpperCase()
 }
 
-function parseMagnitude(body: string, radix: number): { ok: true; value: bigint } | { ok: false; message: string; position: number } {
+function parseMagnitude(
+  body: string,
+  radix: number
+): { ok: true; value: bigint } | { ok: false; code: 'invalidDigit'; char: string; base: number; position: number } {
   const radixValue = BigInt(radix)
   let value = 0n
 
   for (let index = 0; index < body.length; index += 1) {
     const digit = digitValue(body[index])
     if (digit < 0 || digit >= radix) {
-      return { ok: false, message: `字符 ${body[index]} 不是 ${radix} 进制的有效数字`, position: index + 1 }
+      return { ok: false, code: 'invalidDigit', char: body[index], base: radix, position: index + 1 }
     }
     value = value * radixValue + BigInt(digit)
   }
@@ -112,17 +138,17 @@ function parseMagnitude(body: string, radix: number): { ok: true; value: bigint 
 
 export function convertNumber(input: string, from: NumberBase): NumberResult {
   let value = input.trim()
-  if (!value) return { ok: false, message: '请输入要转换的数字' }
+  if (!value) return { ok: false, code: 'emptyInput' }
 
   const negative = value.startsWith('-')
   if (negative || value.startsWith('+')) value = value.slice(1)
-  if (!value) return { ok: false, message: '请输入要转换的数字' }
+  if (!value) return { ok: false, code: 'emptyInput' }
 
   const cleaned = value.replace(/[\s_,]/g, '')
   const prefix = basePrefix(from)
   const body = prefix && cleaned.toLowerCase().startsWith(prefix) ? cleaned.slice(prefix.length) : cleaned
-  if (!body) return { ok: false, message: `请输入 ${from} 进制的数字，不能只填写进制前缀` }
-  if (body.includes('.')) return { ok: false, message: '仅支持整数，暂不支持小数转换', position: body.indexOf('.') + 1 }
+  if (!body) return { ok: false, code: 'prefixOnly', base: from }
+  if (body.includes('.')) return { ok: false, code: 'decimalNotSupported', position: body.indexOf('.') + 1 }
 
   const magnitude = parseMagnitude(body, from)
   if (!magnitude.ok) return magnitude

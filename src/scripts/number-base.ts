@@ -1,8 +1,31 @@
-import { baseLabel, basePrefix, commonBases, convertNumber, detectBase, isNumberBase, numberBases, type NumberBase } from '../lib/number-base'
+import { baseNameId, basePrefix, commonBases, convertNumber, detectBase, isNumberBase, numberBases, type NumberBase, type NumberResult } from '../lib/number-base'
+import { currentTranslator } from '../i18n/client'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, downloadText, formatNumber, setDisabled, setStat, setText, showError, toggleHidden } from './tool-panel'
 
 const sample = '0x4d2'
+
+function baseName(base: number) {
+  const t = currentTranslator()
+  const id = baseNameId(base)
+  return id ? t(`toolUi.number-base.bases.${id}`) : t('toolUi.number-base.bases.suffix', { base })
+}
+
+function baseErrorText(result: Extract<NumberResult, { ok: false }>) {
+  const t = currentTranslator()
+  switch (result.code) {
+    case 'emptyInput':
+      return t('toolUi.number-base.errors.emptyInput')
+    case 'prefixOnly':
+      return t('toolUi.number-base.errors.prefixOnly', { base: result.base ?? 10 })
+    case 'decimalNotSupported':
+      return t('toolUi.number-base.errors.decimalNotSupported')
+    case 'invalidDigit':
+      return t('toolUi.number-base.errors.invalidDigit', { char: result.char ?? '', base: result.base ?? 10 })
+    case 'unsupportedBase':
+      return t('toolUi.number-base.errors.unsupportedBase', { base: result.base ?? 0 })
+  }
+}
 
 const mountedRoots = new WeakSet<HTMLElement>()
 
@@ -38,7 +61,7 @@ function init() {
     const needle = (filterInput?.value ?? '').trim().toLowerCase()
     return numberBases.filter((base) => {
       if (!needle) return commonBases.includes(base)
-      return String(base).includes(needle) || baseLabel(base).toLowerCase().includes(needle)
+      return String(base).includes(needle) || baseName(base).toLowerCase().includes(needle)
     })
   }
 
@@ -48,24 +71,27 @@ function init() {
     const visible = shownBases()
     const needle = (filterInput?.value ?? '').trim()
     toggleHidden(emptyState, visible.length > 0)
-    if (visible.length === 0 && emptyState) emptyState.textContent = `没有匹配「${needle}」的进制。`
+    if (visible.length === 0 && emptyState) {
+      emptyState.textContent = currentTranslator()('toolUi.number-base.copy.filterNoMatch', { needle })
+    }
     rows.replaceChildren(
       ...visible.map((base) => {
         const text = `${basePrefix(base)}${values[base]}`
         const element = document.createElement('div')
         element.className = 'tool-row tool-row-copy'
         const label = document.createElement('span')
-        label.textContent = `${baseLabel(base)} ${base}`
+        label.textContent = `${baseName(base)} ${base}`
         const value = document.createElement('span')
         value.textContent = text
         element.append(label, value)
         element.setAttribute('role', 'button')
         element.setAttribute('tabindex', '0')
-        element.addEventListener('click', () => void copyText(text, `${baseLabel(base)}结果已复制`))
+        const copied = () => currentTranslator()('toolUi.number-base.copy.rowCopied', { base: baseName(base) })
+        element.addEventListener('click', () => void copyText(text, copied()))
         element.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            void copyText(text, `${baseLabel(base)}结果已复制`)
+            void copyText(text, copied())
           }
         })
         return element
@@ -78,8 +104,8 @@ function init() {
     digits = null
     rows?.replaceChildren()
     toggleHidden(emptyState, false)
-    if (emptyState) emptyState.textContent = '在上方输入数字即可看到 2–36 全部进制及 Base58、Base62 的表示。'
-    setText(resultStatus, '等待输入')
+    if (emptyState) emptyState.textContent = currentTranslator()('toolUi.number-base.emptyHint')
+    setText(resultStatus, currentTranslator()('workspace.waitingInput'))
     setDisabled(copyButton, true)
     setDisabled(downloadButton, true)
     setStat(root, 'number-base-stat-decimal', '—')
@@ -105,21 +131,30 @@ function init() {
       toggleHidden(emptyState, false)
       setDisabled(copyButton, true)
       setDisabled(downloadButton, true)
-      showError(errorBox, result.message, result.position)
+      showError(errorBox, baseErrorText(result), result.position)
       return
     }
 
     clearError(errorBox)
-    processed = numberBases.map((base) => `${baseLabel(base)}(${base})\t${basePrefix(base)}${result.digits[base]}`).join('\n')
+    processed = numberBases.map((base) => `${baseName(base)}(${base})\t${basePrefix(base)}${result.digits[base]}`).join('\n')
     digits = result.digits
     renderRows()
-    setText(resultStatus, fromSelect?.value === 'auto' ? `已按 ${from} 进制解析` : '转换完成')
+    setText(
+      resultStatus,
+      fromSelect?.value === 'auto'
+        ? currentTranslator()('toolUi.number-base.status.detected', { base: baseName(from) })
+        : currentTranslator()('toolUi.number-base.status.done')
+    )
     setDisabled(copyButton, false)
     setDisabled(downloadButton, false)
     setStat(root, 'number-base-stat-decimal', result.digits[10])
     setStat(root, 'number-base-stat-input', formatNumber(result.inputLength))
-    setStat(root, 'number-base-stat-bits', `${formatNumber(result.digits[2].length)} 位`)
-    setStat(root, 'number-base-stat-sign', result.negative ? '负数' : '非负')
+    setStat(root, 'number-base-stat-bits', currentTranslator()('toolUi.number-base.statBitsValue', { bits: formatNumber(result.digits[2].length) }))
+    setStat(
+      root,
+      'number-base-stat-sign',
+      currentTranslator()(result.negative ? 'toolUi.number-base.signNegative' : 'toolUi.number-base.signNonNegative')
+    )
 
     if (!usageRecorded) {
       usageRecorded = true

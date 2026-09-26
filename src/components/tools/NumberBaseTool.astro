@@ -3,69 +3,74 @@ import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
-import { baseLabel, numberBases } from '../../lib/number-base'
+import { baseNameId, numberBases } from '../../lib/number-base'
 import { createTranslator } from '../../i18n'
 
-const baseOptions = [
-  { value: 'auto', label: '自动识别（按 0b / 0o / 0x 前缀）' },
-  ...numberBases.map((base) => ({ value: String(base), label: `${base} · ${baseLabel(base)}` }))
-]
-
 const t = createTranslator(Astro.locals.locale)
+
+function baseName(base: number) {
+  const id = baseNameId(base)
+  return id ? t(`toolUi.number-base.bases.${id}`) : t('toolUi.number-base.bases.suffix', { base })
+}
+
+const baseOptions = [
+  { value: 'auto', label: t('toolUi.number-base.modeAuto') },
+  ...numberBases.map((base) => ({ value: String(base), label: `${base} · ${baseName(base)}` }))
+]
 ---
 
 <section class="tool-workspace number-base-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>进制转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>{t('tools.number-base.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:binary" size={25} /></span>
-        <div><h1>进制转换</h1><p>在 2–36 进制与 Base58、Base62 之间实时转换</p></div>
+        <div><h1>{t('tools.number-base.name')}</h1><p>{t('toolUi.number-base.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />使用 BigInt 计算，支持任意精度整数与 0b、0o、0x 前缀，可识别空格、下划线与千位分隔符；输入即转换。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.number-base.notice')}</div>
 
   <Card class="tool-card">
     <div class="tool-field-grid">
-      <SelectField id="number-base-from" label="输入进制" options={baseOptions} value="auto" />
+      <SelectField id="number-base-from" label={t('toolUi.number-base.baseLabel')} options={baseOptions} value="auto" />
       <div class="tool-field">
-        <label for="number-base-input">输入数字</label>
-        <input id="number-base-input" type="text" placeholder="0x4d2 或 1234567890" autocomplete="off" spellcheck="false" autofocus />
+        <label for="number-base-input">{t('toolUi.number-base.inputLabel')}</label>
+        <input id="number-base-input" type="text" placeholder={t('toolUi.number-base.inputPlaceholder')} autocomplete="off" spellcheck="false" autofocus />
       </div>
     </div>
     <div class="security-error" id="number-base-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="number-base-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="number-base-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="number-base-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
-      <span class="action-row-hint">输入数字即实时转换，点击任意一行即可复制</span>
+      <span class="action-row-hint">{t('toolUi.number-base.sampleHint')}</span>
     </div>
   </Card>
 
   <Card id="number-base-result" class="result-card">
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>各进制表示</strong></div>
+      <div><span class="status-dot"></span><strong>{t('toolUi.number-base.resultsTitle')}</strong></div>
       <span id="number-base-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="field-heading tool-filter-bar">
-      <label for="number-base-filter">筛选进制</label>
+      <label for="number-base-filter">{t('toolUi.number-base.filterLabel')}</label>
       <div class="field-heading-actions">
-        <input id="number-base-filter" type="text" placeholder="输入 31、十六进制或 base58 可查看全部 37 个进制" autocomplete="off" spellcheck="false" />
+        <input id="number-base-filter" type="text" placeholder={t('toolUi.number-base.filterPlaceholder')} autocomplete="off" spellcheck="false" />
       </div>
     </div>
     <div class="tool-rows" id="number-base-rows"></div>
-    <p class="tool-empty-note" id="number-base-empty" hidden>在上方输入数字即可看到 2–36 全部进制及 Base58、Base62 的表示。</p>
+    <p class="tool-empty-note" id="number-base-empty" hidden>{t('toolUi.number-base.emptyHint')}</p>
     <div class="tool-result-actions">
-      <Button id="number-base-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="number-base-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="number-base-copy" icon="lucide:copy" disabled>{t('toolUi.number-base.copy.copyButton')}</Button>
+      <Button id="number-base-download" icon="lucide:download" disabled>{t('toolUi.number-base.copy.downloadButton')}</Button>
     </div>
     <div class="tool-stats">
-      <div><span>十进制值</span><strong id="number-base-stat-decimal">—</strong></div>
-      <div><span>输入长度</span><strong id="number-base-stat-input">—</strong></div>
-      <div><span>二进制长度</span><strong id="number-base-stat-bits">—</strong></div>
-      <div><span>符号</span><strong id="number-base-stat-sign">—</strong></div>
+      <div><span>{t('toolUi.number-base.statDecimal')}</span><strong id="number-base-stat-decimal">—</strong></div>
+      <div><span>{t('toolUi.number-base.statInputLength')}</span><strong id="number-base-stat-input">—</strong></div>
+      <div><span>{t('toolUi.number-base.statBinaryLength')}</span><strong id="number-base-stat-bits">—</strong></div>
+      <div><span>{t('toolUi.number-base.statSign')}</span><strong id="number-base-stat-sign">—</strong></div>
     </div>
   </Card>
 </section>
