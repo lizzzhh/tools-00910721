@@ -4,6 +4,7 @@ import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
 
 const modeOptions = [
   { value: 'basic', label: '基础转义（< > & " \'）' },
@@ -16,18 +17,20 @@ const formatOptions = [
   { value: 'decimal', label: '十进制码点' },
   { value: 'hex', label: '十六进制码点' }
 ]
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace html-entity-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>HTML 实体转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>HTML 实体转换</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:code-xml" size={25} /></span>
         <div><h1>HTML 实体转换</h1><p>在 HTML 特殊字符与实体之间转换</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />支持命名实体、十进制与十六进制码点，全部转换在浏览器本地完成。</div>
@@ -52,7 +55,7 @@ const formatOptions = [
     <div class="mode-panel active" id="html-entity-panel" role="tabpanel" aria-labelledby="html-encode-tab" data-panel="encode">
       <div class="field-heading">
         <label for="html-entity-input" id="html-entity-input-label">输入文本</label>
-        <span><b id="html-entity-char-count">0</b> 字符</span>
+        <span><b id="html-entity-char-count">0</b> {t('common.charactersUnit')}</span>
       </div>
       <div class="textarea-wrap">
         <textarea id="html-entity-input" placeholder={'<div class="a">Tom & Jerry</div>'} spellcheck="false" autocomplete="off" autofocus></textarea>
@@ -62,14 +65,14 @@ const formatOptions = [
     <div class="action-row">
       <Button id="html-entity-run" class="calculate-button" variant="primary" icon="lucide:code-xml"><span id="html-entity-run-label">开始转义</span></Button>
       <Button id="html-entity-sample" icon="lucide:wand-2">示例</Button>
-      <Button id="html-entity-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="html-entity-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="html-entity-result" class="result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>处理结果</strong></div>
-      <span id="html-entity-result-status">等待处理</span>
+      <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+      <span id="html-entity-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="result-subheading"><strong id="html-entity-output-label">转义结果</strong><span>只读结果</span></div>
     <textarea id="html-entity-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="HTML 实体处理结果"></textarea>

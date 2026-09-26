@@ -3,19 +3,22 @@ import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import CheckboxField from '../ui/CheckboxField.astro'
+import { createTranslator } from '../../i18n'
 
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace text-replace-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>文本处理</span><b>/</b><strong>文本查找替换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>文本查找替换</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:replace" size={25} /></span>
         <div><h1>文本查找替换</h1><p>支持普通文本与正则表达式的批量替换</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />启用正则后使用 JavaScript 语法，支持 $1、$& 与命名分组替换，替换在浏览器本地完成。</div>
@@ -43,7 +46,7 @@ import CheckboxField from '../ui/CheckboxField.astro'
     </div>
     <div class="field-heading">
       <label for="text-replace-input">输入文本</label>
-      <span><b id="text-replace-char-count">0</b> 字符</span>
+      <span><b id="text-replace-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
       <textarea id="text-replace-input" spellcheck="false" autocomplete="off" placeholder="粘贴需要替换的文本"></textarea>
@@ -52,14 +55,14 @@ import CheckboxField from '../ui/CheckboxField.astro'
     <div class="action-row">
       <Button id="text-replace-run" class="calculate-button" variant="primary" icon="lucide:replace"><span>开始替换</span></Button>
       <Button id="text-replace-sample" icon="lucide:wand-2">示例</Button>
-      <Button id="text-replace-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="text-replace-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="text-replace-result" class="result-card" hidden>
     <div class="result-heading">
       <div><span class="status-dot"></span><strong>替换结果</strong></div>
-      <span id="text-replace-result-status">等待处理</span>
+      <span id="text-replace-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="result-subheading"><strong>替换后</strong><span>只读结果</span></div>
     <textarea id="text-replace-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="替换结果"></textarea>

@@ -4,6 +4,7 @@ import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
 
 const modeOptions = [
   { value: 'dedupe', label: '按首次出现去重' },
@@ -18,18 +19,20 @@ const sortModeOptions = [
   { value: 'length', label: '行长度' }
 ]
 
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace text-dedupe-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>文本处理</span><b>/</b><strong>文本去重排序</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>文本去重排序</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:list-checks" size={25} /></span>
         <div><h1>文本去重排序</h1><p>按行去重、排序、倒序与随机打乱</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />按 \n 分行处理，可选择忽略大小写、去除首尾空白以及排序前先去重。</div>
@@ -60,14 +63,14 @@ const sortModeOptions = [
     <div class="action-row">
       <Button id="text-dedupe-run" class="calculate-button" variant="primary" icon="lucide:list-checks"><span>开始处理</span></Button>
       <Button id="text-dedupe-sample" icon="lucide:wand-2">示例</Button>
-      <Button id="text-dedupe-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="text-dedupe-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="text-dedupe-result" class="result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>处理结果</strong></div>
-      <span id="text-dedupe-result-status">等待处理</span>
+      <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+      <span id="text-dedupe-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="result-subheading"><strong>结果</strong><span>只读结果</span></div>
     <textarea id="text-dedupe-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="去重排序结果"></textarea>

@@ -3,18 +3,21 @@ import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import CheckboxField from '../ui/CheckboxField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace query-string-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>Query String 解析</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>Query String 解析</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:list-ordered" size={25} /></span>
         <div><h1>Query String 解析</h1><p>粘贴查询串，逐条编辑参数，实时同步结果</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />支持粘贴完整 URL、<code>?</code> 开头或纯查询串，边输入边解析；百分号编码与 <code>+</code> 空格会显示为解码后的值，所有处理在浏览器本地完成。</div>
@@ -22,7 +25,7 @@ import CheckboxField from '../ui/CheckboxField.astro'
   <Card class="tool-card">
     <div class="field-heading">
       <label for="query-input">查询字符串</label>
-      <span><b id="query-char-count">0</b> 字符</span>
+      <span><b id="query-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
       <textarea id="query-input" spellcheck="false" autocomplete="off" autofocus placeholder="https://example.com/list?utm_source=weibo&tags=a&tags=b&draft#section"></textarea>
@@ -30,7 +33,7 @@ import CheckboxField from '../ui/CheckboxField.astro'
     <div class="security-error" id="query-error" role="alert" hidden></div>
     <div class="action-row">
       <Button id="query-sample" icon="lucide:wand-2">示例</Button>
-      <Button id="query-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="query-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
       <span class="action-row-hint">输入即解析，编辑参数表会实时同步下方结果</span>
     </div>
     <div class="tool-options">
@@ -51,7 +54,7 @@ import CheckboxField from '../ui/CheckboxField.astro'
   <Card id="query-result" class="result-card">
     <div class="result-heading">
       <div><span class="status-dot"></span><strong>参数表</strong></div>
-      <span id="query-result-status">等待输入</span>
+      <span id="query-result-status">{t('workspace.waiting')}</span>
     </div>
 
     <div class="field-heading tool-filter-bar">

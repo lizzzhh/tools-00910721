@@ -4,6 +4,7 @@ import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
 import { uuidDomains, uuidNamespaces, uuidVersions } from '../../lib/uuid'
+import { createTranslator } from '../../i18n'
 
 const versionOptions = uuidVersions.map((spec) => ({ value: String(spec.version), label: spec.label }))
 const namespaceOptions = uuidNamespaces.map((item) => ({ value: item.id, label: item.label }))
@@ -17,18 +18,20 @@ const formatOptions = [
   { value: 'compact', label: '无连字符' },
   { value: 'braces', label: '花括号包裹' }
 ]
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace uuid-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>UUID 生成</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>UUID 生成</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:fingerprint" size={25} /></span>
         <div><h1>UUID 生成</h1><p>批量生成 v1 至 v8 全部版本的唯一标识</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} /><span>v1、v2、v6、v7、v8 带时间戳，v3、v5 由命名空间与名称派生，v4 完全随机。需要查看某个 UUID 的版本与字段，请前往 <a href="/tools/uuid-parser/">UUID 解析</a>。</span></div>
@@ -74,7 +77,7 @@ const formatOptions = [
     <div class="security-error" id="uuid-error" role="alert" hidden></div>
     <div class="action-row">
       <Button id="uuid-run" class="calculate-button" variant="primary" icon="lucide:fingerprint"><span>生成 UUID</span></Button>
-      <Button id="uuid-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="uuid-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 

@@ -4,23 +4,26 @@ import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
 import { baseLabel, numberBases } from '../../lib/number-base'
+import { createTranslator } from '../../i18n'
 
 const baseOptions = [
   { value: 'auto', label: '自动识别（按 0b / 0o / 0x 前缀）' },
   ...numberBases.map((base) => ({ value: String(base), label: `${base} · ${baseLabel(base)}` }))
 ]
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace number-base-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>进制转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>进制转换</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:binary" size={25} /></span>
         <div><h1>进制转换</h1><p>在 2–36 进制与 Base58、Base62 之间实时转换</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />使用 BigInt 计算，支持任意精度整数与 0b、0o、0x 前缀，可识别空格、下划线与千位分隔符；输入即转换。</div>
@@ -36,7 +39,7 @@ const baseOptions = [
     <div class="security-error" id="number-base-error" role="alert" hidden></div>
     <div class="action-row">
       <Button id="number-base-sample" icon="lucide:wand-2">示例</Button>
-      <Button id="number-base-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="number-base-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
       <span class="action-row-hint">输入数字即实时转换，点击任意一行即可复制</span>
     </div>
   </Card>
@@ -44,7 +47,7 @@ const baseOptions = [
   <Card id="number-base-result" class="result-card">
     <div class="result-heading">
       <div><span class="status-dot"></span><strong>各进制表示</strong></div>
-      <span id="number-base-result-status">等待输入</span>
+      <span id="number-base-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="field-heading tool-filter-bar">
       <label for="number-base-filter">筛选进制</label>

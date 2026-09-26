@@ -4,24 +4,27 @@ import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
 import { caseStyleHints, caseStyleLabels } from '../../lib/text'
+import { createTranslator } from '../../i18n'
 
 type Style = keyof typeof caseStyleLabels
 
 const caseOptions = (Object.keys(caseStyleLabels) as Style[]).map((value) => ({ value, label: `${caseStyleLabels[value]}（${caseStyleHints[value]}）` }))
 
 const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant', 'dot', 'path', 'title']
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace text-case-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>文本处理</span><b>/</b><strong>大小写转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>大小写转换</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:case-sensitive" size={25} /></span>
         <div><h1>大小写转换</h1><p>命名风格与字符顺序转换</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />自动识别驼峰、下划线、连字符与空格分隔，并保留中英文数字混排的可读性。</div>
@@ -35,7 +38,7 @@ const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant'
     </div>
     <div class="field-heading">
       <label for="text-case-input">输入文本</label>
-      <span><b id="text-case-char-count">0</b> 字符</span>
+      <span><b id="text-case-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
       <textarea id="text-case-input" placeholder="hello world example" spellcheck="false" autocomplete="off" autofocus></textarea>
@@ -44,7 +47,7 @@ const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant'
     <div class="action-row">
       <Button id="text-case-run" class="calculate-button" variant="primary" icon="lucide:case-sensitive"><span>开始转换</span></Button>
       <Button id="text-case-sample" icon="lucide:wand-2">示例</Button>
-      <Button id="text-case-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="text-case-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
     <div class="tool-option-section">
       <span class="tool-option-heading">常用风格</span>
@@ -61,8 +64,8 @@ const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant'
 
   <Card id="text-case-result" class="result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>转换结果</strong></div>
-      <span id="text-case-result-status">等待处理</span>
+      <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+      <span id="text-case-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="result-subheading"><strong>结果</strong><span>只读结果</span></div>
     <textarea id="text-case-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="大小写转换结果"></textarea>

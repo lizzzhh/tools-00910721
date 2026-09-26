@@ -5,23 +5,26 @@ import SelectField from '../ui/SelectField.astro'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import { digestAlgorithms, hmacAlgorithms } from '../../lib/security/digests'
+import { createTranslator } from '../../i18n'
 
 const outputCaseOptions = [
   { value: 'lower', label: '小写' },
   { value: 'upper', label: '大写' }
 ]
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace security-workspace" aria-live="polite">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>安全与加密</span><b>/</b><strong>哈希计算</strong></div>
+      <div class="breadcrumb"><span>{t('categories.security')}</span><b>/</b><strong>哈希计算</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:hash" size={25} /></span>
         <div><h1>哈希计算</h1><p>同时计算多种摘要与 HMAC 签名</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />可同时勾选多种算法，文本或文件均会一次计算全部结果；HMAC 需要填写密钥。</div>
@@ -54,7 +57,7 @@ const outputCaseOptions = [
     <div class="mode-panel active" id="hash-text-panel" role="tabpanel" aria-labelledby="hash-text-tab" data-panel="text">
       <div class="field-heading">
         <label for="hash-input">输入文本</label>
-        <div class="field-heading-actions"><span><b id="hash-char-count">0</b> 字符</span><CheckboxField id="hash-realtime" label="实时计算" checked /></div>
+        <div class="field-heading-actions"><span><b id="hash-char-count">0</b> {t('common.charactersUnit')}</span><CheckboxField id="hash-realtime" label="实时计算" checked /></div>
       </div>
       <div class="textarea-wrap">
         <textarea id="hash-input" placeholder="在此输入需要计算哈希的文本…" spellcheck="false" autocomplete="off" autofocus></textarea>
@@ -78,12 +81,12 @@ const outputCaseOptions = [
     <div class="action-row">
       <Button id="hash-calculate" class="calculate-button" variant="primary" icon="lucide:hash">计算摘要</Button>
       <Button id="hash-cancel" hidden>停止计算</Button>
-      <Button id="hash-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="hash-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card class="result-card security-result-card" ariaLabel="哈希结果">
-    <div class="result-heading"><div><span class="status-dot"></span><strong>计算摘要</strong></div><span id="hash-result-status">等待输入</span></div>
+    <div class="result-heading"><div><span class="status-dot"></span><strong>计算摘要</strong></div><span id="hash-result-status">{t('workspace.waiting')}</span></div>
     <div class="hash-result-list" id="hash-results"></div>
     <div class="hash-result-actions">
       <Button id="hash-copy-all" icon="lucide:copy">复制全部</Button>

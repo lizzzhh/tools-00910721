@@ -4,24 +4,27 @@ import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
 
 const unitOptions = [
   { value: 'auto', label: '自动识别' },
   { value: 'seconds', label: '秒（10 位）' },
   { value: 'milliseconds', label: '毫秒（13 位）' }
 ]
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace timestamp-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>时间戳转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>时间戳转换</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:calendar-clock" size={25} /></span>
         <div><h1>时间戳转换</h1><p>Unix 时间戳与日期时间互转</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />时区取自浏览器本地设置，同时展示 UTC 与本地时间，转换在浏览器本地完成。</div>
@@ -53,14 +56,14 @@ const unitOptions = [
     <div class="action-row">
       <Button id="timestamp-run" class="calculate-button" variant="primary" icon="lucide:calendar-clock"><span>开始转换</span></Button>
       <Button id="timestamp-now" icon="lucide:clock">当前时间</Button>
-      <Button id="timestamp-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="timestamp-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="timestamp-result" class="result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>转换结果</strong></div>
-      <span id="timestamp-result-status">等待处理</span>
+      <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+      <span id="timestamp-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="result-subheading"><strong>时间详情</strong><span>点击任意一行复制取值</span></div>
     <div class="tool-rows" id="timestamp-rows"></div>

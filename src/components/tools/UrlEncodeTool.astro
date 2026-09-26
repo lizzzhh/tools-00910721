@@ -3,23 +3,26 @@ import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
 
 const ruleOptions = [
   { value: 'component', label: 'URL 组件（encodeURIComponent）' },
   { value: 'uri', label: '完整 URL（encodeURI）' }
 ]
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace encoding-workspace url-workspace" aria-live="polite">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>URL 编解码</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>URL 编解码</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:link-2" size={25} /></span>
         <div><h1>URL 编解码</h1><p>处理链接、路径与查询参数中的特殊字符</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
   <div class="security-notice"><Icon name="lucide:info" size={16} />URL 组件模式会转义分隔符；完整 URL 模式会保留链接结构，所有处理均在本地完成。</div>
@@ -36,7 +39,7 @@ const ruleOptions = [
     <div class="mode-panel active" id="url-panel" role="tabpanel" aria-labelledby="url-encode-tab" data-panel="encode">
       <div class="field-heading">
         <label for="url-input" id="url-input-label">输入文本或 URL</label>
-        <span><b id="url-char-count">0</b> 字符</span>
+        <span><b id="url-char-count">0</b> {t('common.charactersUnit')}</span>
       </div>
       <div class="textarea-wrap">
         <textarea id="url-input" placeholder="输入需要编码的 URL 或文本…" spellcheck="false" autocomplete="off" autofocus></textarea>
@@ -45,14 +48,14 @@ const ruleOptions = [
     <div class="security-error" id="url-error" role="alert" hidden></div>
     <div class="action-row">
       <Button id="url-process" class="calculate-button" variant="primary" icon="lucide:link-2"><span id="url-process-label">开始编码</span></Button>
-      <Button id="url-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="url-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="url-result" class="result-card encoding-result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>处理结果</strong></div>
-      <span id="url-result-status">等待处理</span>
+      <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+      <span id="url-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="result-subheading encoding-output-heading"><strong id="url-output-label">编码结果</strong><span>只读结果</span></div>
     <textarea id="url-output" class="encoding-output" data-empty="true" readonly spellcheck="false" aria-label="URL 处理结果"></textarea>
