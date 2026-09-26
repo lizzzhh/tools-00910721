@@ -11,19 +11,29 @@ export type UuidForm = 'standard' | 'compact' | 'braces'
 export type UuidVariant = 'NCS' | 'RFC 4122' | 'Microsoft' | 'Future'
 export type DceDomain = 0 | 64 | 128
 
+export class UuidGenerationError extends Error {
+  readonly code: UuidErrorCode
+
+  constructor(code: UuidErrorCode) {
+    super(code)
+    this.name = 'UuidGenerationError'
+    this.code = code
+  }
+}
+
 export type UuidSpec = {
   version: UuidVersion
-  label: string
+  nameId: `v${UuidVersion}`
   kind: UuidKind
-  kindLabel: string
-  summary: string
+  summaryId: `v${UuidVersion}`
 }
 
 export type UuidDetails = {
   value: string
   compact: string
   version: number | null
-  versionLabel: string
+  versionLabelId: 'nil' | 'max' | 'unknown' | `v${UuidVersion}`
+  unknownVersion: string | null
   kind: UuidKind | 'none'
   variant: UuidVariant
   form: 'nil' | 'max' | 'standard'
@@ -37,9 +47,11 @@ export type UuidDetails = {
   entropy: string | null
 }
 
+export type UuidErrorCode = 'noSecureRandom' | 'namespaceInvalid' | 'nameRequired' | 'digestFailed'
+
 export type UuidResult =
   | { ok: true; output: string; values: string[]; version: UuidVersion }
-  | { ok: false; message: string }
+  | { ok: false; code: UuidErrorCode }
 
 export type UuidParsedRow = {
   index: number
@@ -79,30 +91,33 @@ const gregorianTicksPerMs = 10000n
 const hexTable = Array.from({ length: 256 }, (_, index) => index.toString(16).padStart(2, '0'))
 
 export const uuidVersions: UuidSpec[] = [
-  { version: 1, label: 'v1 · 时间戳', kind: 'time', kindLabel: '时间有序', summary: '100 纳秒时间戳加时钟序列，节点位取随机值' },
-  { version: 2, label: 'v2 · DCE 安全', kind: 'time', kindLabel: '时间有序', summary: '在 v1 基础上用本地域编号替换时钟序列低位' },
-  { version: 3, label: 'v3 · MD5 名称', kind: 'name', kindLabel: '名称派生', summary: '命名空间与名称拼接后的 MD5 摘要' },
-  { version: 4, label: 'v4 · 随机', kind: 'random', kindLabel: '随机', summary: '完全随机来源，兼容性最好' },
-  { version: 5, label: 'v5 · SHA-1 名称', kind: 'name', kindLabel: '名称派生', summary: '命名空间与名称拼接后的 SHA-1 摘要' },
-  { version: 6, label: 'v6 · 重排时间戳', kind: 'time', kindLabel: '时间有序', summary: 'v1 时间戳重排为高位在前，天然可排序' },
-  { version: 7, label: 'v7 · Unix 毫秒', kind: 'time', kindLabel: '时间有序', summary: '前 48 位为 Unix 毫秒，适合数据库主键' },
-  { version: 8, label: 'v8 · 自定义', kind: 'custom', kindLabel: '自定义', summary: '实验版本，前缀为毫秒时间戳，后接自定义载荷' }
+  { version: 1, nameId: 'v1', kind: 'time', summaryId: 'v1' },
+  { version: 2, nameId: 'v2', kind: 'time', summaryId: 'v2' },
+  { version: 3, nameId: 'v3', kind: 'name', summaryId: 'v3' },
+  { version: 4, nameId: 'v4', kind: 'random', summaryId: 'v4' },
+  { version: 5, nameId: 'v5', kind: 'name', summaryId: 'v5' },
+  { version: 6, nameId: 'v6', kind: 'time', summaryId: 'v6' },
+  { version: 7, nameId: 'v7', kind: 'time', summaryId: 'v7' },
+  { version: 8, nameId: 'v8', kind: 'custom', summaryId: 'v8' }
 ]
 
 export const uuidVersionMap: Record<number, UuidSpec> = Object.fromEntries(uuidVersions.map((spec) => [spec.version, spec]))
 
-export const uuidNamespaces = [
-  { id: 'dns', label: 'DNS', hex: '6ba7b8109dad11d180b400c04fd430c8' },
-  { id: 'url', label: 'URL', hex: '6ba7b8119dad11d180b400c04fd430c8' },
-  { id: 'oid', label: 'OID', hex: '6ba7b8129dad11d180b400c04fd430c8' },
-  { id: 'x500', label: 'X.500', hex: '6ba7b8149dad11d180b400c04fd430c8' },
-  { id: 'custom', label: '自定义', hex: '' }
+export type UuidNamespaceId = 'dns' | 'url' | 'oid' | 'x500' | 'custom'
+export type UuidDomainId = 'person' | 'group' | 'org'
+
+export const uuidNamespaces: { id: UuidNamespaceId; hex: string }[] = [
+  { id: 'dns', hex: '6ba7b8109dad11d180b400c04fd430c8' },
+  { id: 'url', hex: '6ba7b8119dad11d180b400c04fd430c8' },
+  { id: 'oid', hex: '6ba7b8129dad11d180b400c04fd430c8' },
+  { id: 'x500', hex: '6ba7b8149dad11d180b400c04fd430c8' },
+  { id: 'custom', hex: '' }
 ]
 
-export const uuidDomains: { value: DceDomain; label: string }[] = [
-  { value: 0, label: 'Person（个人）' },
-  { value: 64, label: 'Group（组）' },
-  { value: 128, label: 'Org（组织）' }
+export const uuidDomains: { value: DceDomain; id: UuidDomainId }[] = [
+  { value: 0, id: 'person' },
+  { value: 64, id: 'group' },
+  { value: 128, id: 'org' }
 ]
 
 let clockSequence = Math.floor(Math.random() * 0x4000)
@@ -115,7 +130,7 @@ function getRandomBytes(length: number) {
   const source = globalThis.crypto
 
   if (!source?.getRandomValues) {
-    throw new Error('当前环境不支持安全随机数，无法生成 UUID')
+    throw new UuidGenerationError('noSecureRandom')
   }
 
   source.getRandomValues(bytes)
@@ -249,16 +264,16 @@ function digestHex(hasher: typeof MD5 | typeof SHA1, bytes: number[]) {
   return hasher(WordArray.create(words, bytes.length)).toString()
 }
 
-function createNamed(version: 3 | 5, namespaceHex: string, name: string) {
+function createNamed(version: 3 | 5, namespaceHex: string, name: string): { ok: true; bytes: Uint8Array } | { ok: false; code: UuidErrorCode } {
   const namespace = hexToBytes(namespaceHex)
   if (!namespace || namespace.length !== 16) {
-    return { ok: false as const, message: '命名空间需要 32 位十六进制字符或合法 UUID' }
+    return { ok: false as const, code: 'namespaceInvalid' }
   }
-  if (!name) return { ok: false as const, message: '请输入用于计算摘要的名称' }
+  if (!name) return { ok: false as const, code: 'nameRequired' }
 
   const nameBytes = Array.from(new TextEncoder().encode(name))
   const digest = hexToBytes(digestHex(version === 3 ? MD5 : SHA1, [...namespace, ...nameBytes]))
-  if (!digest) return { ok: false as const, message: '摘要结果异常，无法生成 UUID' }
+  if (!digest) return { ok: false as const, code: 'digestFailed' }
 
   const bytes = Uint8Array.from(digest.slice(0, 16))
   setVersion(bytes, version)
@@ -318,7 +333,7 @@ export function createUuid(options: Omit<UuidGenerateOptions, 'count'> = {}): st
   else if (version === 7 || version === 8) bytes = createV7(version, now)
   else {
     const named = createNamed(version, namespace, name)
-    if (!named.ok) throw new Error(named.message)
+    if (!named.ok) throw new UuidGenerationError(named.code)
     bytes = named.bytes
   }
 
@@ -333,7 +348,8 @@ export function createUuids(options: UuidGenerateOptions = {}): UuidResult {
     const values = Array.from({ length: total }, () => createUuid({ ...options, now }))
     return { ok: true, output: values.join('\n'), values, version }
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : String(error) }
+    const code = error instanceof UuidGenerationError ? error.code : 'digestFailed'
+    return { ok: false, code }
   }
 }
 
@@ -382,7 +398,8 @@ export function describeUuid(value: string): UuidDetails | null {
     value: formatUuid(compact),
     compact,
     version,
-    versionLabel: form === 'nil' ? 'Nil 特殊格式' : form === 'max' ? 'Max 特殊格式' : spec ? `v${version}` : `未知版本 0x${version.toString(16)}`,
+    versionLabelId: form === 'nil' ? 'nil' : form === 'max' ? 'max' : spec ? (spec.nameId as UuidDetails['versionLabelId']) : 'unknown',
+    unknownVersion: spec ? null : `0x${version.toString(16)}`,
     kind: form === 'standard' ? (spec?.kind ?? 'none') : 'none',
     variant,
     form,

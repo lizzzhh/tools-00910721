@@ -27,8 +27,8 @@ test('exposes the eight standard versions', () => {
     [1, 2, 3, 4, 5, 6, 7, 8]
   )
   for (const spec of uuidVersions) {
-    assert.ok(spec.label.startsWith(`v${spec.version}`))
-    assert.ok(spec.summary.length > 0)
+    assert.equal(spec.nameId, `v${spec.version}`)
+    assert.equal(spec.summaryId, `v${spec.version}`)
   }
   assert.equal(isUuidVersion(4), true)
   assert.equal(isUuidVersion(9), false)
@@ -92,8 +92,8 @@ test('accepts a namespace written in standard form', () => {
 })
 
 test('rejects invalid namespaces and empty names', () => {
-  assert.equal(createUuids({ version: 3, namespace: 'abc', name: 'x' }).message, '命名空间需要 32 位十六进制字符或合法 UUID')
-  assert.equal(createUuids({ version: 5, namespace: dnsNamespace, name: '' }).message, '请输入用于计算摘要的名称')
+  assert.equal(createUuids({ version: 3, namespace: 'abc', name: 'x' }).code, 'namespaceInvalid')
+  assert.equal(createUuids({ version: 5, namespace: dnsNamespace, name: '' }).code, 'nameRequired')
   assert.equal(createUuid({ version: 3, namespace: dnsNamespace, name: 'a' }).length, 36)
 })
 
@@ -140,7 +140,7 @@ test('writes the local domain into the low clock sequence byte of version 2', ()
   assert.equal(personal?.dceDomain, 0)
   assert.equal(group?.dceDomain, 64)
   assert.equal(org?.dceDomain, 128)
-  assert.equal(personal?.versionLabel, 'v2')
+  assert.equal(personal?.versionLabelId, 'v2')
 })
 
 test('lays out the version 6 timestamp in front for sorting', () => {
@@ -178,7 +178,7 @@ test('keeps version 8 on the millisecond prefix with custom payload', () => {
   const first = createUuid({ version: 8, now: timestamp })
   const second = createUuid({ version: 8, now: timestamp + 5000 })
 
-  assert.equal(describeUuid(first)?.versionLabel, 'v8')
+  assert.equal(describeUuid(first)?.versionLabelId, 'v8')
   assert.equal(describeUuid(first)?.kind, 'custom')
   assert.equal(describeUuid(first)?.timestamp, new Date(timestamp).toISOString())
   assert.notEqual(describeUuid(first)?.randomTail, describeUuid(second)?.randomTail)
@@ -231,14 +231,15 @@ test('describes variant, node and entropy of a random identifier', () => {
 
 test('detects every variant and the special forms', () => {
   assert.equal(describeUuid('00000000-0000-0000-0000-000000000000')?.form, 'nil')
-  assert.equal(describeUuid('00000000-0000-0000-0000-000000000000')?.versionLabel, 'Nil 特殊格式')
+  assert.equal(describeUuid('00000000-0000-0000-0000-000000000000')?.versionLabelId, 'nil')
   assert.equal(describeUuid('ffffffff-ffff-ffff-ffff-ffffffffffff')?.form, 'max')
-  assert.equal(describeUuid('ffffffff-ffff-ffff-ffff-ffffffffffff')?.versionLabel, 'Max 特殊格式')
+  assert.equal(describeUuid('ffffffff-ffff-ffff-ffff-ffffffffffff')?.versionLabelId, 'max')
   assert.equal(describeUuid('01234567-89ab-cdef-0123-456789abcdef')?.variant, 'NCS')
   assert.equal(describeUuid('01234567-89ab-4def-4123-456789abcdef')?.variant, 'Future')
   assert.equal(describeUuid('01234567-89ab-4def-c123-456789abcdef')?.variant, 'Microsoft')
   assert.equal(describeUuid('01234567-89ab-4def-8123-456789abcdef')?.variant, 'RFC 4122')
-  assert.equal(describeUuid('01234567-89ab-0def-8123-456789abcdef')?.versionLabel, '未知版本 0x0')
+  assert.equal(describeUuid('01234567-89ab-0def-8123-456789abcdef')?.versionLabelId, 'unknown')
+  assert.equal(describeUuid('01234567-89ab-0def-8123-456789abcdef')?.unknownVersion, '0x0')
 })
 
 test('reports unknown versions without throwing', () => {
@@ -246,14 +247,15 @@ test('reports unknown versions without throwing', () => {
 
   assert.equal(described?.version, 12)
   assert.equal(described?.kind, 'none')
-  assert.equal(described?.versionLabel, '未知版本 0xc')
+  assert.equal(described?.versionLabelId, 'unknown')
+  assert.equal(described?.unknownVersion, '0xc')
   assert.equal(describeUuid('not-a-uuid'), null)
   assert.equal(describeUuid(''), null)
 })
 
 test('maps version metadata for the interface', () => {
-  assert.equal(uuidVersionMap[7].label, 'v7 · Unix 毫秒')
-  assert.equal(uuidVersionMap[7].kindLabel, '时间有序')
+  assert.equal(uuidVersionMap[7].nameId, 'v7')
+  assert.equal(uuidVersionMap[7].kind, 'time')
   assert.equal(uuidVersionMap[3].kind, 'name')
   assert.equal(uuidVersionMap[8].kind, 'custom')
 })

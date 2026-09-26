@@ -21,7 +21,7 @@ const jaLatinAllow = new Set([
   'UTF', 'Bitcoin', 'RFC', 'DNS', 'Punycode', 'IDN', 'Nginx', 'WebP', 'SVG', 'PDF', 'OCR',
   'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
   'BigInt', 'base', 'kebab', 'camel', 'snake', 'pascal', 'train', 'dot', 'path', 'alternating',
-  'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8',, 'encodeURIComponent', 'encodeURI',
+  'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8',, 'encodeURIComponent', 'encodeURI', 'Person', 'Group', 'Org', 'DCE', 'MD', 'SHA', 'www', 'user', 'example', 'com', 'undefined', 'NaN', 'null',
   'RAW', 'UTC', 'GMT', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
 ])
 

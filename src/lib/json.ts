@@ -11,9 +11,78 @@ export type JsonStats = {
   values: number
 }
 
+export type JsonErrorCode =
+  | 'parseFailed'
+  | 'emptyInput'
+  | 'invalidUnicodeEscape'
+  | 'invalidEscapeCharacter'
+  | 'unescapedControlCharacter'
+  | 'newlineInString'
+  | 'unterminatedString'
+  | 'invalidNumber'
+  | 'commentsNotAllowed'
+  | 'unterminatedBlockComment'
+  | 'singleQuotesNotAllowed'
+  | 'unrecognizedCharacter'
+  | 'incompleteContent'
+  | 'trailingContent'
+  | 'unrecognizedValue'
+  | 'objectUnrecoverable'
+  | 'objectBadClosing'
+  | 'objectTrailingComma'
+  | 'objectKeyMustBeString'
+  | 'objectKeyEquals'
+  | 'objectKeyMissingColon'
+  | 'objectValueMissing'
+  | 'objectMissingBrace'
+  | 'objectMissingComma'
+  | 'arrayUnrecoverable'
+  | 'arrayBadClosing'
+  | 'arrayHoleNotAllowed'
+  | 'arrayValueMissing'
+  | 'arrayMissingBracket'
+  | 'arrayTrailingComma'
+  | 'arrayMissingComma'
+
+export type JsonRepairCode =
+  | 'fixedUnicodeEscape'
+  | 'removedEscapeCharacter'
+  | 'replacedControlCharacter'
+  | 'newlineToSpace'
+  | 'closedString'
+  | 'finiteToNull'
+  | 'closedBlockComment'
+  | 'ignoredCharacter'
+  | 'ignoredRootComma'
+  | 'ignoredClosing'
+  | 'ignoredRootContent'
+  | 'valueToNull'
+  | 'unrecognizedValueToNull'
+  | 'missingValueToNull'
+  | 'objectBraceAdded'
+  | 'ignoredObjectComma'
+  | 'removedObjectTrailingComma'
+  | 'removedArrayTrailingComma'
+  | 'ignoredObjectKey'
+  | 'objectColonAdded'
+  | 'objectMissingValueToNull'
+  | 'duplicateKey'
+  | 'objectCommaAdded'
+  | 'arrayBracketAdded'
+  | 'arrayHoleToNull'
+  | 'arrayCommaAdded'
+
+export type JsonMessageParams = Record<string, string | number>
+
+export type JsonRepair = {
+  code: JsonRepairCode
+  params?: JsonMessageParams
+}
+
 export type JsonFailure = {
   ok: false
-  message: string
+  code: JsonErrorCode
+  params?: JsonMessageParams
   line: number
   column: number
 }
@@ -39,11 +108,11 @@ export type JsonFormatOptions = JsonParseOptions & {
 }
 
 export type JsonParseResult =
-  | { ok: true; value: unknown; repairs: string[]; commentCount: number }
+  | { ok: true; value: unknown; repairs: JsonRepair[]; commentCount: number }
   | JsonFailure
 
 export type JsonFormatResult =
-  | { ok: true; value: unknown; output: string; stats: JsonStats; repairs: string[]; commentCount: number }
+  | { ok: true; value: unknown; output: string; stats: JsonStats; repairs: JsonRepair[]; commentCount: number }
   | JsonFailure
 
 type JsonRecord = Record<string, unknown>
@@ -69,12 +138,16 @@ type ParsedValue = { value: unknown; missing: boolean }
 class JsonParserError extends Error {
   line: number
   column: number
+  code: JsonErrorCode
+  params?: JsonMessageParams
 
-  constructor(message: string, line: number, column: number) {
-    super(message)
+  constructor(code: JsonErrorCode, line: number, column: number, params?: JsonMessageParams) {
+    super(code)
     this.name = 'JsonParserError'
     this.line = line
     this.column = column
+    this.code = code
+    this.params = params
   }
 }
 
@@ -110,11 +183,18 @@ function resolveParseOptions(options: JsonParseOptions, defaultRelaxed: boolean)
   }
 }
 
-function addUnique(values: string[], value: string) {
-  if (!values.includes(value)) values.push(value)
+function addUnique(values: JsonRepair[], value: JsonRepair) {
+  if (!values.some((item) => item.code === value.code && sameParams(item.params, value.params))) values.push(value)
 }
 
-function readString(source: string, start: number, quote: string, options: NormalizedParseOptions, repairs: string[]) {
+function sameParams(a?: JsonMessageParams, b?: JsonMessageParams) {
+  if (!a || !b) return a === b
+  const keys = Object.keys(a)
+  if (keys.length !== Object.keys(b).length) return false
+  return keys.every((key) => a[key] === b[key])
+}
+
+function readString(source: string, start: number, quote: string, options: NormalizedParseOptions, repairs: JsonRepair[]) {
   let index = start + 1
   let value = ''
 
@@ -149,9 +229,9 @@ function readString(source: string, start: number, quote: string, options: Norma
         }
         if (!options.relaxed) {
           const location = locationAt(source, index - 1)
-          throw new JsonParserError('字符串中的 Unicode 转义无效', location.line, location.column)
+          throw new JsonParserError('invalidUnicodeEscape', location.line, location.column)
         }
-        addUnique(repairs, '修复了无效的 Unicode 转义')
+        addUnique(repairs, { code: 'fixedUnicodeEscape' })
         value += 'u'
         index += 1
         continue
@@ -163,9 +243,9 @@ function readString(source: string, start: number, quote: string, options: Norma
       }
       if (!options.relaxed) {
         const location = locationAt(source, index - 1)
-        throw new JsonParserError('字符串包含无效的转义字符', location.line, location.column)
+        throw new JsonParserError('invalidEscapeCharacter', location.line, location.column)
       }
-      addUnique(repairs, '移除了无法识别的转义字符')
+      addUnique(repairs, { code: 'removedEscapeCharacter' })
       value += escaped
       index += 1
       continue
@@ -174,9 +254,9 @@ function readString(source: string, start: number, quote: string, options: Norma
     if (character !== '\n' && character !== '\r' && character.charCodeAt(0) < 0x20) {
       if (!options.relaxed) {
         const location = locationAt(source, index)
-        throw new JsonParserError('字符串包含未转义的控制字符', location.line, location.column)
+        throw new JsonParserError('unescapedControlCharacter', location.line, location.column)
       }
-      addUnique(repairs, '替换了字符串中的未转义控制字符')
+      addUnique(repairs, { code: 'replacedControlCharacter' })
       value += ' '
       index += 1
       continue
@@ -185,9 +265,9 @@ function readString(source: string, start: number, quote: string, options: Norma
     if (character === '\n' || character === '\r') {
       if (!options.relaxed) {
         const location = locationAt(source, index)
-        throw new JsonParserError('字符串不能直接包含换行', location.line, location.column)
+        throw new JsonParserError('newlineInString', location.line, location.column)
       }
-      addUnique(repairs, '将字符串中的换行替换为空格')
+      addUnique(repairs, { code: 'newlineToSpace' })
       value += ' '
       index += character === '\r' && source[index + 1] === '\n' ? 2 : 1
       continue
@@ -199,13 +279,13 @@ function readString(source: string, start: number, quote: string, options: Norma
 
   if (!options.relaxed) {
     const location = locationAt(source, start)
-    throw new JsonParserError('字符串缺少结束引号', location.line, location.column)
+    throw new JsonParserError('unterminatedString', location.line, location.column)
   }
-  addUnique(repairs, '为未闭合的字符串补上了结束引号')
+  addUnique(repairs, { code: 'closedString' })
   return { value, end: source.length }
 }
 
-function readNumber(source: string, start: number, options: NormalizedParseOptions, repairs: string[]) {
+function readNumber(source: string, start: number, options: NormalizedParseOptions, repairs: JsonRepair[]) {
   const pattern = options.relaxed
     ? /[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?/y
     : /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y
@@ -213,12 +293,12 @@ function readNumber(source: string, start: number, options: NormalizedParseOptio
   const match = pattern.exec(source)
   if (!match) {
     const location = locationAt(source, start)
-    throw new JsonParserError('数字格式无效', location.line, location.column)
+    throw new JsonParserError('invalidNumber', location.line, location.column)
   }
   const raw = match[0]
   const value = Number(raw)
   if (!Number.isFinite(value) && options.relaxed) {
-    addUnique(repairs, '将非有限数字转换为 null')
+    addUnique(repairs, { code: 'finiteToNull' })
     return { value: null, end: start + raw.length, raw }
   }
   return { value, end: start + raw.length, raw }
@@ -226,7 +306,7 @@ function readNumber(source: string, start: number, options: NormalizedParseOptio
 
 function tokenize(source: string, options: NormalizedParseOptions) {
   const tokens: Token[] = []
-  const repairs: string[] = []
+  const repairs: JsonRepair[] = []
   let commentCount = 0
   let index = 0
 
@@ -240,7 +320,7 @@ function tokenize(source: string, options: NormalizedParseOptions) {
     if (character === '/' && source[index + 1] === '/') {
       if (!options.allowComments) {
         const location = locationAt(source, index)
-        throw new JsonParserError('严格 JSON 不允许注释', location.line, location.column)
+        throw new JsonParserError('commentsNotAllowed', location.line, location.column)
       }
       commentCount += 1
       index += 2
@@ -251,16 +331,16 @@ function tokenize(source: string, options: NormalizedParseOptions) {
     if (character === '/' && source[index + 1] === '*') {
       if (!options.allowComments) {
         const location = locationAt(source, index)
-        throw new JsonParserError('严格 JSON 不允许注释', location.line, location.column)
+        throw new JsonParserError('commentsNotAllowed', location.line, location.column)
       }
       commentCount += 1
       const end = source.indexOf('*/', index + 2)
       if (end < 0) {
         if (!options.relaxed) {
           const location = locationAt(source, index)
-          throw new JsonParserError('块注释缺少结束标记', location.line, location.column)
+          throw new JsonParserError('unterminatedBlockComment', location.line, location.column)
         }
-        addUnique(repairs, '为未闭合的块注释补上了结束标记')
+        addUnique(repairs, { code: 'closedBlockComment' })
         index = source.length
       } else {
         index = end + 2
@@ -271,7 +351,7 @@ function tokenize(source: string, options: NormalizedParseOptions) {
     if (character === '"' || character === "'") {
       if (character === "'" && !options.allowSingleQuotes) {
         const location = locationAt(source, index)
-        throw new JsonParserError('严格 JSON 不允许单引号', location.line, location.column)
+        throw new JsonParserError('singleQuotesNotAllowed', location.line, location.column)
       }
       const result = readString(source, index, character, options, repairs)
       tokens.push({ kind: 'string', value: result.value, raw: source.slice(index, result.end), start: index, end: result.end })
@@ -312,9 +392,9 @@ function tokenize(source: string, options: NormalizedParseOptions) {
 
     if (!options.relaxed) {
       const location = locationAt(source, index)
-      throw new JsonParserError(`无法识别的字符 ${JSON.stringify(character)}`, location.line, location.column)
+      throw new JsonParserError('unrecognizedCharacter', location.line, location.column, { char: JSON.stringify(character) })
     }
-    addUnique(repairs, '忽略了无法识别的字符')
+    addUnique(repairs, { code: 'ignoredCharacter' })
     index += 1
   }
 
@@ -324,12 +404,12 @@ function tokenize(source: string, options: NormalizedParseOptions) {
 
 class ValueParser {
   private index = 0
-  private readonly repairs: string[]
+  private readonly repairs: JsonRepair[]
   private readonly commentCount: number
   private readonly source: string
   private readonly options: NormalizedParseOptions
 
-  constructor(source: string, tokens: Token[], repairs: string[], commentCount: number, options: NormalizedParseOptions) {
+  constructor(source: string, tokens: Token[], repairs: JsonRepair[], commentCount: number, options: NormalizedParseOptions) {
     this.source = source
     this.options = options
     this.repairs = [...repairs]
@@ -354,31 +434,31 @@ class ValueParser {
     return token.kind === 'punctuation' && token.value === value
   }
 
-  private repair(message: string) {
-    addUnique(this.repairs, message)
+  private repair(code: JsonRepairCode, params?: JsonMessageParams) {
+    addUnique(this.repairs, { code, params })
   }
 
-  private fail(message: string, token = this.current()) {
+  private fail(code: JsonErrorCode, token = this.current(), params?: JsonMessageParams) {
     const location = locationAt(this.source, token.start)
-    throw new JsonParserError(message, location.line, location.column)
+    throw new JsonParserError(code, location.line, location.column, params)
   }
 
   parse() {
     const parsed = this.parseValue()
-    if (parsed.missing) this.fail('JSON 内容不完整')
+    if (parsed.missing) this.fail('incompleteContent')
     while (this.current().kind !== 'eof') {
-      if (!this.options.relaxed) this.fail('JSON 根值后存在多余内容')
+      if (!this.options.relaxed) this.fail('trailingContent')
       if (this.isPunctuation(',')) {
-        this.repair('忽略了根值后的多余逗号')
+        this.repair('ignoredRootComma')
         this.consume()
         continue
       }
       if (this.isPunctuation('}') || this.isPunctuation(']')) {
-        this.repair('忽略了多余的闭合符号')
+        this.repair('ignoredClosing')
         this.consume()
         continue
       }
-      this.repair('忽略了根值后的多余内容')
+      this.repair('ignoredRootContent')
       this.consume()
     }
     return { value: parsed.value, repairs: this.repairs, commentCount: this.commentCount }
@@ -397,12 +477,12 @@ class ValueParser {
         return { value: normalized === 'null' ? null : normalized === 'true', missing: false }
       }
       if (this.options.allowUndefined && (normalized === 'undefined' || normalized === 'nan' || normalized === 'infinity' || normalized === '-infinity')) {
-        this.repair(`将 ${token.value} 转换为 null`)
+        this.repair('valueToNull', { value: String(token.value ?? '') })
         this.consume()
         return { value: null, missing: false }
       }
-      if (!this.options.relaxed) this.fail(`无法识别的值 ${token.raw}`)
-      this.repair(`将无法识别的值 ${token.raw} 转换为 null`)
+      if (!this.options.relaxed) this.fail('unrecognizedValue', undefined, { value: token.raw })
+      this.repair('unrecognizedValueToNull', { value: token.raw })
       this.consume()
       return { value: null, missing: false }
     }
@@ -411,7 +491,7 @@ class ValueParser {
     if (this.isPunctuation('}') || this.isPunctuation(']') || this.isPunctuation(',') || this.isPunctuation(':') || token.kind === 'eof') {
       return { value: null, missing: true }
     }
-    this.repair('将缺失的值转换为 null')
+    this.repair('missingValueToNull')
     this.consume()
     return { value: null, missing: false }
   }
@@ -440,22 +520,22 @@ class ValueParser {
     let iterations = 0
     while (this.current().kind !== 'eof') {
       iterations += 1
-      if (iterations > this.tokens.length * 2 + 8) this.fail('对象结构无法恢复')
+      if (iterations > this.tokens.length * 2 + 8) this.fail('objectUnrecoverable')
       if (this.isPunctuation('}')) {
         this.consume()
         return object
       }
       if (this.isPunctuation(']')) {
-        if (!this.options.relaxed) this.fail('对象中出现错误的闭合符号')
-        this.repair('为对象补上了右花括号')
+        if (!this.options.relaxed) this.fail('objectBadClosing')
+        this.repair('objectBraceAdded')
         return object
       }
       if (this.isPunctuation(',')) {
-        this.repair('忽略了对象中的多余逗号')
+        this.repair('ignoredObjectComma')
         this.consume()
         if (this.isPunctuation('}')) {
-          if (!this.options.allowTrailingCommas) this.fail('对象不允许尾逗号')
-          this.repair('移除了对象中的尾逗号')
+          if (!this.options.allowTrailingCommas) this.fail('objectTrailingComma')
+          this.repair('removedObjectTrailingComma')
           this.consume()
           return object
         }
@@ -466,8 +546,8 @@ class ValueParser {
       const key = this.readObjectKey()
       if (key === null) {
         const unsupportedUnquotedKey = (keyToken.kind === 'identifier' || keyToken.kind === 'number') && !this.options.allowUnquotedKeys
-        if (!this.options.relaxed || unsupportedUnquotedKey) this.fail('对象键必须使用字符串')
-        this.repair('忽略了对象中无法识别的键')
+        if (!this.options.relaxed || unsupportedUnquotedKey) this.fail('objectKeyMustBeString')
+        this.repair('ignoredObjectKey')
         this.consume()
         continue
       }
@@ -475,21 +555,21 @@ class ValueParser {
       if (this.isPunctuation(':')) {
         this.consume()
       } else if (this.isPunctuation('=')) {
-        if (!this.options.allowMissingColons) this.fail('对象键使用了等号但未启用修复')
+        if (!this.options.allowMissingColons) this.fail('objectKeyEquals')
         this.consume()
-        this.repair('为对象键补上了冒号')
+        this.repair('objectColonAdded')
       } else if (!this.options.allowMissingColons) {
-        this.fail('对象键后缺少冒号')
+        this.fail('objectKeyMissingColon')
       } else {
-        this.repair('为对象键补上了冒号')
+        this.repair('objectColonAdded')
       }
 
       const value = this.parseValue()
       if (value.missing) {
-        if (!this.options.relaxed) this.fail('对象属性缺少值')
-        this.repair('将对象中的缺失值转换为 null')
+        if (!this.options.relaxed) this.fail('objectValueMissing')
+        this.repair('objectMissingValueToNull')
       }
-      if (Object.prototype.hasOwnProperty.call(object, key)) this.repair(`对象中的重复键 ${key} 只保留最后一个值`)
+      if (Object.prototype.hasOwnProperty.call(object, key)) this.repair('duplicateKey', { key })
       Object.defineProperty(object, key, { value: value.value, writable: true, enumerable: true, configurable: true })
 
       if (this.isPunctuation('}')) {
@@ -497,26 +577,26 @@ class ValueParser {
         return object
       }
       if (this.isPunctuation(']') || this.current().kind === 'eof') {
-        if (!this.options.relaxed) this.fail('对象缺少右花括号')
-        this.repair('为对象补上了右花括号')
+        if (!this.options.relaxed) this.fail('objectMissingBrace')
+        this.repair('objectBraceAdded')
         return object
       }
       if (this.isPunctuation(',')) {
         this.consume()
         if (this.isPunctuation('}')) {
-          if (!this.options.allowTrailingCommas) this.fail('对象不允许尾逗号')
-          this.repair('移除了对象中的尾逗号')
+          if (!this.options.allowTrailingCommas) this.fail('objectTrailingComma')
+          this.repair('removedObjectTrailingComma')
           this.consume()
           return object
         }
         continue
       }
-      if (!this.options.allowMissingCommas) this.fail('对象属性之间缺少逗号')
-      this.repair('为对象属性补上了逗号')
+      if (!this.options.allowMissingCommas) this.fail('objectMissingComma')
+      this.repair('objectCommaAdded')
     }
 
-    if (!this.options.relaxed) this.fail('对象缺少右花括号')
-    this.repair('为对象补上了右花括号')
+    if (!this.options.relaxed) this.fail('objectMissingBrace')
+    this.repair('objectBraceAdded')
     return object
   }
 
@@ -531,19 +611,19 @@ class ValueParser {
     let iterations = 0
     while (this.current().kind !== 'eof') {
       iterations += 1
-      if (iterations > this.tokens.length * 2 + 8) this.fail('数组结构无法恢复')
+      if (iterations > this.tokens.length * 2 + 8) this.fail('arrayUnrecoverable')
       if (this.isPunctuation(']')) {
         this.consume()
         return values
       }
       if (this.isPunctuation('}') || this.isPunctuation(':')) {
-        if (!this.options.relaxed) this.fail('数组中出现错误的闭合符号')
-        this.repair('为数组补上了右方括号')
+        if (!this.options.relaxed) this.fail('arrayBadClosing')
+        this.repair('arrayBracketAdded')
         return values
       }
       if (this.isPunctuation(',')) {
-        if (!this.options.relaxed) this.fail('数组中不允许空项')
-        this.repair('将数组空项转换为 null')
+        if (!this.options.relaxed) this.fail('arrayHoleNotAllowed')
+        this.repair('arrayHoleToNull')
         values.push(null)
         this.consume()
         continue
@@ -551,8 +631,8 @@ class ValueParser {
 
       const parsed = this.parseValue()
       if (parsed.missing) {
-        if (!this.options.relaxed) this.fail('数组元素缺少值')
-        this.repair('将数组空项转换为 null')
+        if (!this.options.relaxed) this.fail('arrayValueMissing')
+        this.repair('arrayHoleToNull')
         values.push(null)
         if (this.isPunctuation(']')) {
           this.consume()
@@ -571,26 +651,26 @@ class ValueParser {
         return values
       }
       if (this.isPunctuation('}') || this.current().kind === 'eof') {
-        if (!this.options.relaxed) this.fail('数组缺少右方括号')
-        this.repair('为数组补上了右方括号')
+        if (!this.options.relaxed) this.fail('arrayMissingBracket')
+        this.repair('arrayBracketAdded')
         return values
       }
       if (this.isPunctuation(',')) {
         this.consume()
         if (this.isPunctuation(']')) {
-          if (!this.options.allowTrailingCommas) this.fail('数组不允许尾逗号')
-          this.repair('移除了数组中的尾逗号')
+          if (!this.options.allowTrailingCommas) this.fail('arrayTrailingComma')
+          this.repair('removedArrayTrailingComma')
           this.consume()
           return values
         }
         continue
       }
-      if (!this.options.allowMissingCommas) this.fail('数组元素之间缺少逗号')
-      this.repair('为数组元素补上了逗号')
+      if (!this.options.allowMissingCommas) this.fail('arrayMissingComma')
+      this.repair('arrayCommaAdded')
     }
 
-    if (!this.options.relaxed) this.fail('数组缺少右方括号')
-    this.repair('为数组补上了右方括号')
+    if (!this.options.relaxed) this.fail('arrayMissingBracket')
+    this.repair('arrayBracketAdded')
     return values
   }
 }
@@ -688,13 +768,15 @@ function getSource(input: string) {
 }
 
 function toFailure(error: unknown): JsonFailure {
-  if (error instanceof JsonParserError) return { ok: false, message: error.message, line: error.line, column: error.column }
-  return { ok: false, message: error instanceof Error ? error.message : 'JSON 解析失败', line: 1, column: 1 }
+  if (error instanceof JsonParserError) {
+    return { ok: false, code: error.code, params: error.params, line: error.line, column: error.column }
+  }
+  return { ok: false, code: 'parseFailed', line: 1, column: 1 }
 }
 
 export function parseJson(input: string, options: JsonParseOptions = {}): JsonParseResult {
   const source = getSource(input)
-  if (!source.trim()) return { ok: false, message: '请输入 JSON 内容', line: 1, column: 1 }
+  if (!source.trim()) return { ok: false, code: 'emptyInput', line: 1, column: 1 }
   try {
     const parsed = parseSource(source, resolveParseOptions(options, false))
     return { ok: true, value: parsed.value, repairs: parsed.repairs, commentCount: parsed.commentCount }
@@ -735,7 +817,7 @@ export function getJsonStats(value: unknown, output?: string): JsonStats {
 
 function createFormatResult(input: string, options: JsonFormatOptions, compact: boolean): JsonFormatResult {
   const source = getSource(input)
-  if (!source.trim()) return { ok: false, message: '请输入 JSON 内容', line: 1, column: 1 }
+  if (!source.trim()) return { ok: false, code: 'emptyInput', line: 1, column: 1 }
   const parseOptions = resolveParseOptions(options, true)
   try {
     const parsed = parseSource(source, parseOptions)

@@ -38,6 +38,7 @@ test('reports empty input and syntax error locations', () => {
   const empty = parseJson('  ')
   assert.equal(empty.ok, false)
   if (!empty.ok) {
+    assert.equal(empty.code, 'emptyInput')
     assert.equal(empty.line, 1)
     assert.equal(empty.column, 1)
   }
@@ -45,6 +46,7 @@ test('reports empty input and syntax error locations', () => {
   const invalid = parseJson('{\n  "name": "码间",\n}')
   assert.equal(invalid.ok, false)
   if (!invalid.ok) {
+    assert.equal(invalid.code, 'objectTrailingComma')
     assert.equal(invalid.line, 3)
     assert.equal(invalid.column, 1)
   }
@@ -98,4 +100,20 @@ test('supports output quote, Unicode, trailing comma, and array layout options',
   assert.equal(result.ok, true)
   if (!result.ok) return
   assert.equal(result.output, "{\n  '\\u4e2d\\u6587': [1, 2,],\n}")
+})
+
+test('reports locale-neutral repair codes with params', () => {
+  const result = parseJson('{"name":"码间","name":"second",}', {
+    allowTrailingCommas: true,
+    relaxed: true
+  })
+
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+  const codes = result.repairs.map((repair) => repair.code)
+  assert.ok(codes.includes('removedObjectTrailingComma'), `codes: ${codes.join(',')}`)
+  assert.ok(codes.includes('duplicateKey'), `codes: ${codes.join(',')}`)
+  const duplicate = result.repairs.find((repair) => repair.code === 'duplicateKey')
+  assert.equal(duplicate.params.key, 'name')
+  assert.equal(result.repairs.every((repair) => typeof repair.code === 'string'), true)
 })

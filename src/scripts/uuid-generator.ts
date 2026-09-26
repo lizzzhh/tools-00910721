@@ -8,6 +8,7 @@ import {
   type UuidForm
 } from '../lib/uuid'
 import { recordToolUsage } from './usage'
+import { currentTranslator } from '../i18n/client'
 import { clearError, copyText, downloadText, formatNumber, setStat, setValue, showError, toggleHidden } from './tool-panel'
 
 const mountedRoots = new WeakSet<HTMLElement>()
@@ -55,7 +56,7 @@ function init() {
     processed = ''
     toggleHidden(resultCard, true)
     setValue(output, '')
-    if (resultStatus) resultStatus.textContent = '等待生成'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.uuid-generator.status.waitingStatus')
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
     setStat(root, 'uuid-stat-count', '—')
@@ -82,19 +83,21 @@ function init() {
 
     if (!result.ok) {
       resetResult()
-      showError(errorBox, result.message)
+      showError(errorBox, currentTranslator()(`uuidUi.errors.${result.code}`))
       return
     }
 
     processed = result.output
     setValue(output, result.output)
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = `已生成 ${result.values.length} 个`
+    if (resultStatus) {
+      resultStatus.textContent = currentTranslator()('toolUi.uuid-generator.status.doneStatus', { count: formatNumber(result.values.length) })
+    }
     if (copyButton) copyButton.disabled = false
     if (downloadButton) downloadButton.disabled = false
     setStat(root, 'uuid-stat-count', formatNumber(result.values.length))
     setStat(root, 'uuid-stat-version', `v${result.version}`)
-    setStat(root, 'uuid-stat-kind', uuidVersionMap[result.version].kindLabel)
+    setStat(root, 'uuid-stat-kind', currentTranslator()(`uuidUi.kinds.${uuidVersionMap[result.version].kind}`))
     setStat(root, 'uuid-stat-length', formatNumber(result.output.length))
     recordToolUsage('uuid-generator')
   }

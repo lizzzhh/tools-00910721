@@ -1,16 +1,21 @@
 import { parseUuidList, type UuidDetails, type UuidParsedRow } from '../lib/uuid'
 import { recordToolUsage } from './usage'
+import { currentTranslator } from '../i18n/client'
 import { clearError, copyText, formatNumber, setStat, showError, toggleHidden } from './tool-panel'
 
 const mountedRoots = new WeakSet<HTMLElement>()
 const MAX_ROWS = 200
 
-const kindLabels: Record<UuidDetails['kind'], string> = {
-  time: '时间有序',
-  random: '随机',
-  name: '名称派生',
-  custom: '自定义',
-  none: '无字段'
+function kindLabel(kind: UuidDetails['kind']) {
+  return currentTranslator()(`uuidUi.kinds.${kind}`)
+}
+
+function versionLabel(details: UuidDetails) {
+  const t = currentTranslator()
+  if (details.versionLabelId === 'unknown') return t('uuidUi.forms.unknown', { hex: details.unknownVersion ?? '' })
+  if (details.versionLabelId === 'nil') return t('uuidUi.forms.nil')
+  if (details.versionLabelId === 'max') return t('uuidUi.forms.max')
+  return `v${details.version}`
 }
 
 function createRow(cells: string[]) {
@@ -25,23 +30,32 @@ function createRow(cells: string[]) {
 }
 
 function detailRows(details: UuidDetails): string[][] {
+  const t = currentTranslator()
   const rows: string[][] = [
-    ['规范形式', details.value],
-    ['紧凑形式', details.compact],
-    ['版本', details.versionLabel],
-    ['变体', details.variant],
-    ['类型', kindLabels[details.kind]]
+    [t('toolUi.uuid-parser.rows.canonical'), details.value],
+    [t('toolUi.uuid-parser.rows.compact'), details.compact],
+    [t('toolUi.uuid-parser.rows.version'), versionLabel(details)],
+    [t('toolUi.uuid-parser.rows.variant'), details.variant],
+    [t('toolUi.uuid-parser.rows.kind'), kindLabel(details.kind)]
   ]
 
   if (details.form !== 'standard') {
-    rows.push(['特殊格式', details.form === 'nil' ? 'Nil 全零' : 'Max 全一'])
+    rows.push([
+      t('toolUi.uuid-parser.rows.specialForm'),
+      t(details.form === 'nil' ? 'toolUi.uuid-parser.forms.nilZero' : 'toolUi.uuid-parser.forms.maxOnes')
+    ])
   }
-  if (details.timestamp) rows.push(['时间戳', `${details.timestamp}（Unix ${details.timestampMs} ms）`])
-  if (details.clockSequence) rows.push(['时钟序列', details.clockSequence])
-  if (details.dceDomain !== null) rows.push(['DCE 域', `0x${details.dceDomain.toString(16).padStart(2, '0')}`])
-  if (details.node) rows.push(['节点标识', `${details.node}${details.multicast ? '（随机位已置 1）' : ''}`])
-  if (details.randomTail) rows.push(['随机尾部', details.randomTail])
-  if (details.entropy) rows.push(['随机位', `${details.entropy}（122 位）`])
+  if (details.timestamp) rows.push([t('toolUi.uuid-parser.rows.timestamp'), `${details.timestamp}（Unix ${details.timestampMs} ms）`])
+  if (details.clockSequence) rows.push([t('toolUi.uuid-parser.rows.clockSequence'), details.clockSequence])
+  if (details.dceDomain !== null) rows.push([t('toolUi.uuid-parser.rows.dceDomain'), `0x${details.dceDomain.toString(16).padStart(2, '0')}`])
+  if (details.node) {
+    rows.push([
+      t('toolUi.uuid-parser.rows.node'),
+      `${details.node}${details.multicast ? t('toolUi.uuid-parser.suffixes.nodeMulticast') : ''}`
+    ])
+  }
+  if (details.randomTail) rows.push([t('toolUi.uuid-parser.rows.randomTail'), details.randomTail])
+  if (details.entropy) rows.push([t('toolUi.uuid-parser.rows.entropy'), `${details.entropy}${t('toolUi.uuid-parser.suffixes.entropyBits')}`])
 
   return rows
 }
@@ -65,7 +79,12 @@ function createItem(template: HTMLTemplateElement, row: UuidParsedRow) {
 
   setHead('.uuid-parse-item-index', String(row.index))
   setHead('.uuid-parse-item-value', details ? details.value : row.input)
-  setHead('.uuid-parse-item-meta', details ? `${details.versionLabel} · ${kindLabels[details.kind]}` : '无法解析')
+  setHead(
+    '.uuid-parse-item-meta',
+    details
+      ? `${versionLabel(details)} · ${kindLabel(details.kind)}`
+      : currentTranslator()('toolUi.uuid-parser.messages.unparsable')
+  )
   setHead('.uuid-parse-item-state', details ? shortTimestamp(details.timestamp) : (row.error ?? ''))
 
   const fields = body.querySelector<HTMLElement>('.uuid-parse-item-fields')
@@ -74,7 +93,9 @@ function createItem(template: HTMLTemplateElement, row: UuidParsedRow) {
     const copyButton = body.querySelector<HTMLButtonElement>('.uuid-parse-item-copy')
     if (copyButton) {
       copyButton.disabled = false
-      copyButton.addEventListener('click', () => void copyText(details.value, '该 UUID 已复制到剪贴板'))
+      copyButton.addEventListener('click', () =>
+        void copyText(details.value, currentTranslator()('toolUi.uuid-parser.messages.copied'))
+      )
     }
     return fragment
   }
@@ -83,7 +104,7 @@ function createItem(template: HTMLTemplateElement, row: UuidParsedRow) {
   body.querySelector('.uuid-parse-item-actions')?.remove()
   const note = document.createElement('p')
   note.className = 'uuid-parse-item-note'
-  note.textContent = row.error ?? '该项不是合法 UUID'
+  note.textContent = row.error ?? currentTranslator()('toolUi.uuid-parser.messages.invalidItem')
   fields?.replaceChildren(note)
   return fragment
 }
@@ -106,7 +127,7 @@ function init() {
     toggleHidden(resultCard, true)
     itemContainer?.replaceChildren()
     if (itemContainer) itemContainer.dataset.empty = 'true'
-    if (resultStatus) resultStatus.textContent = '等待解析'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.uuid-parser.messages.waiting')
     setStat(root, 'uuid-parse-stat-total', '—')
     setStat(root, 'uuid-parse-stat-valid', '—')
     setStat(root, 'uuid-parse-stat-invalid', '—')
@@ -118,7 +139,7 @@ function init() {
     const value = input?.value.trim() ?? ''
     if (!value) {
       resetResult()
-      showError(errorBox, '请输入需要解析的 UUID')
+      showError(errorBox, currentTranslator()('toolUi.uuid-parser.messages.emptyInput'))
       return
     }
 
@@ -130,16 +151,23 @@ function init() {
     }
 
     if (report.invalid > 0) {
-      showError(errorBox, `有 ${report.invalid} 项无法解析，已在下方明细中标注`)
+      showError(errorBox, currentTranslator()('toolUi.uuid-parser.messages.invalidNotice', { count: formatNumber(report.invalid) }))
     }
 
     toggleHidden(resultCard, false)
-    if (resultStatus) resultStatus.textContent = `已解析 ${report.rows.length} 项`
+    if (resultStatus) {
+      resultStatus.textContent = currentTranslator()('toolUi.uuid-parser.messages.parsedStatus', { count: formatNumber(report.rows.length) })
+    }
     setStat(root, 'uuid-parse-stat-total', formatNumber(report.rows.length))
     setStat(root, 'uuid-parse-stat-valid', formatNumber(report.valid))
     setStat(root, 'uuid-parse-stat-invalid', formatNumber(report.invalid))
 
-    const versions = [...new Set(report.rows.map((row) => row.details?.versionLabel ?? '无效'))].sort()
+    const t = currentTranslator()
+    const versions = [
+      ...new Set(
+        report.rows.map((row) => (row.details ? versionLabel(row.details) : t('toolUi.uuid-parser.messages.invalidShort')))
+      )
+    ].sort()
     setStat(root, 'uuid-parse-stat-versions', versions.join(' · '))
 
     if (itemContainer && itemTemplate) {
@@ -147,7 +175,10 @@ function init() {
       if (report.rows.length > MAX_ROWS) {
         const notice = document.createElement('p')
         notice.className = 'uuid-parse-item-notice'
-        notice.textContent = `仅显示前 ${MAX_ROWS} 项，其余 ${formatNumber(report.rows.length - MAX_ROWS)} 项未列出`
+        notice.textContent = currentTranslator()('toolUi.uuid-parser.messages.truncated', {
+        shown: formatNumber(MAX_ROWS),
+        rest: formatNumber(report.rows.length - MAX_ROWS)
+      })
         nodes.push(notice)
       }
       itemContainer.replaceChildren(...nodes)

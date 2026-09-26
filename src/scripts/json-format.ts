@@ -1,4 +1,5 @@
 import { formatJson, minifyJson, type JsonFormatOptions, type JsonFormatResult, type JsonIndent, type JsonQuote } from '../lib/json'
+import { currentTranslator } from '../i18n/client'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
 
@@ -80,7 +81,9 @@ function init() {
 
   function showError(result: Extract<JsonFormatResult, { ok: false }>) {
     if (!errorBox) return
-    errorBox.textContent = `第 ${result.line} 行，第 ${result.column} 列：${result.message}`
+    const t = currentTranslator()
+    const position = t('toolUi.json-format.errorPosition', { line: result.line, column: result.column })
+    errorBox.textContent = `${position}${t(`toolUi.json-format.errors.${result.code}`, result.params)}`
     errorBox.hidden = false
   }
 
@@ -93,7 +96,7 @@ function init() {
     }
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('toolUi.json-format.status.waiting')
     if (repairSummary) {
       repairSummary.textContent = ''
       repairSummary.hidden = true
@@ -115,11 +118,14 @@ function init() {
   function renderResult(result: Extract<JsonFormatResult, { ok: true }>) {
     formattedOutput = result.output
     if (resultCard) resultCard.hidden = false
-    const notes = result.repairs.slice()
-    if (result.commentCount) notes.push(`移除了 ${result.commentCount} 条注释`)
-    if (resultStatus) resultStatus.textContent = notes.length ? '已自动处理' : 'JSON 有效'
+    const t = currentTranslator()
+    const notes = result.repairs.map((repair) => t(`toolUi.json-format.repairs.${repair.code}`, repair.params))
+    if (result.commentCount) notes.push(t('toolUi.json-format.repairs.commentsRemoved', { count: result.commentCount }))
+    if (resultStatus) resultStatus.textContent = notes.length ? t('toolUi.json-format.status.autoFixed') : t('toolUi.json-format.status.valid')
     if (repairSummary) {
-      repairSummary.textContent = notes.length ? `已自动处理：${notes.join('；')}` : ''
+      repairSummary.textContent = notes.length
+        ? t('toolUi.json-format.autoFixedSummary', { notes: notes.join(t('toolUi.json-format.separator')) })
+        : ''
       repairSummary.hidden = notes.length === 0
     }
     if (output) {
@@ -155,9 +161,9 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(formattedOutput)
-      showToast('JSON 结果已复制')
+      showToast(currentTranslator()('toolUi.json-format.toast.copied'))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择内容')
+      showToast(currentTranslator()('toolUi.json-format.toast.manualCopy'))
     }
   }
 
@@ -169,7 +175,7 @@ function init() {
     link.download = 'formatted.json'
     link.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    showToast('JSON 文件已准备下载')
+    showToast(currentTranslator()('toolUi.json-format.toast.downloadReady'))
   }
 
   function clearAll() {
