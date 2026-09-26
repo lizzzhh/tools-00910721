@@ -61,7 +61,7 @@ const searchIndex = localized.map((tool) => `${tool.name} ${tool.description} ${
     <div class="empty-search" id="empty-search" hidden>{t('sidebar.noResult')}</div>
   </div>
   <div class="sidebar-footer">
-    <span class="avatar">码</span>
+    <span class="avatar" aria-hidden="true"><Icon name="lucide:code" size={18} /></span>
     <span><strong>{t('sidebar.updating')}</strong><small>{t('sidebar.updatingHint')}</small></span>
   </div>
 </aside>

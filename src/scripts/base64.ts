@@ -1,4 +1,5 @@
 import { decodeBase, encodeBase, type BaseEncoding, type BaseResult } from '../lib/base64'
+import { currentTranslator } from '../i18n/client'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
 
@@ -61,9 +62,12 @@ function init() {
 
   function updateModeLabels() {
     const label = getEncodingLabel()
-    if (inputLabel) inputLabel.textContent = mode === 'encode' ? '输入文本' : `输入${label}`
-    if (processLabel) processLabel.textContent = mode === 'encode' ? '开始编码' : '开始解码'
-    if (input) input.placeholder = mode === 'encode' ? '输入要编码的文本…' : `输入要解码的${label}文本…`
+    const t = currentTranslator()
+    if (inputLabel) inputLabel.textContent = mode === 'encode' ? t('workspace.inputLabel') : t('toolUi.base64.inputHintFor', { label })
+    if (processLabel) processLabel.textContent = mode === 'encode' ? t('workspace.startEncode') : t('workspace.startDecode')
+    if (input)
+      input.placeholder =
+        mode === 'encode' ? t('toolUi.base64.inputPlaceholder') : t('toolUi.base64.decodeInputPlaceholder', { label })
   }
 
   function clearError() {
@@ -74,8 +78,9 @@ function init() {
 
   function showError(result: Extract<BaseResult, { ok: false }>) {
     if (!errorBox) return
-    const position = result.position === undefined ? '' : `第 ${result.position} 个字符：`
-    errorBox.textContent = `${position}${result.message}`
+    const t = currentTranslator()
+    const position = result.position === undefined ? '' : t('toolUi.base64.charPosition', { position: result.position })
+    errorBox.textContent = `${position}${t(`toolUi.base64.errors.${result.code}`, result.params)}`
     errorBox.hidden = false
   }
 
@@ -94,7 +99,7 @@ function init() {
     }
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (statInput) statInput.textContent = '—'
     if (statOutput) statOutput.textContent = '—'
     if (statBytes) statBytes.textContent = '—'
@@ -104,8 +109,9 @@ function init() {
   function renderResult(result: Extract<BaseResult, { ok: true }>) {
     processedOutput = result.output
     if (resultCard) resultCard.hidden = false
-    if (resultStatus) resultStatus.textContent = mode === 'encode' ? '编码完成' : '解码完成'
-    if (outputLabel) outputLabel.textContent = mode === 'encode' ? '编码结果' : '解码结果'
+    const t = currentTranslator()
+    if (resultStatus) resultStatus.textContent = mode === 'encode' ? t('toolUi.base64.doneEncode') : t('toolUi.base64.doneDecode')
+    if (outputLabel) outputLabel.textContent = mode === 'encode' ? t('workspace.encodedResult') : t('workspace.decodedResult')
     if (output) {
       output.value = result.output
       output.dataset.empty = 'false'
@@ -115,7 +121,7 @@ function init() {
     if (statInput) statInput.textContent = String(getInputLength())
     if (statOutput) statOutput.textContent = String(result.outputLength)
     if (statBytes) statBytes.textContent = formatBytes(result.byteLength)
-    if (statFormat) statFormat.textContent = mode === 'encode' ? getEncodingLabel() : 'UTF-8 文本'
+    if (statFormat) statFormat.textContent = mode === 'encode' ? getEncodingLabel() : t('toolUi.base64.utf8Text')
   }
 
   function setMode(nextMode: Base64Mode) {
@@ -138,7 +144,7 @@ function init() {
     if (mode === 'decode' && !value.trim()) {
       resetResult()
       if (errorBox) {
-        errorBox.textContent = `请输入${getEncodingLabel()}内容`
+        errorBox.textContent = currentTranslator()('toolUi.base64.needInput', { label: getEncodingLabel() })
         errorBox.hidden = false
       }
       return
@@ -158,9 +164,9 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(processedOutput)
-      showToast('处理结果已复制')
+      showToast(currentTranslator()('toolUi.base64.toast.copied'))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择内容')
+      showToast(currentTranslator()('toolUi.base64.toast.manualCopy'))
     }
   }
 
@@ -172,7 +178,7 @@ function init() {
     link.download = mode === 'encode' ? 'encoded.txt' : 'decoded.txt'
     link.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    showToast('结果文件已准备下载')
+    showToast(currentTranslator()('toolUi.base64.toast.downloadReady'))
   }
 
   function clearAll() {

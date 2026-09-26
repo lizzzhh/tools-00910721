@@ -9,13 +9,31 @@ export type BaseResult =
     }
   | {
       ok: false
-      message: string
+      /** Stable key resolved to localized text by the UI layer. */
+      code: BaseErrorCode
+      params?: Record<string, string | number>
       position?: number
     }
 
 export type Base64Result = BaseResult
 
-type DecodeError = { error: string; position?: number }
+/** Codes the UI maps to `toolUi.base64.errors.*`. */
+export type BaseErrorCode =
+  | 'invalidChar'
+  | 'needInput'
+  | 'base32Length'
+  | 'base32Padding'
+  | 'base32PaddingBits'
+  | 'base85Length'
+  | 'invalidBase85'
+  | 'base85Range'
+  | 'base85Boundary'
+  | 'base64Padding'
+  | 'base64Length'
+  | 'base64Invalid'
+  | 'notUtf8'
+
+type DecodeError = { code: BaseErrorCode; params?: Record<string, string | number>; position?: number }
 
 const base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
@@ -32,14 +50,14 @@ function getOutputLength(value: string) {
   return Array.from(value).length
 }
 
-function getInvalidCharacter(value: string, name: string, pattern: RegExp) {
+function getInvalidCharacter(value: string, name: string, pattern: RegExp): DecodeError {
   const index = [...value].findIndex((character) => !pattern.test(character))
-  return { error: `包含无效的 ${name} 字符`, position: index >= 0 ? index + 1 : undefined }
+  return { code: 'invalidChar', params: { name }, position: index >= 0 ? index + 1 : undefined }
 }
 
-function getInvalidAlphabetCharacter(value: string, name: string, alphabet: string) {
+function getInvalidAlphabetCharacter(value: string, name: string, alphabet: string): DecodeError | undefined {
   const index = [...value].findIndex((character) => alphabet.indexOf(character) < 0)
-  return index >= 0 ? { error: `包含无效的 ${name} 字符`, position: index + 1 } : undefined
+  return index >= 0 ? { code: 'invalidChar', params: { name }, position: index + 1 } : undefined
 }
 
 function bytesToBaseN(bytes: Uint8Array, base: number, alphabet: string) {
@@ -61,7 +79,7 @@ function bytesToBaseN(bytes: Uint8Array, base: number, alphabet: string) {
 
 function baseNToBytes(value: string, base: number, alphabet: string, name: string): Uint8Array | DecodeError {
   const normalized = removeWhitespace(value)
-  if (!normalized) return { error: `请输入 ${name} 内容` }
+  if (!normalized) return { code: 'needInput', params: { name } }
   const invalid = getInvalidAlphabetCharacter(normalized, name, alphabet)
   if (invalid) return invalid
 
@@ -101,7 +119,7 @@ function bytesToBase32(bytes: Uint8Array) {
 
 function base32ToBytes(value: string): Uint8Array | DecodeError {
   const normalized = removeWhitespace(value).toUpperCase()
-  if (!normalized) return { error: '请输入 Base32 内容' }
+  if (!normalized) return { code: 'needInput', params: { name: 'Base32' } }
 
   const firstPadding = normalized.indexOf('=')
   const data = firstPadding >= 0 ? normalized.slice(0, firstPadding) : normalized
@@ -111,10 +129,10 @@ function base32ToBytes(value: string): Uint8Array | DecodeError {
   }
 
   const remainder = data.length % 8
-  if (remainder === 1 || remainder === 3 || remainder === 6) return { error: 'Base32 长度无效', position: data.length }
+  if (remainder === 1 || remainder === 3 || remainder === 6) return { code: 'base32Length', position: data.length }
   if (padding) {
     const expectedPadding = remainder === 0 ? 0 : 8 - remainder
-    if (padding.length !== expectedPadding) return { error: 'Base32 填充字符位置无效' }
+    if (padding.length !== expectedPadding) return { code: 'base32Padding' }
   }
 
   const bytes: number[] = []
@@ -129,7 +147,7 @@ function base32ToBytes(value: string): Uint8Array | DecodeError {
     }
     buffer &= (1 << bits) - 1
   }
-  if (bits > 0 && buffer !== 0) return { error: 'Base32 填充位无效' }
+  if (bits > 0 && buffer !== 0) return { code: 'base32PaddingBits' }
   return Uint8Array.from(bytes)
 }
 
@@ -165,15 +183,15 @@ function encodeAscii85Group(bytes: ArrayLike<number>, length: number) {
 }
 
 function decodeAscii85Group(group: string): Uint8Array | DecodeError {
-  if (group.length < 2 || group.length > 5) return { error: 'Base85 长度无效' }
+  if (group.length < 2 || group.length > 5) return { code: 'base85Length' }
   let value = 0
   for (const character of group) {
     const digit = ascii85Alphabet.indexOf(character)
-    if (digit < 0) return { error: '包含无效的 Base85 字符' }
+    if (digit < 0) return { code: 'invalidBase85' }
     value = value * 85 + digit
   }
   for (let index = group.length; index < 5; index += 1) value = value * 85 + 84
-  if (value > 0xffffffff) return { error: 'Base85 数值超出范围' }
+  if (value > 0xffffffff) return { code: 'base85Range' }
 
   const bytes: number[] = []
   for (let index = 0; index < group.length - 1; index += 1) {
@@ -187,10 +205,10 @@ function ascii85ToBytes(value: string): Uint8Array | DecodeError {
   const hasOpening = normalized.startsWith('<~')
   const hasClosing = normalized.endsWith('~>')
   if (hasOpening || hasClosing) {
-    if (!hasOpening || !hasClosing) return { error: 'Base85 边界字符无效' }
+    if (!hasOpening || !hasClosing) return { code: 'base85Boundary' }
     normalized = normalized.slice(2, -2)
   }
-  if (!normalized) return { error: '请输入 Base85 内容' }
+  if (!normalized) return { code: 'needInput', params: { name: 'Base85' } }
 
   const bytes: number[] = []
   let offset = 0
@@ -203,7 +221,7 @@ function ascii85ToBytes(value: string): Uint8Array | DecodeError {
 
     const group = normalized.slice(offset, offset + 5)
     const paddingIndex = group.indexOf('z')
-    if (paddingIndex >= 0) return { error: '包含无效的 Base85 字符', position: offset + paddingIndex + 1 }
+    if (paddingIndex >= 0) return { code: 'invalidBase85', position: offset + paddingIndex + 1 }
     const decoded = decodeAscii85Group(group)
     if (!(decoded instanceof Uint8Array)) return decoded
     bytes.push(...decoded)
@@ -243,7 +261,7 @@ function bytesToBase91(bytes: Uint8Array) {
 
 function base91ToBytes(value: string): Uint8Array | DecodeError {
   const normalized = removeWhitespace(value)
-  if (!normalized) return { error: '请输入 Base91 内容' }
+  if (!normalized) return { code: 'needInput', params: { name: 'Base91' } }
   const invalid = getInvalidAlphabetCharacter(normalized, 'Base91', base91Alphabet)
   if (invalid) return invalid
 
@@ -283,23 +301,23 @@ function bytesToBase64(bytes: Uint8Array) {
 
 function base64ToBytes(value: string): Uint8Array | DecodeError {
   const normalized = removeWhitespace(value)
-  if (!normalized) return { error: '请输入 Base64 内容' }
+  if (!normalized) return { code: 'needInput', params: { name: 'Base64' } }
   if (!base64Pattern.test(normalized)) return getInvalidCharacter(normalized, 'Base64', /^[A-Za-z0-9+/=]$/)
 
   const firstPadding = normalized.indexOf('=')
   if (firstPadding >= 0 && firstPadding < normalized.length - (normalized.endsWith('==') ? 2 : 1)) {
-    return { error: 'Base64 填充字符位置无效' }
+    return { code: 'base64Padding' }
   }
 
   const unpadded = normalized.replace(/=+$/, '')
-  if (unpadded.length % 4 === 1) return { error: 'Base64 长度无效' }
+  if (unpadded.length % 4 === 1) return { code: 'base64Length' }
   const padded = unpadded + '='.repeat((4 - (unpadded.length % 4)) % 4)
 
   try {
     const binary = atob(padded)
     return Uint8Array.from(binary, (character) => character.charCodeAt(0))
   } catch {
-    return { error: 'Base64 内容无效' }
+    return { code: 'base64Invalid' }
   }
 }
 
@@ -326,7 +344,7 @@ function decodeText(bytes: Uint8Array): BaseResult {
     const output = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
     return { ok: true, output, byteLength: bytes.byteLength, outputLength: getOutputLength(output) }
   } catch {
-    return { ok: false, message: '解码结果不是有效的 UTF-8 文本' }
+    return { ok: false, code: 'notUtf8' }
   }
 }
 
@@ -339,7 +357,12 @@ export function encodeBase(input: string, encoding: BaseEncoding = 'base64'): Ba
 export function decodeBase(input: string, encoding: BaseEncoding = 'base64'): BaseResult {
   const result = decodeBytes(input, encoding)
   if (result instanceof Uint8Array) return decodeText(result)
-  return { ok: false, message: result.error, ...(result.position === undefined ? {} : { position: result.position }) }
+  return {
+    ok: false,
+    code: result.code,
+    ...(result.params === undefined ? {} : { params: result.params }),
+    ...(result.position === undefined ? {} : { position: result.position })
+  }
 }
 
 export function encodeBase64(input: string): BaseResult {

@@ -124,7 +124,11 @@ test('rejects URL-safe Base64 syntax', () => {
   const result = decodeBase64('Pz8_Pj4')
 
   assert.equal(result.ok, false)
-  if (!result.ok) assert.match(result.message, /Base64/)
+  // errors surface a stable code; the UI resolves it to localized text
+  if (!result.ok) {
+    assert.equal(result.code, 'invalidChar')
+    assert.deepEqual(result.params, { name: 'Base64' })
+  }
 })
 
 test('rejects malformed Base64 and invalid UTF-8 output', () => {
@@ -137,6 +141,11 @@ test('rejects malformed Base64 and invalid UTF-8 output', () => {
   assert.equal(invalidLength.ok, false)
   assert.equal(invalidUtf8.ok, false)
   assert.equal(empty.ok, false)
-  if (!invalidCharacter.ok) assert.equal(invalidCharacter.position, 8)
-  if (!invalidUtf8.ok) assert.match(invalidUtf8.message, /UTF-8/)
+  if (!invalidCharacter.ok) {
+    assert.equal(invalidCharacter.position, 8)
+    assert.equal(invalidCharacter.code, 'invalidChar')
+    assert.deepEqual(invalidCharacter.params, { name: 'Base64' })
+  }
+  if (!invalidUtf8.ok) assert.equal(invalidUtf8.code, 'notUtf8')
+  if (!empty.ok) assert.equal(empty.code, 'needInput')
 })

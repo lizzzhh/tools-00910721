@@ -18,6 +18,7 @@ const jaLatinAllow = new Set([
   'HSL', 'QR', 'TODO', 'OAuth', 'CRC32', 'bcrypt', 'argon2', 'AES', 'RSA', 'EC', 'ES', 'HS', 'PS',
   'none', 'PBKDF2', 'scrypt', 'HTTPS', 'iOS', 'Web', 'ISO', 'RFC', 'plain', 'DEFLATE', 'GZIP',
   'eyJ', 'ey', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'Nil', 'Max', 'NilUUID', 'MaxUUID',
+  'UTF', 'Bitcoin', 'RFC', 'DNS', 'Punycode', 'IDN', 'Nginx', 'WebP', 'SVG', 'PDF', 'OCR',
   'RAW', 'UTC', 'GMT', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
 ])
 
