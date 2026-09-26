@@ -1,11 +1,11 @@
-import { defaultLocale, isLocale, locales, type Locale } from './config'
-import en from './locales/en'
-import ja from './locales/ja'
-import zhCN from './locales/zh-CN'
-import zhTW from './locales/zh-TW'
+import { defaultLocale, isLocale, locales, type Locale } from './config.ts'
+import en from './locales/en.ts'
+import ja from './locales/ja.ts'
+import zhCN from './locales/zh-CN.ts'
+import zhTW from './locales/zh-TW.ts'
 
-export type { Locale } from './config'
-export { defaultLocale, isLocale, localeMeta, localePath, localeStorageKey, locales, localeFromPath, matchBrowserLocale, stripLocalePrefix } from './config'
+export type { Locale } from './config.ts'
+export { defaultLocale, isLocale, localeMeta, localePath, localeStorageKey, locales, localeFromPath, matchBrowserLocale, stripLocalePrefix } from './config.ts'
 
 /**
  * The zh-CN dictionary defines the shape every other locale must satisfy.

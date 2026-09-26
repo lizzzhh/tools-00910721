@@ -1,5 +1,5 @@
-import { createTranslator, type MessageKey, type Translator } from './index'
-import { isLocale, localeMeta, type Locale } from './config'
+import { createTranslator, type MessageKey, type Translator } from './index.ts'
+import { isLocale, localeMeta, type Locale } from './config.ts'
 
 /**
  * Reads the active locale from the document. Every client script goes through
