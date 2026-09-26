@@ -109,18 +109,17 @@
 
 html {
   min-width: 320px;
-  background: var(--page-bg);
   scroll-behavior: smooth;
+  background:
+    linear-gradient(90deg, color-mix(in oklch, var(--line-divider) 40%, transparent) 1px, transparent 1px) 0 0 / 48px 48px fixed,
+    linear-gradient(color-mix(in oklch, var(--line-divider) 35%, transparent) 1px, transparent 1px) 0 0 / 48px 48px fixed,
+    var(--page-bg);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--deep-text);
-  background:
-    linear-gradient(90deg, color-mix(in oklch, var(--line-divider) 40%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
-    linear-gradient(color-mix(in oklch, var(--line-divider) 35%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
-    var(--page-bg);
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.6;
