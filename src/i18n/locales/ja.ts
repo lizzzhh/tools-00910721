@@ -1,0 +1,198 @@
+import type { Dictionary } from '../index'
+
+const ja: Dictionary = {
+  meta: {
+    siteName: '透明質のツールボックス',
+    tagline: '開発に集中',
+    description: 'すべての処理がブラウザ内で完結する開発者向けツールボックス。'
+  },
+  locale: {
+    switcherLabel: '言語を切り替える',
+    switcherTitle: '言語',
+    current: '現在の言語'
+  },
+  nav: {
+    home: 'ホーム',
+    tools: 'ツール',
+    favorites: 'お気に入り',
+    about: 'このサイトについて',
+    brandHome: '{site} のホーム',
+    openMenu: 'ツールメニューを開く',
+    expanding: 'ツールは継続的に追加中です',
+    themeToggle: 'ライトとダークを切り替える',
+    main: 'メインナビゲーション'
+  },
+  sidebar: {
+    allTools: 'すべてのツール',
+    closeMenu: 'ツールメニューを閉じる',
+    searchPlaceholder: 'ツールを検索',
+    toolCenter: 'ツール一覧',
+    soon: '近日公開',
+    noResult: '該当するツールがありません',
+    updating: '継続的に更新中',
+    updatingHint: '便利なツールを順次追加予定です'
+  },
+  catalog: {
+    eyebrow: 'TOOL DIRECTORY',
+    title: 'ツール一覧',
+    subtitle: '必要なツールを選んで、日常の開発を提速しましょう。',
+    favoritesTitle: 'お気に入り',
+    favoritesSubtitle: 'よく使うツールをすぐ開けるように保存できます。',
+    count: '利用可能 {available} 件 · 近日公開 {planned} 件',
+    searchPlaceholder: 'ツール名や機能を検索',
+    filterLabel: 'ツールのカテゴリ',
+    all: 'すべて',
+    favoritesEmptyTitle: 'お気に入りはまだありません',
+    favoritesEmptyHint: 'ツール一覧でスターを押すと保存できます。',
+    emptyTitle: '該当するツールがありません',
+    emptyHint: '別のキーワードやカテゴリを試してください。',
+    resultsCount: '{count} 件の結果',
+    favoritesCount: 'お気に入り {count} 件',
+    favoriteAction: { add: 'お気に入りに追加', remove: 'お気に入りから削除' },
+    favoriteLabel: '{name} をお気に入り'
+  },
+  footer: {
+    motto: '{site} · 開発に集中',
+    feedback: 'ツールは継続的に追加中 · フィードバック歓迎'
+  },
+  home: {
+    eyebrow: 'WORKSPACE / OVERVIEW',
+    title: '開発ワークベンチ',
+    subtitle: 'おかえりなさい。煩雑な作業はツールに任せて、コードは清晰地保ちましょう。',
+    cta: 'ツール一覧へ',
+    soon: '近日公開',
+    fortune: {
+      eyebrow: 'DAILY CHECK',
+      title: '今日の運勢',
+      draw: '今日の運勢を引く',
+      drawn: '今日はもう引きました',
+      idle: 'まだ引いていません',
+      idleMessage: '運勢は 1 日 1 回引けます。'
+    },
+    usage: {
+      eyebrow: 'LOCAL ACTIVITY',
+      title: 'ツールの使用状況',
+      deviceOnly: 'この端末のみ',
+      total: '累計使用',
+      today: '今日の使用',
+      favorite: '最も使用',
+      none: 'なし',
+      times: '{count} 回',
+      unit: '回',
+      empty: '使用履歴はまだありません',
+      emptyHint: 'ツールを使うと上位 5 件がここに表示されます'
+    },
+    quick: { eyebrow: 'QUICK ACCESS', title: 'クイックスタート' },
+    activity: {
+      eyebrow: 'RECENT ACTIVITY',
+      title: '最近の使用履歴',
+      count: '{count} 件の履歴',
+      empty: '使用履歴はまだありません',
+      emptyHint: 'ツール一覧から最初のツールを試してみてください',
+      usedAt: '{time} に使用'
+    }
+  },
+  fortunes: {
+    online: { label: '快調', message: '複雑な問題を小さく分けて一つずつ確実に片付けていける日です。' },
+    steady: { label: '着実に前進', message: 'アイデアを待つより、計画の次の 1 個を完了させましょう。' },
+    stutter: { label: '少し詰まり', message: '難題に当たったら少し休憩を。答えはその少し先に待っているかもしれません。' },
+    inspired: { label: 'アイデアが湧く', message: 'TODO を片付けるのに適しています。一度のリファクタで半日分を短縮できるかも。' },
+    focus: { label: '集中モード', message: '通知を切り、最も重要なタスクをいちばん前に置きましょう。' },
+    smooth: { label: '快調', message: '今日の手応えも思路も調子がよく、古いコードの整理に向いています。' }
+  },
+  about: {
+    eyebrow: 'ABOUT TRANSPARENT TOOLBOX',
+    title: '{site} について',
+    body: 'プログラマーのために作られた軽量なツールボックスです。すべての計算はブラウザ内で行われ、入力内容が送信・保存されることはありません。',
+    cta: 'ハッシュ計算ツールを開く',
+    notFoundTitle: 'ツールが見つかりません',
+    backToTools: 'ツール一覧へ戻る'
+  },
+  toolsPage: { comingSoonBody: 'このツールは開発中です。ほかのツールをお試しください。', browseCatalog: 'ツール一覧を見る' },
+  theme: { toDark: 'ダークテーマに切り替える', toLight: 'ライトテーマに切り替える' },
+  toast: { success: '完了しました' },
+  common: {
+    copy: 'コピー',
+    copied: 'コピーしました',
+    download: 'ダウンロード',
+    clear: 'クリア',
+    sample: 'サンプル',
+    generate: '生成',
+    encode: 'エンコード',
+    decode: 'デコード',
+    input: '入力',
+    output: '出力',
+    options: '表示オプション',
+    copyFailed: 'コピーに失敗しました',
+    emptyInput: '内容を入力してください',
+    localOnly: 'ローカル処理',
+    charactersUnit: '文字'
+  },
+  error: { title: 'エラーが発生しました' },
+  categories: {
+    developer: '開発ツール',
+    encoding: 'エンコードとデータ',
+    text: 'テキスト',
+    security: 'セキュリティ',
+    media: 'メディア',
+    efficiency: '効率化'
+  },
+  workspace: { result: '処理結果', waiting: '処理待ち', readonly: '読み取り専用結果', copyResult: '結果をコピー', downloadResult: '結果をダウンロード', inputChars: '入力文字数', outputChars: '出力文字数', bytes: 'バイト数', format: '形式', algorithm: 'アルゴリズム', inputLabel: '入力テキスト', startEncode: 'エンコード開始', startDecode: 'デコード開始', encodedResult: 'エンコード結果', decodedResult: 'デコード結果', outputLabel: '出力' },
+  toolUi: {
+    'uuid-parser': { subtitle: 'バージョン、バリアント、時刻フィールドを分解（一括対応）', noticeLead: 'v1 から v8 、および Nil・Max の特殊形式に対応します。v1・v2・v6 は 100 ナノ秒のタイムスタンプ、v7・v8 は Unix ミリ秒を解析します。識別子を作成するには', noticeLink: 'UUID 生成', inputLabel: '解析する UUID', inputHint: '1 行に 1 個、カンマやスペース区切りにも対応', parseButton: '解析', resultTitle: '解析結果', idleStatus: '解析待ち', statTotal: '検出数', statValid: '有効', statInvalid: '無効', statVersions: 'バージョン', detailsTitle: 'フィールド詳細', detailsHint: '展開して各 UUID を確認' },
+    'jwt-decode': { subtitle: 'ヘッダー、ペイロード、時刻関連のクレームを確認', notice: '内容のみをデコードし、署名は検証しません。実際の鍵や個人情報は貼り付けないでください。', inputLabel: 'JWT トークン', inputPlaceholder: 'eyJ で始まる JWT トークンを貼り付け…', decodeButton: 'トークンを解析', resultTitle: '解析結果', idleStatus: '解析待ち', idleState: '入力待ち' }
+  },
+  tools: {
+    hash: { name: 'ハッシュ計算', description: '複数アルゴリズムのダイジェストと署名' },
+    'jwt-decode': { name: 'JWT デコード', description: 'トークンの中身を解析' },
+    'password-generator': { name: 'パスワード生成', description: '安全なランダムパスワードを生成' },
+    'password-strength': { name: 'パスワード強度', description: 'パスワードの安全性を評価' },
+    'json-format': { name: 'JSON 整形', description: 'JSON の整形と検証' },
+    base64: { name: 'Base エンコード', description: 'テキストと Base32・Base58・Base62・Base64・Ascii85・Base91 の相互変換' },
+    'url-encode': { name: 'URL エンコード', description: 'リンクとクエリパラメータの処理' },
+    'html-entity': { name: 'HTML エンティティ', description: 'HTML 文字のエスケープと復元' },
+    'unicode-escape': { name: 'Unicode エスケープ', description: '文字コード・エスケープ・コードポイント検索' },
+    'query-string': { name: 'クエリ文字列', description: 'パラメータを 1 件ずつ編集して同期' },
+    'number-base': { name: '基数変換', description: '2-36 基数と Base58・Base62 をリアルタイム変換' },
+    'uuid-generator': { name: 'UUID 生成', description: 'v1 から v8 の識別子をまとめて生成' },
+    'uuid-parser': { name: 'UUID 解析', description: 'バージョン・バリアント・時刻を分解' },
+    'timestamp-converter': { name: 'タイムスタンプ変換', description: 'Unix 時刻と日付を相互変換' },
+    'text-case': { name: '大文字小文字変換', description: 'ケースとネーミングスタイルを切り替え' },
+    'text-counter': { name: 'テキスト統計', description: '文字数・行数・単語数をカウント' },
+    'text-deduplicate': { name: '重複削除と並べ替え', description: '重複する行を削除して並べ替え' },
+    'text-replace': { name: '置換ツール', description: 'テキストを一括で置換' },
+    'fullwidth-halfwidth': { name: '全角半角変換', description: '全角文字と半角文字を相互変換' },
+    'yaml-format': { name: 'YAML 整形', description: 'YAML の検証と整理' },
+    'xml-format': { name: 'XML 整形', description: 'XML の整形と検証' },
+    'sql-format': { name: 'SQL 整形', description: 'SQL クエリを整理' },
+    'cron-parser': { name: 'Cron 式解析', description: 'スケジュール式を説明' },
+    'regex-tester': { name: '正規表現テスト', description: 'マッチ・グループ・置換' },
+    'diff-text': { name: 'テキスト差分', description: '2 つのテキストを比較' },
+    'markdown-preview': { name: 'Markdown プレビュー', description: 'Markdown をリアルタイム表示' },
+    'json-path': { name: 'JSONPath', description: 'JSON 内のノードを特定' },
+    'curl-builder': { name: 'cURL ジェネレータ', description: 'パラメータから cURL コマンドを生成' },
+    'http-request': { name: 'HTTP リクエスト', description: 'HTTP リクエストの送信とデバッグ' },
+    'code-beautify': { name: 'コード整形', description: 'インデントと体裁を統一' },
+    'json-to-typescript': { name: 'JSON → TypeScript', description: 'サンプルから型定義を生成' },
+    'openapi-viewer': { name: 'OpenAPI ビューア', description: 'API ドキュメントの閲覧と検索' },
+    'json-schema-validator': { name: 'JSON Schema 検証', description: 'データ構造と制約を検証' },
+    'markdown-toc': { name: 'Markdown 目次生成', description: 'ドキュメントの目次を生成' },
+    'random-string': { name: 'ランダム文字列', description: 'ルールに従ったランダムなテキストを生成' },
+    'timezone-converter': { name: 'タイムゾーン変換', description: 'タイムゾーンをまたいで時刻を変換' },
+    'date-calculator': { name: '日付計算', description: '日付の差と加算日数を計算' },
+    'scientific-calculator': { name: '計算機', description: '関数と式を計算' },
+    'text-sort': { name: 'テキスト並べ替え', description: 'ルールに基づいて行を並べ替え' },
+    'color-converter': { name: 'カラー変換', description: 'HEX・RGB・HSL を変換' },
+    'contrast-checker': { name: 'コントラスト確認', description: '文字色の可読性を確認' },
+    'qr-code': { name: 'QR コード生成', description: 'QR コードを生成してダウンロード' },
+    'image-compressor': { name: '画像圧縮', description: '画像を圧縮して容量を削減' },
+    'image-cropper': { name: '画像切り抜き', description: '比率に合わせて画像を切り抜き' },
+    'image-converter': { name: '画像形式変換', description: '一般的な画像形式を変換' },
+    'exif-viewer': { name: 'EXIF 情報', description: '写真の撮影情報を読み取る' },
+    'audio-converter': { name: '音声形式変換', description: '音声ファイルの形式を変換' },
+    'docker-compose': { name: 'Docker Compose 整形', description: 'コンテナ設定を検証して整理' },
+    'nginx-config': { name: 'Nginx 設定チェック', description: 'よくある設定ミスを検出' }
+  }
+}
+
+export default ja

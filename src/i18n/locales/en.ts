@@ -1,0 +1,198 @@
+import type { Dictionary } from '../index'
+
+const en: Dictionary = {
+  meta: {
+    siteName: 'Transparent Toolbox',
+    tagline: 'Stay focused on development',
+    description: 'A developer toolbox that runs entirely in your browser.'
+  },
+  locale: {
+    switcherLabel: 'Change language',
+    switcherTitle: 'Language',
+    current: 'Current language'
+  },
+  nav: {
+    home: 'Home',
+    tools: 'Tools',
+    favorites: 'Favorites',
+    about: 'About',
+    brandHome: '{site} home',
+    openMenu: 'Open tools menu',
+    expanding: 'More tools on the way',
+    themeToggle: 'Toggle light and dark theme',
+    main: 'Main navigation'
+  },
+  sidebar: {
+    allTools: 'All tools',
+    closeMenu: 'Close tools menu',
+    searchPlaceholder: 'Search tools',
+    toolCenter: 'Tools',
+    soon: 'Coming soon',
+    noResult: 'No matching tools',
+    updating: 'Always updating',
+    updatingHint: 'More handy tools are on the way'
+  },
+  catalog: {
+    eyebrow: 'TOOL DIRECTORY',
+    title: 'Tools',
+    subtitle: 'Pick the tool you need and move faster every day.',
+    favoritesTitle: 'Favorites',
+    favoritesSubtitle: 'Keep the tools you use most one click away.',
+    count: '{available} available · {planned} coming soon',
+    searchPlaceholder: 'Search tools by name or feature',
+    filterLabel: 'Tool categories',
+    all: 'All',
+    favoritesEmptyTitle: 'No favorites yet',
+    favoritesEmptyHint: 'Tap the star on any tool in the directory to save it.',
+    emptyTitle: 'No matching tools',
+    emptyHint: 'Try a different keyword or category.',
+    resultsCount: '{count} results',
+    favoritesCount: '{count} favorited tools',
+    favoriteAction: { add: 'Favorite', remove: 'Remove from favorites' },
+    favoriteLabel: 'Favorite {name}'
+  },
+  footer: {
+    motto: '{site} · Stay focused on development',
+    feedback: 'More tools on the way · Feedback welcome'
+  },
+  home: {
+    eyebrow: 'WORKSPACE / OVERVIEW',
+    title: 'Developer workbench',
+    subtitle: 'Welcome back. Stay focused today and let the tools handle the busywork while the code stays clean.',
+    cta: 'Open the toolbox',
+    soon: 'Coming soon',
+    fortune: {
+      eyebrow: 'DAILY CHECK',
+      title: 'Daily fortune',
+      draw: "Draw today's fortune",
+      drawn: "Drawn for today",
+      idle: 'Not drawn yet',
+      idleMessage: 'You can draw your fortune once a day.'
+    },
+    usage: {
+      eyebrow: 'LOCAL ACTIVITY',
+      title: 'Tool usage',
+      deviceOnly: 'This device only',
+      total: 'Total runs',
+      today: 'Today',
+      favorite: 'Most used',
+      none: 'None yet',
+      times: '{count} runs',
+      unit: 'runs',
+      empty: 'No usage yet',
+      emptyHint: 'Your five most used tools will show up here'
+    },
+    quick: { eyebrow: 'QUICK ACCESS', title: 'Quick start' },
+    activity: {
+      eyebrow: 'RECENT ACTIVITY',
+      title: 'Recent activity',
+      count: '{count} entries',
+      empty: 'No activity yet',
+      emptyHint: 'Head to the toolbox and try your first tool',
+      usedAt: 'used at {time}'
+    }
+  },
+  fortunes: {
+    online: { label: 'All systems go', message: 'A good day to break a big problem into small ones and clear them one by one.' },
+    steady: { label: 'Steady progress', message: 'Skip the inspiration hunt and just finish the next box on your plan.' },
+    stutter: { label: 'A few hiccups', message: 'Stuck on something? Take a sip of water. The answer may be one step away.' },
+    inspired: { label: 'Inspired', message: 'Great time to clear your TODOs. One refactor might save you half a day.' },
+    focus: { label: 'Focus mode', message: 'Mute the notifications and put the most important task front and center.' },
+    smooth: { label: 'Super smooth', message: 'Your hands and your head are both in sync today. Perfect for legacy code.' }
+  },
+  about: {
+    eyebrow: 'ABOUT TRANSPARENT TOOLBOX',
+    title: 'About {site}',
+    body: 'A lightweight toolbox built for programmers. Everything runs locally in your browser: nothing is uploaded and nothing you type is stored.',
+    cta: 'Open the hash tool',
+    notFoundTitle: 'Tool not found',
+    backToTools: 'Back to the toolbox'
+  },
+  toolsPage: { comingSoonBody: 'This tool is still in development. Try one of the others in the meantime.', browseCatalog: 'Browse the toolbox' },
+  theme: { toDark: 'Switch to dark theme', toLight: 'Switch to light theme' },
+  toast: { success: 'Done' },
+  common: {
+    copy: 'Copy',
+    copied: 'Copied',
+    download: 'Download',
+    clear: 'Clear',
+    sample: 'Sample',
+    generate: 'Generate',
+    encode: 'Encode',
+    decode: 'Decode',
+    input: 'Input',
+    output: 'Output',
+    options: 'Display options',
+    copyFailed: 'Copy failed',
+    emptyInput: 'Enter some content first',
+    localOnly: 'Runs locally',
+    charactersUnit: 'chars'
+  },
+  error: { title: 'Something went wrong' },
+  categories: {
+    developer: 'Developer tools',
+    encoding: 'Encoding & data',
+    text: 'Text',
+    security: 'Security',
+    media: 'Media',
+    efficiency: 'Productivity'
+  },
+  workspace: { result: 'Result', waiting: 'Waiting', readonly: 'Read-only result', copyResult: 'Copy result', downloadResult: 'Download result', inputChars: 'Input characters', outputChars: 'Output characters', bytes: 'Bytes', format: 'Format', algorithm: 'Algorithm', inputLabel: 'Input text', startEncode: 'Encode', startDecode: 'Decode', encodedResult: 'Encoded output', decodedResult: 'Decoded output', outputLabel: 'Output' },
+  toolUi: {
+    'uuid-parser': { subtitle: 'Break down the version, variant, and time fields, in batches', noticeLead: 'Handles v1 through v8 plus the Nil and Max forms. v1, v2, and v6 expose a 100-nanosecond timestamp; v7 and v8 expose Unix milliseconds. To create identifiers, go to', noticeLink: 'UUID Generator', inputLabel: 'UUIDs to decode', inputHint: 'One per line; commas and spaces work too', parseButton: 'Decode', resultTitle: 'Decoded result', idleStatus: 'Waiting to decode', statTotal: 'Recognized', statValid: 'Valid', statInvalid: 'Invalid', statVersions: 'Versions', detailsTitle: 'Field details', detailsHint: 'Expand to inspect each UUID' },
+    'jwt-decode': { subtitle: 'Inspect the header, payload, and time-based claims', notice: 'Only the contents are decoded; signatures are not verified. Never paste real secrets or private data.', inputLabel: 'JWT token', inputPlaceholder: 'Paste a JWT token starting with eyJ…', decodeButton: 'Decode token', resultTitle: 'Decoded result', idleStatus: 'Waiting to decode', idleState: 'Waiting for input' }
+  },
+  tools: {
+    hash: { name: 'Hash calculator', description: 'Digests and signatures' },
+    'jwt-decode': { name: 'JWT decoder', description: 'Inspect token contents' },
+    'password-generator': { name: 'Password generator', description: 'Generate secure random passwords' },
+    'password-strength': { name: 'Password strength', description: 'Rate password security' },
+    'json-format': { name: 'JSON formatter', description: 'Format and validate JSON' },
+    base64: { name: 'Base encoding', description: 'Text to Base32, Base58, Base62, Base64, Ascii85 and Base91' },
+    'url-encode': { name: 'URL encoder', description: 'Work with links and query parameters' },
+    'html-entity': { name: 'HTML entities', description: 'Escape and unescape HTML characters' },
+    'unicode-escape': { name: 'Unicode escapes', description: 'Character encoding, escapes and code points' },
+    'query-string': { name: 'Query string parser', description: 'Edit query parameters and keep the string in sync' },
+    'number-base': { name: 'Number base converter', description: 'Live conversion across 2-36, Base58 and Base62' },
+    'uuid-generator': { name: 'UUID generator', description: 'Batch generate v1 through v8 identifiers' },
+    'uuid-parser': { name: 'UUID parser', description: 'Break down version, variant and time' },
+    'timestamp-converter': { name: 'Timestamp converter', description: 'Convert between Unix time and dates' },
+    'text-case': { name: 'Case converter', description: 'Switch letter case and naming styles' },
+    'text-counter': { name: 'Text statistics', description: 'Count characters, lines and words' },
+    'text-deduplicate': { name: 'Deduplicate and sort', description: 'Remove duplicate lines and sort text' },
+    'text-replace': { name: 'Find and replace', description: 'Replace text in bulk' },
+    'fullwidth-halfwidth': { name: 'Fullwidth converter', description: 'Convert between fullwidth and halfwidth characters' },
+    'yaml-format': { name: 'YAML formatter', description: 'Validate and tidy YAML' },
+    'xml-format': { name: 'XML formatter', description: 'Format and validate XML' },
+    'sql-format': { name: 'SQL formatter', description: 'Tidy up SQL queries' },
+    'cron-parser': { name: 'Cron parser', description: 'Explain scheduled task expressions' },
+    'regex-tester': { name: 'Regex tester', description: 'Match, capture groups and replace' },
+    'diff-text': { name: 'Text diff', description: 'Compare two blocks of text' },
+    'markdown-preview': { name: 'Markdown preview', description: 'Preview Markdown as you type' },
+    'json-path': { name: 'JSONPath query', description: 'Locate nodes in JSON data' },
+    'curl-builder': { name: 'cURL builder', description: 'Build a cURL command from parameters' },
+    'http-request': { name: 'HTTP request', description: 'Send and debug HTTP requests' },
+    'code-beautify': { name: 'Code formatter', description: 'Normalize indentation and layout' },
+    'json-to-typescript': { name: 'JSON to TypeScript', description: 'Generate type definitions from a sample' },
+    'openapi-viewer': { name: 'OpenAPI viewer', description: 'Read and search API documentation' },
+    'json-schema-validator': { name: 'JSON Schema validator', description: 'Validate structure and constraints' },
+    'markdown-toc': { name: 'Markdown TOC', description: 'Generate a table of contents' },
+    'random-string': { name: 'Random string', description: 'Generate random text by rules' },
+    'timezone-converter': { name: 'Timezone converter', description: 'Convert time across timezones' },
+    'date-calculator': { name: 'Date calculator', description: 'Calculate date differences and offsets' },
+    'scientific-calculator': { name: 'Calculator', description: 'Evaluate functions and expressions' },
+    'text-sort': { name: 'Text sorter', description: 'Order lines by rule' },
+    'color-converter': { name: 'Color converter', description: 'Convert HEX, RGB and HSL' },
+    'contrast-checker': { name: 'Contrast checker', description: 'Check text color readability' },
+    'qr-code': { name: 'QR code generator', description: 'Generate and download QR codes' },
+    'image-compressor': { name: 'Image compressor', description: 'Compress images and shrink file size' },
+    'image-cropper': { name: 'Image cropper', description: 'Crop images by ratio' },
+    'image-converter': { name: 'Image converter', description: 'Convert common image formats' },
+    'exif-viewer': { name: 'EXIF viewer', description: 'Read photo metadata' },
+    'audio-converter': { name: 'Audio converter', description: 'Convert audio file formats' },
+    'docker-compose': { name: 'Docker Compose formatter', description: 'Validate and tidy container configs' },
+    'nginx-config': { name: 'Nginx config check', description: 'Catch common configuration problems' }
+  }
+}
+
+export default en

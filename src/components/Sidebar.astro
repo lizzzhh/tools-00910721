@@ -1,6 +1,8 @@
 ---
 import { Icon } from 'astro-icon/components'
-import { allTools, toolCategories } from '../data/tools'
+import { allTools, categoryName, localizeTools, toolCategories } from '../data/tools'
+import { createTranslator } from '../i18n'
+import { localePath } from '../i18n/config'
 
 interface Props {
   activeTool: string
@@ -8,51 +10,58 @@ interface Props {
 }
 
 const { activeTool, activeNav } = Astro.props
-const categoryTools = new Map(toolCategories.map((category) => [category.name, allTools.filter((tool) => tool.category === category.name)]))
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const localized = localizeTools(allTools, t)
+const categories = toolCategories.map((category) => ({ ...category, name: categoryName(category.id, t) }))
+const categoryTools = new Map(categories.map((category) => [category.id, localized.filter((tool) => tool.category === category.id)]))
+const toolsHref = localePath(locale, '/tools/')
+const searchIndex = localized.map((tool) => `${tool.name} ${tool.description} ${tool.keywords.join(' ')}`).join(' | ')
 ---
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-mobile-head">
-    <strong>全部工具</strong>
-    <button class="icon-button" id="close-sidebar" type="button" aria-label="关闭工具菜单"><Icon name="lucide:x" size={20} /></button>
+    <strong>{t('sidebar.allTools')}</strong>
+    <button class="icon-button" id="close-sidebar" type="button" aria-label={t('sidebar.closeMenu')}><Icon name="lucide:x" size={20} /></button>
   </div>
   <label class="tool-search">
     <Icon name="lucide:search" size={17} />
-    <input id="tool-search" type="search" placeholder="搜索工具" autocomplete="off" />
+    <input id="tool-search" type="search" placeholder={t('sidebar.searchPlaceholder')} autocomplete="off" />
     <kbd>⌘ K</kbd>
   </label>
-  <a class:list={['tool-center-link', { active: activeNav === 'tools' }]} href="/tools/"><Icon name="lucide:layout-grid" size={17} /><span>工具中心</span></a>
-  <div class="sidebar-scroll">
-    {toolCategories.map((category, categoryIndex) => (
+  <a class:list={['tool-center-link', { active: activeNav === 'tools' }]} href={toolsHref}><Icon name="lucide:layout-grid" size={17} /><span>{t('sidebar.toolCenter')}</span></a>
+  <div class="sidebar-scroll" data-search-index={searchIndex}>
+    {categories.map((category, categoryIndex) => (
       <section class="tool-group" data-category={category.id}>
         <div class="group-title">
           <span>{category.name}</span>
           <span>{String(categoryIndex + 1).padStart(2, '0')}</span>
         </div>
-        {(categoryTools.get(category.name) ?? []).map((tool) => {
+        {(categoryTools.get(category.id) ?? []).map((tool) => {
           const active = tool.available && activeTool === tool.id
+          const search = `${tool.name} ${tool.description} ${tool.keywords.join(' ')}`
           if (tool.available) {
             return (
-              <a class:list={['tool-item', { active }]} href={`/tools/${tool.id}/`} data-search={`${tool.name} ${tool.description} ${tool.keywords.join(' ')}`} aria-current={active ? 'page' : undefined}>
+              <a class:list={['tool-item', { active }]} href={localePath(locale, `/tools/${tool.id}/`)} data-search={search} aria-current={active ? 'page' : undefined}>
                 <span class="tool-icon"><Icon name={tool.icon} size={19} /></span>
                 <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
               </a>
             )
           }
           return (
-            <button class="tool-item disabled" type="button" disabled data-search={`${tool.name} ${tool.description} ${tool.keywords.join(' ')}`}>
+            <button class="tool-item disabled" type="button" disabled data-search={search}>
               <span class="tool-icon"><Icon name={tool.icon} size={19} /></span>
               <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
-              <em>即将上线</em>
+              <em>{t('sidebar.soon')}</em>
             </button>
           )
         })}
       </section>
     ))}
-    <div class="empty-search" id="empty-search" hidden>没有找到相关工具</div>
+    <div class="empty-search" id="empty-search" hidden>{t('sidebar.noResult')}</div>
   </div>
   <div class="sidebar-footer">
     <span class="avatar">码</span>
-    <span><strong>持续更新中</strong><small>更多实用工具正在路上</small></span>
+    <span><strong>{t('sidebar.updating')}</strong><small>{t('sidebar.updatingHint')}</small></span>
   </div>
 </aside>

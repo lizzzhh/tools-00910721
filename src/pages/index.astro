@@ -1,9 +1,9 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
 import Dashboard from '../components/Dashboard.astro'
+import { createTranslator } from '../i18n'
 ---
 
-<BaseLayout title="开发者工作台 · 透明质的工具箱" description="透明质的工具箱总览，查看工具使用统计和今日运势。" activeNav="home">
+<BaseLayout title={`${createTranslator(Astro.locals.locale)('home.title')} · ${createTranslator(Astro.locals.locale)('meta.siteName')}`} description={createTranslator(Astro.locals.locale)('meta.description')} activeNav="home">
   <Dashboard />
 </BaseLayout>
-

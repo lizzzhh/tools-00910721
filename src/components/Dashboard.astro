@@ -1,24 +1,32 @@
 ---
 import { Icon } from 'astro-icon/components'
-import { plannedTools, tools } from '../data/tools'
+import { localizeTools, plannedTools, tools } from '../data/tools'
 import Button from './ui/Button.astro'
 import Card from './ui/Card.astro'
 import SectionHeading from './ui/SectionHeading.astro'
+import { createTranslator } from '../i18n'
+import { localePath } from '../i18n/config'
+
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const localizedTools = localizeTools(tools, t)
+const localizedPlanned = localizeTools(plannedTools, t)
+const toolsHref = localePath(locale, '/tools/')
 ---
 
-<section class="dashboard-workspace">
+<section class="dashboard-workspace" data-locale={locale}>
   <div class="dashboard-heading">
     <div>
-      <span class="eyebrow">WORKSPACE / OVERVIEW</span>
-      <h1>开发者工作台</h1>
-      <p>欢迎回来，今天也保持专注，让工具处理琐碎，让代码保持清晰。</p>
+      <span class="eyebrow">{t('home.eyebrow')}</span>
+      <h1>{t('home.title')}</h1>
+      <p>{t('home.subtitle')}</p>
     </div>
-    <a class="primary-button" href="/tools/"><Icon name="lucide:grid-2x2" size={17} />进入工具中心</a>
+    <a class="primary-button" href={toolsHref}><Icon name="lucide:grid-2x2" size={17} />{t('home.cta')}</a>
   </div>
 
   <div class="dashboard-grid">
     <Card class="fortune-card">
-      <SectionHeading eyebrow="DAILY CHECK" title="今日运势">
+      <SectionHeading eyebrow={t('home.fortune.eyebrow')} title={t('home.fortune.title')}>
         <span class="random-label">ONE DAILY</span>
       </SectionHeading>
       <div class="fortune-score-row">
@@ -26,60 +34,60 @@ import SectionHeading from './ui/SectionHeading.astro'
         <div class="fortune-meter"><i id="fortune-meter"></i></div>
       </div>
       <div class="fortune-copy">
-        <span id="fortune-label">等待今日签到</span>
-        <p id="fortune-message">每天可以抽取一次今日运势。</p>
+        <span id="fortune-label">{t('home.fortune.idle')}</span>
+        <p id="fortune-message">{t('home.fortune.idleMessage')}</p>
       </div>
-      <Button id="draw-fortune" icon="lucide:sparkles">抽取今日运势</Button>
+      <Button id="draw-fortune" icon="lucide:sparkles">{t('home.fortune.draw')}</Button>
     </Card>
 
     <Card class="usage-card">
-      <SectionHeading eyebrow="LOCAL ACTIVITY" title="工具使用统计">
-        <span class="local-label"><i></i>仅当前设备</span>
+      <SectionHeading eyebrow={t('home.usage.eyebrow')} title={t('home.usage.title')}>
+        <span class="local-label"><i></i>{t('home.usage.deviceOnly')}</span>
         <span class="activity-count">TOP 5</span>
       </SectionHeading>
       <div class="usage-metrics">
-        <div><span>累计使用</span><strong id="total-usage">0</strong><small>次</small></div>
-        <div><span>今日使用</span><strong id="today-usage">0</strong><small>次</small></div>
-        <div><span>最常用</span><strong id="favorite-tool">暂无</strong><small id="favorite-count">0 次</small></div>
+        <div><span>{t('home.usage.total')}</span><strong id="total-usage">0</strong><small>{t('home.usage.unit')}</small></div>
+        <div><span>{t('home.usage.today')}</span><strong id="today-usage">0</strong><small>{t('home.usage.unit')}</small></div>
+        <div><span>{t('home.usage.favorite')}</span><strong id="favorite-tool">{t('home.usage.none')}</strong><small id="favorite-count">{t('home.usage.times', { count: 0 })}</small></div>
       </div>
       <div class="usage-bars" id="usage-bars" hidden>
-        {tools.map((tool) => (
+        {localizedTools.map((tool) => (
           <div class="usage-bar-row" data-tool-id={tool.id}>
             <div><span><Icon name={tool.icon} size={14} />{tool.name}</span><b data-tool-count>0</b></div>
             <i><span data-tool-bar></span></i>
           </div>
         ))}
       </div>
-      <div class="usage-empty" id="usage-empty"><Icon name="lucide:chart-no-axes-column" size={18} /><span>还没有使用记录<br /><small>使用工具后这里会按次数显示前五名</small></span></div>
+      <div class="usage-empty" id="usage-empty"><Icon name="lucide:chart-no-axes-column" size={18} /><span>{t('home.usage.empty')}<br /><small>{t('home.usage.emptyHint')}</small></span></div>
     </Card>
   </div>
 
   <div class="dashboard-lower-grid">
     <Card class="quick-tools">
-        <SectionHeading eyebrow="QUICK ACCESS" title="快速开始" />
+        <SectionHeading eyebrow={t('home.quick.eyebrow')} title={t('home.quick.title')} />
       <div class="quick-tool-list">
-        {tools.map((tool) => (
-          <a class="quick-tool" href={`/tools/${tool.id}/`}>
+        {localizedTools.map((tool) => (
+          <a class="quick-tool" href={localePath(locale, `/tools/${tool.id}/`)}>
             <span class="quick-tool-icon"><Icon name={tool.icon} size={19} /></span>
             <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
             <Icon name="lucide:arrow-up-right" size={16} />
           </a>
         ))}
-        {plannedTools.slice(0, 3).map((tool) => (
+        {localizedPlanned.slice(0, 3).map((tool) => (
           <div class="quick-tool coming">
             <span class="quick-tool-icon"><Icon name={tool.icon} size={19} /></span>
             <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
-            <em>即将上线</em>
+            <em>{t('home.soon')}</em>
           </div>
         ))}
       </div>
     </Card>
 
     <Card class="activity-card">
-      <SectionHeading eyebrow="RECENT ACTIVITY" title="最近使用">
-        <span class="activity-count" id="activity-count">0 条记录</span>
+      <SectionHeading eyebrow={t('home.activity.eyebrow')} title={t('home.activity.title')}>
+        <span class="activity-count" id="activity-count">{t('home.activity.count', { count: 0 })}</span>
       </SectionHeading>
-      <div class="activity-empty" id="activity-empty"><Icon name="lucide:history" size={18} /><span>还没有使用记录<br /><small>去工具中心试试第一个工具吧</small></span></div>
+      <div class="activity-empty" id="activity-empty"><Icon name="lucide:history" size={18} /><span>{t('home.activity.empty')}<br /><small>{t('home.activity.emptyHint')}</small></span></div>
       <ol class="activity-list" id="activity-list" hidden></ol>
     </Card>
   </div>

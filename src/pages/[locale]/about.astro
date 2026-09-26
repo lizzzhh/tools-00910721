@@ -1,0 +1,24 @@
+---
+import { Icon } from 'astro-icon/components'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { prefixedLocales } from '../../i18n/config'
+import { createTranslator } from '../../i18n'
+import { localePath } from '../../i18n/config'
+
+export function getStaticPaths() {
+  return prefixedLocales.map((locale) => ({ params: { locale } }))
+}
+
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+---
+
+<BaseLayout title={t('about.title', { site: t('meta.siteName') })} description={t('meta.description')} activeNav="about">
+  <section class="simple-page card-base">
+    <span class="eyebrow">{t('about.eyebrow')}</span>
+    <div class="simple-page-icon"><Icon name="lucide:info" size={30} /></div>
+    <h1>{t('about.title', { site: t('meta.siteName') })}</h1>
+    <p>{t('about.body')}</p>
+    <a class="primary-button" href={localePath(locale, '/tools/hash/')}>{t('about.cta')}<Icon name="lucide:arrow-right" size={18} /></a>
+  </section>
+</BaseLayout>

@@ -1,34 +1,75 @@
 ---
 import { Icon } from 'astro-icon/components'
+import { localeMeta, localePath, locales } from '../i18n/config'
+import { createTranslator } from '../i18n'
 
 interface Props {
   activeNav: 'home' | 'tools' | 'favorites' | 'about'
 }
 
 const { activeNav } = Astro.props
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const current = localeMeta[locale]
+const homeHref = localePath(locale, '/')
+const toolsHref = localePath(locale, '/tools/')
+const favoritesHref = localePath(locale, '/favorites/')
+const aboutHref = localePath(locale, '/about/')
+const localeOptions = locales.map((candidate) => ({
+  id: candidate,
+  label: localeMeta[candidate].label,
+  href: localePath(candidate, Astro.url.pathname)
+}))
 ---
 
 <header class="topbar" id="navbar">
   <div class="nav-inner">
-    <button class="mobile-menu icon-button" id="mobile-menu" type="button" aria-label="打开工具菜单" aria-expanded="false">
+    <button class="mobile-menu icon-button" id="mobile-menu" type="button" aria-label={t('nav.openMenu')} aria-expanded="false">
       <Icon name="lucide:menu" size={21} />
     </button>
-    <a class="brand" href="/" aria-label="透明质的工具箱首页">
+    <a class="brand" href={homeHref} aria-label={t('nav.brandHome', { site: t('meta.siteName') })}>
       <span class="brand-mark"><Icon name="lucide:command" size={22} /></span>
-      <span class="brand-name">透明质的工具箱</span>
+      <span class="brand-name">{t('meta.siteName')}</span>
     </a>
-    <nav class="main-nav" aria-label="主导航">
-      <a class:list={{ active: activeNav === 'home' }} href="/"><Icon name="lucide:layout-dashboard" size={17} /><span>首页</span></a>
-      <a class:list={{ active: activeNav === 'tools' }} href="/tools/"><Icon name="lucide:layout-grid" size={17} /><span>工具中心</span></a>
-      <a class:list={{ active: activeNav === 'favorites' }} href="/favorites/"><Icon name="lucide:star" size={17} /><span>我的收藏</span></a>
-      <a class:list={{ active: activeNav === 'about' }} href="/about/"><Icon name="lucide:info" size={17} /><span>关于</span></a>
+    <nav class="main-nav" aria-label={t('nav.main')}>
+      <a class:list={{ active: activeNav === 'home' }} href={homeHref}><Icon name="lucide:layout-dashboard" size={17} /><span>{t('nav.home')}</span></a>
+      <a class:list={{ active: activeNav === 'tools' }} href={toolsHref}><Icon name="lucide:layout-grid" size={17} /><span>{t('nav.tools')}</span></a>
+      <a class:list={{ active: activeNav === 'favorites' }} href={favoritesHref}><Icon name="lucide:star" size={17} /><span>{t('nav.favorites')}</span></a>
+      <a class:list={{ active: activeNav === 'about' }} href={aboutHref}><Icon name="lucide:info" size={17} /><span>{t('nav.about')}</span></a>
     </nav>
     <div class="nav-actions">
-      <span class="status-pill"><i></i>工具持续扩展中</span>
-      <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="切换明暗主题">
+      <span class="status-pill"><i></i>{t('nav.expanding')}</span>
+      <div class="locale-switcher" id="locale-switcher">
+        <button class="icon-button locale-trigger" id="locale-trigger" type="button" aria-label={t('locale.switcherLabel')} aria-expanded="false" aria-haspopup="true" title={t('locale.switcherLabel')}>
+          <Icon name="lucide:languages" size={19} />
+          <span class="locale-current">{current.label}</span>
+        </button>
+        <div class="locale-menu" id="locale-menu" role="menu" hidden>
+          <span class="locale-menu-title">{t('locale.switcherTitle')}</span>
+          {localeOptions.map((option) => (
+            <a
+              class:list={['locale-option', { active: option.id === locale }]}
+              href={option.href}
+              hreflang={localeMeta[option.id].htmlLang}
+              lang={localeMeta[option.id].htmlLang}
+              role="menuitem"
+              data-locale-option={option.id}
+              aria-current={option.id === locale ? 'true' : undefined}
+            >
+              <span>{option.label}</span>
+              {option.id === locale && <Icon name="lucide:check" size={15} />}
+            </a>
+          ))}
+        </div>
+      </div>
+      <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label={t('nav.themeToggle')}>
         <span class="theme-icon-light"><Icon name="lucide:sun" size={19} /></span>
         <span class="theme-icon-dark"><Icon name="lucide:moon" size={18} /></span>
       </button>
     </div>
   </div>
 </header>
+
+<script>
+  import '../scripts/locale-switcher'
+</script>

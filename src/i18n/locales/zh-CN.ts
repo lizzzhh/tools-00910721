@@ -1,0 +1,198 @@
+const zhCN = {
+  meta: {
+    siteName: '透明质的工具箱',
+    tagline: '让开发更专注',
+    description: '一个纯前端、数据不离开浏览器的开发者工具箱。'
+  },
+  locale: {
+    switcherLabel: '切换语言',
+    switcherTitle: '语言',
+    current: '当前语言'
+  },
+  nav: {
+    home: '首页',
+    tools: '工具中心',
+    favorites: '我的收藏',
+    about: '关于',
+    brandHome: '{site}首页',
+    openMenu: '打开工具菜单',
+    expanding: '工具持续扩展中',
+    themeToggle: '切换明暗主题',
+    main: '主导航'
+  },
+  sidebar: {
+    allTools: '全部工具',
+    closeMenu: '关闭工具菜单',
+    searchPlaceholder: '搜索工具',
+    toolCenter: '工具中心',
+    soon: '即将上线',
+    noResult: '没有找到相关工具',
+    updating: '持续更新中',
+    updatingHint: '更多实用工具正在路上'
+  },
+  catalog: {
+    eyebrow: 'TOOL DIRECTORY',
+    title: '工具中心',
+    subtitle: '按需选择工具，提升日常开发效率。',
+    favoritesTitle: '我的收藏',
+    favoritesSubtitle: '收藏常用工具，快速返回工作流。',
+    count: '{available} 个可用 · {planned} 个即将上线',
+    searchPlaceholder: '搜索工具名称或功能',
+    filterLabel: '工具分类',
+    all: '全部',
+    favoritesEmptyTitle: '还没有收藏工具',
+    favoritesEmptyHint: '在工具中心点击星标即可收藏。',
+    emptyTitle: '没有找到相关工具',
+    emptyHint: '试试其他关键词或分类。',
+    resultsCount: '{count} 个结果',
+    favoritesCount: '{count} 个收藏工具',
+    favoriteAction: { add: '收藏', remove: '取消收藏' },
+    favoriteLabel: '收藏{name}'
+  },
+  footer: {
+    motto: '{site} · 让开发更专注',
+    feedback: '工具持续扩展中 · 欢迎反馈'
+  },
+  home: {
+    eyebrow: 'WORKSPACE / OVERVIEW',
+    title: '开发者工作台',
+    subtitle: '欢迎回来，今天也保持专注，让工具处理琐碎，让代码保持清晰。',
+    cta: '进入工具中心',
+    soon: '即将上线',
+    fortune: {
+      eyebrow: 'DAILY CHECK',
+      title: '今日运势',
+      draw: '抽取今日运势',
+      drawn: '今日已解锁',
+      idle: '等待今日签到',
+      idleMessage: '每天可以抽取一次今日运势。'
+    },
+    usage: {
+      eyebrow: 'LOCAL ACTIVITY',
+      title: '工具使用统计',
+      deviceOnly: '仅当前设备',
+      total: '累计使用',
+      today: '今日使用',
+      favorite: '最常用',
+      none: '暂无',
+      times: '{count} 次',
+      unit: '次',
+      empty: '还没有使用记录',
+      emptyHint: '使用工具后这里会按次数显示前五名'
+    },
+    quick: { eyebrow: 'QUICK ACCESS', title: '快速开始' },
+    activity: {
+      eyebrow: 'RECENT ACTIVITY',
+      title: '最近使用',
+      count: '{count} 条记录',
+      empty: '还没有使用记录',
+      emptyHint: '去工具中心试试第一个工具吧',
+      usedAt: '{time} 使用'
+    }
+  },
+  fortunes: {
+    online: { label: '状态在线', message: '今天很适合把复杂问题拆小，逐个击破。' },
+    steady: { label: '稳步推进', message: '不追求灵感，先让计划里的下一格完成。' },
+    stutter: { label: '偶尔卡顿', message: '遇到难题时先喝口水，答案可能就在下一步。' },
+    inspired: { label: '灵感在线', message: '适合清理 TODO，也许一次重构就能省下半天。' },
+    focus: { label: '专注模式', message: '关掉通知，把最重要的任务放在第一屏。' },
+    smooth: { label: '超级顺滑', message: '今天的手感和思路都很好，适合解决历史遗留问题。' }
+  },
+  about: {
+    eyebrow: 'ABOUT TRANSPARENT TOOLBOX',
+    title: '关于{site}',
+    body: '一个为程序员设计的轻量工具聚合站。所有计算均在浏览器本地完成，不上传、不存储你的输入内容。',
+    cta: '使用哈希工具',
+    notFoundTitle: '工具不存在',
+    backToTools: '返回工具中心'
+  },
+  toolsPage: { comingSoonBody: '该工具正在开发中，你可以先使用其他工具。', browseCatalog: '浏览工具中心' },
+  theme: { toDark: '切换深色主题', toLight: '切换浅色主题' },
+  toast: { success: '操作成功' },
+  common: {
+    copy: '复制',
+    copied: '已复制',
+    download: '下载',
+    clear: '清空',
+    sample: '示例',
+    generate: '生成',
+    encode: '编码',
+    decode: '解码',
+    input: '输入',
+    output: '输出',
+    options: '显示选项',
+    copyFailed: '复制失败',
+    emptyInput: '请输入内容',
+    localOnly: '本地处理',
+    charactersUnit: '字符'
+  },
+  error: {
+    title: '出错了'
+  },
+  categories: {
+    developer: '开发者工具',
+    encoding: '编码与数据',
+    text: '文本处理',
+    security: '安全与加密',
+    media: '媒体处理',
+    efficiency: '效率工具'
+  },
+  workspace: { result: '处理结果', waiting: '等待处理', readonly: '只读结果', copyResult: '复制结果', downloadResult: '下载结果', inputChars: '输入字符', outputChars: '输出字符', bytes: '字节数', format: '格式', algorithm: '算法', inputLabel: '输入文本', startEncode: '开始编码', startDecode: '开始解码', encodedResult: '编码结果', decodedResult: '解码结果', outputLabel: '输出结果' },
+  toolUi: {
+    'uuid-parser': { subtitle: '拆解版本、变体与时间字段，支持批量', noticeLead: '支持 v1 至 v8 与 Nil、Max 特殊格式，v1、v2、v6 解析 100 纳秒时间戳，v7、v8 解析 Unix 毫秒。需要生成标识请前往', noticeLink: 'UUID 生成', inputLabel: '待解析 UUID', inputHint: '每行一个，也兼容逗号与空格分隔', parseButton: '解析', resultTitle: '解析结果', idleStatus: '等待解析', statTotal: '识别数量', statValid: '有效', statInvalid: '无效', statVersions: '版本', detailsTitle: '字段明细', detailsHint: '逐个展开查看每个 UUID' },
+    'jwt-decode': { subtitle: '查看令牌头部、载荷与时间声明', notice: '只解析内容，不验证签名；请勿粘贴真实密钥或隐私数据。', inputLabel: 'JWT 令牌', inputPlaceholder: '粘贴以 eyJ 开头的 JWT 令牌…', decodeButton: '解析令牌', resultTitle: '解析结果', idleStatus: '等待解析', idleState: '等待输入' }
+  },
+  tools: {
+    hash: { name: '哈希计算', description: '多算法摘要与签名' },
+    'jwt-decode': { name: 'JWT 解析', description: '解析令牌内容' },
+    'password-generator': { name: '密码生成器', description: '生成安全随机密码' },
+    'password-strength': { name: '密码强度检测', description: '评估密码安全性' },
+    'json-format': { name: 'JSON 格式化', description: '格式化与校验 JSON' },
+    base64: { name: 'Base 编解码', description: '文本与 Base32、Base58、Base62、标准 Base64、Ascii85、Base91 转换' },
+    'url-encode': { name: 'URL 编解码', description: '处理链接与查询参数' },
+    'html-entity': { name: 'HTML 实体转换', description: '转义与还原 HTML 字符' },
+    'unicode-escape': { name: 'Unicode 转义', description: '字符编码、转义与码点查询' },
+    'query-string': { name: 'Query String 解析', description: '逐条编辑查询参数并实时同步查询串' },
+    'number-base': { name: '进制转换', description: '2-36 进制与 Base58、Base62 实时互转' },
+    'uuid-generator': { name: 'UUID 生成器', description: '批量生成 v1 至 v8 唯一标识' },
+    'uuid-parser': { name: 'UUID 解析', description: '拆解版本、变体与时间' },
+    'timestamp-converter': { name: '时间戳转换', description: 'Unix 时间与日期互转' },
+    'text-case': { name: '大小写转换', description: '切换文本大小写与命名风格' },
+    'text-counter': { name: '文本统计', description: '统计字数、行数和词数' },
+    'text-deduplicate': { name: '文本去重排序', description: '删除重复行并排序文本' },
+    'text-replace': { name: '查找替换', description: '批量替换文本内容' },
+    'fullwidth-halfwidth': { name: '全角半角转换', description: '在中文全角与西文半角字符之间转换' },
+    'yaml-format': { name: 'YAML 格式化', description: '校验与整理 YAML' },
+    'xml-format': { name: 'XML 格式化', description: '格式化与校验 XML' },
+    'sql-format': { name: 'SQL 格式化', description: '整理 SQL 查询语句' },
+    'cron-parser': { name: 'Cron 表达式解析', description: '解释定时任务表达式' },
+    'regex-tester': { name: '正则表达式测试', description: '匹配、分组与替换' },
+    'diff-text': { name: '文本 Diff 比较', description: '对比两段文本差异' },
+    'markdown-preview': { name: 'Markdown 预览', description: '实时预览 Markdown' },
+    'json-path': { name: 'JSONPath 查询', description: '定位 JSON 数据节点' },
+    'curl-builder': { name: 'cURL 生成器', description: '从参数生成 cURL 命令' },
+    'http-request': { name: 'HTTP 请求测试', description: '发送与调试 HTTP 请求' },
+    'code-beautify': { name: '代码格式化', description: '统一代码缩进与排版' },
+    'json-to-typescript': { name: 'JSON 转 TypeScript', description: '从样例生成类型定义' },
+    'openapi-viewer': { name: 'OpenAPI 查看器', description: '阅读和检索接口文档' },
+    'json-schema-validator': { name: 'JSON Schema 校验', description: '验证数据结构与约束' },
+    'markdown-toc': { name: 'Markdown 目录生成', description: '生成文档标题目录' },
+    'random-string': { name: '随机字符串生成', description: '按规则生成随机文本' },
+    'timezone-converter': { name: '时区转换', description: '跨时区转换时间' },
+    'date-calculator': { name: '日期计算器', description: '计算日期差与加减天数' },
+    'scientific-calculator': { name: '科学计算器', description: '计算函数与表达式' },
+    'text-sort': { name: '文本排序', description: '按规则排列文本行' },
+    'color-converter': { name: '颜色转换', description: '转换 HEX、RGB 与 HSL' },
+    'contrast-checker': { name: '对比度检查', description: '检查文字颜色可读性' },
+    'qr-code': { name: '二维码生成', description: '生成与下载二维码' },
+    'image-compressor': { name: '图片压缩', description: '压缩图片并减小体积' },
+    'image-cropper': { name: '图片裁剪', description: '按比例裁剪图片' },
+    'image-converter': { name: '图片格式转换', description: '转换常见图片格式' },
+    'exif-viewer': { name: 'EXIF 信息查看', description: '读取图片拍摄信息' },
+    'audio-converter': { name: '音频格式转换', description: '转换音频文件格式' },
+    'docker-compose': { name: 'Docker Compose 格式化', description: '校验与整理容器配置' },
+    'nginx-config': { name: 'Nginx 配置检查', description: '检查常见配置问题' }
+  }
+}
+
+export default zhCN

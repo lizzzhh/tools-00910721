@@ -1,6 +1,7 @@
 ---
 import { Icon } from 'astro-icon/components'
-import { toolCategories, tools, plannedTools } from '../data/tools'
+import { categoryName, localizeTools, plannedTools, toolCategories, tools } from '../data/tools'
+import { createTranslator } from '../i18n'
 import ToolCard from './ToolCard.astro'
 
 interface Props {
@@ -8,27 +9,29 @@ interface Props {
 }
 
 const { favoritesOnly = false } = Astro.props
-const allTools = [...tools, ...plannedTools]
+const t = createTranslator(Astro.locals.locale)
+const categories = toolCategories.map((category) => ({ ...category, name: categoryName(category.id, t) }))
+const allTools = localizeTools([...tools, ...plannedTools], t)
 ---
 
 <section class="tool-catalog" data-catalog data-favorites-only={favoritesOnly ? 'true' : 'false'}>
   <div class="catalog-heading">
     <div>
-      <span class="eyebrow">TOOL DIRECTORY</span>
-      <h1>{favoritesOnly ? '我的收藏' : '工具中心'}</h1>
-      <p>{favoritesOnly ? '收藏常用工具，快速返回工作流。' : '按需选择工具，提升日常开发效率。'}</p>
+      <span class="eyebrow">{t('catalog.eyebrow')}</span>
+      <h1>{favoritesOnly ? t('catalog.favoritesTitle') : t('catalog.title')}</h1>
+      <p>{favoritesOnly ? t('catalog.favoritesSubtitle') : t('catalog.subtitle')}</p>
     </div>
-    <span class="catalog-count" id="catalog-count">{tools.length} 个可用 · {plannedTools.length} 个即将上线</span>
+    <span class="catalog-count" id="catalog-count">{t('catalog.count', { available: tools.length, planned: plannedTools.length })}</span>
   </div>
 
   <div class="catalog-toolbar">
     <label class="catalog-search">
       <Icon name="lucide:search" size={17} />
-      <input id="catalog-search-input" type="search" placeholder="搜索工具名称或功能" autocomplete="off" />
+      <input id="catalog-search-input" type="search" placeholder={t('catalog.searchPlaceholder')} autocomplete="off" />
     </label>
-    <div class="catalog-filters" role="group" aria-label="工具分类">
-      <button class="catalog-filter active" type="button" data-category="all">全部</button>
-      {toolCategories.map((category) => <button class="catalog-filter" type="button" data-category={category.name}>{category.name}</button>)}
+    <div class="catalog-filters" role="group" aria-label={t('catalog.filterLabel')}>
+      <button class="catalog-filter active" type="button" data-category="all">{t('catalog.all')}</button>
+      {categories.map((category) => <button class="catalog-filter" type="button" data-category={category.id}>{category.name}</button>)}
     </div>
   </div>
 
@@ -37,8 +40,8 @@ const allTools = [...tools, ...plannedTools]
   </div>
   <div class="catalog-empty" id="catalog-empty" hidden>
     <Icon name={favoritesOnly ? 'lucide:star' : 'lucide:search-x'} size={22} />
-    <strong>{favoritesOnly ? '还没有收藏工具' : '没有找到相关工具'}</strong>
-    <span>{favoritesOnly ? '在工具中心点击星标即可收藏。' : '试试其他关键词或分类。'}</span>
+    <strong>{favoritesOnly ? t('catalog.favoritesEmptyTitle') : t('catalog.emptyTitle')}</strong>
+    <span>{favoritesOnly ? t('catalog.favoritesEmptyHint') : t('catalog.emptyHint')}</span>
   </div>
 </section>
 

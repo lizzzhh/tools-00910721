@@ -1,8 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
 import ToolCatalog from '../components/ToolCatalog.astro'
+import { createTranslator } from '../i18n'
+
+const t = createTranslator(Astro.locals.locale)
 ---
 
-<BaseLayout title="我的收藏 · 透明质的工具箱" description="管理你收藏的开发者工具。" activeNav="favorites">
+<BaseLayout title={`${t('catalog.favoritesTitle')} · ${t('meta.siteName')}`} description={t('catalog.favoritesSubtitle')} activeNav="favorites">
   <ToolCatalog favoritesOnly />
 </BaseLayout>

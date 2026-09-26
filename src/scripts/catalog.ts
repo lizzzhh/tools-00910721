@@ -1,3 +1,5 @@
+import { currentTranslator } from '../i18n/client'
+
 const storageKey = 'code-space-favorites'
 const mountedCatalogs = new WeakSet<HTMLElement>()
 
@@ -38,8 +40,9 @@ function initCatalog() {
       const button = card.querySelector<HTMLButtonElement>('[data-favorite]')
       if (!button) return
       button.setAttribute('aria-pressed', String(favorite))
-      const label = favorite ? '取消收藏' : '收藏'
-      button.setAttribute('aria-label', `${label}${card.querySelector('strong')?.textContent ?? ''}`)
+      const t = currentTranslator()
+      const action = favorite ? t('catalog.favoriteAction.remove') : t('catalog.favoriteAction.add')
+      button.setAttribute('aria-label', `${action}${card.querySelector('strong')?.textContent ?? ''}`)
     })
   }
 
@@ -58,9 +61,11 @@ function initCatalog() {
     })
     if (empty) empty.hidden = visibleCount > 0
     if (count) {
-      if (favoritesOnly) count.textContent = `${visibleCount} 个收藏工具`
-      else if (!keyword && selectedCategory === 'all') count.textContent = `${availableCount} 个可用 · ${plannedCount} 个即将上线`
-      else count.textContent = `${visibleCount} 个结果`
+      const t = currentTranslator()
+      if (favoritesOnly) count.textContent = t('catalog.favoritesCount', { count: visibleCount })
+      else if (!keyword && selectedCategory === 'all')
+        count.textContent = t('catalog.count', { available: availableCount, planned: plannedCount })
+      else count.textContent = t('catalog.resultsCount', { count: visibleCount })
     }
   }
 

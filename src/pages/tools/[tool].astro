@@ -1,14 +1,22 @@
 ---
-import { getTool, tools } from '../../data/tools'
+import { getTool, localizeTool, tools } from '../../data/tools'
 import ToolPage from '../../components/ToolPage.astro'
+import { createTranslator } from '../../i18n'
+import { localePath } from '../../i18n/config'
 
 export function getStaticPaths() {
-  return tools.map((tool) => ({ params: { tool: tool.id }, props: { tool } }))
+  return tools.map((tool) => ({ params: { tool: tool.id }, props: { toolId: tool.id } }))
 }
 
-const { tool } = Astro.props
-const pageTool = tool ?? getTool(Astro.params.tool ?? '')
+const { toolId } = Astro.props
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const tool = localizeTool(getTool(toolId) ?? tools[0], t)
 ---
 
-{pageTool ? <ToolPage tool={pageTool} /> : <div class="not-found"><h1>工具不存在</h1><a href="/tools/">返回工具中心</a></div>}
-
+{getTool(toolId) ? <ToolPage tool={tool} /> : (
+  <div class="not-found">
+    <h1>{t('about.notFoundTitle')}</h1>
+    <a href={localePath(locale, '/tools/')}>{t('about.backToTools')}</a>
+  </div>
+)}

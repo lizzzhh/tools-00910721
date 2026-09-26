@@ -1,27 +1,33 @@
 ---
 import { Icon } from 'astro-icon/components'
-import type { Tool } from '../data/tools'
+import { categoryName } from '../data/tools'
+import { createTranslator } from '../i18n'
+import { localePath } from '../i18n/config'
+import type { LocalizedTool } from '../data/tools'
 
 interface Props {
-  tool: Tool
+  tool: LocalizedTool
 }
 
 const { tool } = Astro.props
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const search = `${tool.name} ${tool.description} ${tool.keywords.join(' ')}`
 ---
 
-<article class:list={['catalog-tool', 'card-base', { planned: !tool.available }]} data-tool-card data-tool-id={tool.id} data-tool-search={`${tool.name} ${tool.description} ${tool.keywords.join(' ')}`} data-tool-category={tool.category}>
+<article class:list={['catalog-tool', 'card-base', { planned: !tool.available }]} data-tool-card data-tool-id={tool.id} data-tool-search={search} data-tool-category={tool.category}>
   {tool.available ? (
-    <a class="catalog-tool-link" href={`/tools/${tool.id}/`}>
+    <a class="catalog-tool-link" href={localePath(locale, `/tools/${tool.id}/`)}>
       <span class="catalog-tool-icon"><Icon name={tool.icon} size={21} /></span>
-      <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{tool.category}</em></span>
+      <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{categoryName(tool.category, t)}</em></span>
       <Icon name="lucide:arrow-up-right" size={16} />
     </a>
   ) : (
     <div class="catalog-tool-link">
       <span class="catalog-tool-icon"><Icon name={tool.icon} size={21} /></span>
-      <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{tool.category}</em></span>
-      <span class="catalog-planned-label">即将上线</span>
+      <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{categoryName(tool.category, t)}</em></span>
+      <span class="catalog-planned-label">{t('sidebar.soon')}</span>
     </div>
   )}
-  {tool.available && <button class="catalog-favorite" type="button" data-favorite aria-label={`收藏${tool.name}`} aria-pressed="false"><span class="favorite-icon-empty"><Icon name="lucide:star" size={16} /></span><span class="favorite-icon-filled"><Icon name="mdi:star" size={16} /></span></button>}
+  {tool.available && <button class="catalog-favorite" type="button" data-favorite aria-label={t('catalog.favoriteLabel', { name: tool.name })} aria-pressed="false"><span class="favorite-icon-empty"><Icon name="lucide:star" size={16} /></span><span class="favorite-icon-filled"><Icon name="mdi:star" size={16} /></span></button>}
 </article>

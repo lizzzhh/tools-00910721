@@ -1,3 +1,5 @@
+import { currentTranslator } from '../i18n/client'
+
 const toolSwitchScrollKey = 'code-space-tool-switch-scroll'
 let sidebar: HTMLElement | null = null
 let backdrop: HTMLElement | null = null
@@ -134,7 +136,8 @@ function initPage() {
   themeButton?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark')
     localStorage.setItem('code-space-theme', isDark ? 'dark' : 'light')
-    themeButton?.setAttribute('aria-label', isDark ? '切换浅色主题' : '切换深色主题')
+    const t = currentTranslator()
+    themeButton?.setAttribute('aria-label', isDark ? t('theme.toLight') : t('theme.toDark'))
   })
 
   if (!navigatedViaSwap) requestAnimationFrame(revealActiveTool)

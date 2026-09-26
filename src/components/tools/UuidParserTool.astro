@@ -2,49 +2,54 @@
 import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
+import { createTranslator } from '../../i18n'
+import { localePath } from '../../i18n/config'
+
+const t = createTranslator(Astro.locals.locale)
+const generatorHref = localePath(Astro.locals.locale, '/tools/uuid-generator/')
 ---
 
 <section class="tool-workspace uuid-parser-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>UUID 解析</strong></div>
+      <div class="breadcrumb"><span>{t('categories.encoding')}</span><b>/</b><strong>{t('tools.uuid-parser.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:scan-search" size={25} /></span>
-        <div><h1>UUID 解析</h1><p>拆解版本、变体与时间字段，支持批量</p></div>
+        <div><h1>{t('tools.uuid-parser.name')}</h1><p>{t('toolUi.uuid-parser.subtitle')}</p></div>
       </div>
     </div>
-    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} /><span>支持 v1 至 v8 与 Nil、Max 特殊格式，v1、v2、v6 解析 100 纳秒时间戳，v7、v8 解析 Unix 毫秒。需要生成标识请前往 <a href="/tools/uuid-generator/">UUID 生成</a>。</span></div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} /><span>{t('toolUi.uuid-parser.noticeLead')} <a href={generatorHref}>{t('toolUi.uuid-parser.noticeLink')}</a>。</span></div>
 
   <Card class="tool-card">
     <div class="field-heading">
-      <label for="uuid-parse-input">待解析 UUID</label>
-      <span>每行一个，也兼容逗号与空格分隔</span>
+      <label for="uuid-parse-input">{t('toolUi.uuid-parser.inputLabel')}</label>
+      <span>{t('toolUi.uuid-parser.inputHint')}</span>
     </div>
     <div class="textarea-wrap">
       <textarea id="uuid-parse-input" spellcheck="false" autocomplete="off" placeholder="0199b1c2-3d4e-7f01-8a2b-3c4d5e6f7a8b"></textarea>
     </div>
     <div class="security-error" id="uuid-parse-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="uuid-parse-run" class="calculate-button" variant="primary" icon="lucide:scan-search"><span>解析</span></Button>
-      <Button id="uuid-parse-clear" icon="lucide:trash-2">清空</Button>
+      <Button id="uuid-parse-run" class="calculate-button" variant="primary" icon="lucide:scan-search"><span>{t('toolUi.uuid-parser.parseButton')}</span></Button>
+      <Button id="uuid-parse-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="uuid-parse-result" class="result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>解析结果</strong></div>
-      <span id="uuid-parse-status">等待解析</span>
+      <div><span class="status-dot"></span><strong>{t('toolUi.uuid-parser.resultTitle')}</strong></div>
+      <span id="uuid-parse-status">{t('toolUi.uuid-parser.idleStatus')}</span>
     </div>
     <div class="tool-stats">
-      <div><span>识别数量</span><strong id="uuid-parse-stat-total">—</strong></div>
-      <div><span>有效</span><strong id="uuid-parse-stat-valid">—</strong></div>
-      <div><span>无效</span><strong id="uuid-parse-stat-invalid">—</strong></div>
-      <div><span>版本</span><strong id="uuid-parse-stat-versions">—</strong></div>
+      <div><span>{t('toolUi.uuid-parser.statTotal')}</span><strong id="uuid-parse-stat-total">—</strong></div>
+      <div><span>{t('toolUi.uuid-parser.statValid')}</span><strong id="uuid-parse-stat-valid">—</strong></div>
+      <div><span>{t('toolUi.uuid-parser.statInvalid')}</span><strong id="uuid-parse-stat-invalid">—</strong></div>
+      <div><span>{t('toolUi.uuid-parser.statVersions')}</span><strong id="uuid-parse-stat-versions">—</strong></div>
     </div>
-    <div class="result-subheading tool-subsection"><strong>字段明细</strong><span>逐个展开查看每个 UUID</span></div>
+    <div class="result-subheading tool-subsection"><strong>{t('toolUi.uuid-parser.detailsTitle')}</strong><span>{t('toolUi.uuid-parser.detailsHint')}</span></div>
     <div class="uuid-parse-items" id="uuid-parse-items" data-empty="true"></div>
   </Card>
 
@@ -60,7 +65,7 @@ import Card from '../ui/Card.astro'
       <div class="uuid-parse-item-body">
         <div class="uuid-parse-item-fields"></div>
         <div class="uuid-parse-item-actions">
-          <button class="inline-copy uuid-parse-item-copy" type="button" disabled><Icon name="lucide:copy" size={14} is:inline />复制</button>
+          <button class="inline-copy uuid-parse-item-copy" type="button" disabled><Icon name="lucide:copy" size={14} is:inline />{t('common.copy')}</button>
         </div>
       </div>
     </details>

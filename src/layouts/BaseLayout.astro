@@ -3,6 +3,8 @@ import Header from '../components/Header.astro'
 import Sidebar from '../components/Sidebar.astro'
 import Footer from '../components/Footer.astro'
 import { ClientRouter } from 'astro:transitions'
+import { localeMeta, localePath, locales } from '../i18n/config'
+import { createTranslator } from '../i18n'
 import '../styles/global.css'
 
 interface Props {
@@ -13,17 +15,71 @@ interface Props {
 }
 
 const { title, description, activeTool = '', activeNav = 'tools' } = Astro.props
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const siteName = t('meta.siteName')
+
+/**
+ * Canonical plus one hreflang alternate per locale, each pointing at the same
+ * page in that language. Search engines need the reciprocal links to treat the
+ * variants as translations of one document rather than duplicates.
+ */
+const canonicalPath = Astro.url.pathname
+const canonical = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href
+const alternates = locales.map((candidate) => ({
+  locale: candidate,
+  hreflang: localeMeta[candidate].htmlLang,
+  href: new URL(localePath(candidate, canonicalPath), Astro.site ?? Astro.url.origin).href
+}))
 ---
 
 <!doctype html>
-<html lang="zh-CN" class="enable-card-border">
+<html lang={localeMeta[locale].htmlLang} dir="ltr" data-locale={locale} class="enable-card-border">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f2f7f7" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={canonical} />
+    <link rel="sitemap" href="/sitemap.xml" />
+    {alternates.map((alternate) => <link rel="alternate" hreflang={alternate.hreflang} href={alternate.href} />)}
+    <link rel="alternate" hreflang="x-default" href={alternates.find((item) => item.locale === 'zh-CN')?.href ?? canonical} />
     <title>{title}</title>
+    <script is:inline define:vars={{ locale, alternates }}>
+      // Runs before paint so a first-time visitor with a non-Chinese browser
+      // language never sees a flash of the wrong language. An explicit choice
+      // in the switcher always wins and is never overridden.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('code-space-locale')
+          if (stored) {
+            if (stored !== locale) {
+              var target = alternates.filter(function (a) { return a.locale === stored })[0]
+              if (target) location.replace(target.href)
+            }
+            return
+          }
+          if (document.documentElement.lang) {
+            var preferred = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || []
+            var best = null
+            for (var i = 0; i < preferred.length; i += 1) {
+              var tag = String(preferred[i] || '').toLowerCase()
+              if (!tag) continue
+              if (tag.indexOf('zh') === 0) {
+                best = /hant|tw|hk|mo/.test(tag) ? 'zh-TW' : 'zh-CN'
+              } else if (tag.indexOf('en') === 0) best = 'en'
+              else if (tag.indexOf('ja') === 0) best = 'ja'
+              if (best) break
+            }
+            if (best && best !== locale) {
+              var match = alternates.filter(function (a) { return a.locale === best })[0]
+              if (match) location.replace(match.href)
+            }
+          }
+        } catch (e) {}
+      })()
+    </script>
     <script is:inline>
       try {
         const saved = localStorage.getItem('code-space-theme')
@@ -45,28 +101,13 @@ const { title, description, activeTool = '', activeNav = 'tools' } = Astro.props
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite">
       <span class="toast-icon"><svg aria-hidden="true"><use href="#icon-check"></use></svg></span>
-      <span id="toast-text">操作成功</span>
+      <span id="toast-text"></span>
     </div>
     <svg class="svg-sprite" aria-hidden="true">
       <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
       <symbol id="icon-hash" viewBox="0 0 24 24"><path d="M10 3 8 21M16 3l-2 18M4 9h16M3 15h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></symbol>
       <symbol id="icon-trash-2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
     </svg>
-    <script is:inline>
-      (function () {
-        try {
-          var raw = sessionStorage.getItem('code-space-tool-switch-scroll')
-          if (!raw) return
-          sessionStorage.removeItem('code-space-tool-switch-scroll')
-          var saved = JSON.parse(raw)
-          var y = Number(saved && saved.y)
-          if (Number.isFinite(y) && y > 0) window.scrollTo(0, y)
-          var sidebarScroll = document.querySelector('.sidebar-scroll')
-          var sidebarTop = Number(saved && saved.sidebarTop)
-          if (sidebarScroll && Number.isFinite(sidebarTop)) sidebarScroll.scrollTop = sidebarTop
-        } catch (e) {}
-      })()
-    </script>
     <script>
       import '../scripts/site'
     </script>
