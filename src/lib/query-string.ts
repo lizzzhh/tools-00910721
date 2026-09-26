@@ -4,11 +4,12 @@ export type QueryEntry = {
   hasValue: boolean
 }
 
-export type QueryResult =
+export type QueryParseResult =
   | {
       ok: true
-      output: string
       entries: QueryEntry[]
+      base: string
+      hash: string
       duplicateKeys: number
       count: number
     }
@@ -18,17 +19,17 @@ export type QueryResult =
       position?: number
     }
 
-export type QueryParseOptions = {
-  keepHash?: boolean
-  keepEmpty?: boolean
+export type QueryFilterOptions = {
+  includeEmpty?: boolean
   sortKeys?: boolean
 }
 
-export type QueryBuildOptions = {
+export type QueryBuildOptions = QueryFilterOptions & {
   encode?: boolean
   encodeSpaceAsPlus?: boolean
-  keepEmpty?: boolean
-  sortKeys?: boolean
+  leadingQuestionMark?: boolean
+  appendHash?: boolean
+  hash?: string
 }
 
 function decodeComponent(value: string) {
@@ -40,12 +41,37 @@ function decodeComponent(value: string) {
   }
 }
 
-function normalizeInput(input: string) {
-  let value = input.trim()
-  const hashIndex = value.indexOf('#')
-  if (hashIndex >= 0) value = value.slice(0, hashIndex)
-  if (value.startsWith('?')) value = value.slice(1)
-  return value
+// A bare string without "?" is only treated as a query string when it cannot be
+// a URL: any "=" means a pair, and a lone token only counts when it has no
+// scheme, path or dotted-host shape.
+function looksLikeUrl(value: string) {
+  if (value.includes('://') || value.startsWith('//')) return true
+  return !value.includes('=') && /[./:]/.test(value)
+}
+
+function splitQuery(input: string) {
+  const raw = input.trim()
+  const questionIndex = raw.indexOf('?')
+
+  if (questionIndex >= 0) {
+    const afterQuestion = raw.slice(questionIndex + 1)
+    const hashIndex = afterQuestion.indexOf('#')
+    return {
+      base: raw.slice(0, questionIndex),
+      body: hashIndex >= 0 ? afterQuestion.slice(0, hashIndex) : afterQuestion,
+      bodyStart: questionIndex + 1,
+      hash: hashIndex >= 0 ? afterQuestion.slice(hashIndex + 1) : ''
+    }
+  }
+
+  const hashIndex = raw.indexOf('#')
+  const head = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw
+  return {
+    base: '',
+    body: looksLikeUrl(head) ? '' : head,
+    bodyStart: 0,
+    hash: hashIndex >= 0 ? raw.slice(hashIndex + 1) : ''
+  }
 }
 
 function splitParts(body: string) {
@@ -62,12 +88,16 @@ function splitParts(body: string) {
   return parts
 }
 
-export function parseQueryString(input: string, options: QueryParseOptions = {}): QueryResult {
-  const { keepHash = false, keepEmpty = true, sortKeys = false } = options
-  const raw = input.trim()
-  const hashIndex = raw.indexOf('#')
-  const hash = hashIndex >= 0 ? raw.slice(hashIndex + 1) : ''
-  const body = normalizeInput(raw)
+function byKey(left: QueryEntry, right: QueryEntry) {
+  return left.key === right.key ? 0 : left.key < right.key ? -1 : 1
+}
+
+export function countDuplicateKeys(entries: QueryEntry[]) {
+  return entries.length - new Set(entries.map((entry) => entry.key)).size
+}
+
+export function parseQueryString(input: string): QueryParseResult {
+  const { base, body, bodyStart, hash } = splitQuery(input)
   const entries: QueryEntry[] = []
 
   for (const [index, part] of splitParts(body).entries()) {
@@ -76,95 +106,44 @@ export function parseQueryString(input: string, options: QueryParseOptions = {})
     const rawValue = equalsIndex >= 0 ? part.value.slice(equalsIndex + 1) : undefined
     const key = decodeComponent(rawKey)
     if (key === null) {
-      return { ok: false, message: `第 ${index + 1} 个参数的键不是合法的百分号编码`, position: part.offset + 1 }
+      return { ok: false, message: `第 ${index + 1} 个参数的键不是合法的百分号编码`, position: bodyStart + part.offset + 1 }
     }
     let value = ''
     let hasValue = false
     if (rawValue !== undefined) {
       const decoded = decodeComponent(rawValue)
       if (decoded === null) {
-        return { ok: false, message: `第 ${index + 1} 个参数的值不是合法的百分号编码`, position: part.offset + 1 }
+        return { ok: false, message: `第 ${index + 1} 个参数的值不是合法的百分号编码`, position: bodyStart + part.offset + 1 }
       }
       value = decoded
       hasValue = true
     }
-    if (!hasValue && !keepEmpty) continue
     entries.push({ key, value, hasValue })
   }
 
-  if (sortKeys) {
-    entries.sort((left, right) => (left.key === right.key ? 0 : left.key < right.key ? -1 : 1))
-  }
-
-  const duplicateKeys = entries.length - new Set(entries.map((entry) => entry.key)).size
-  const json = JSON.stringify(entries, null, 2)
-  const output = keepHash && hash ? `${json}\n\n# ${hash}` : json
-
-  return { ok: true, output, entries, duplicateKeys, count: entries.length }
+  return { ok: true, entries, base, hash, duplicateKeys: countDuplicateKeys(entries), count: entries.length }
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+export function selectEntries(entries: QueryEntry[], options: QueryFilterOptions = {}): QueryEntry[] {
+  const { includeEmpty = true, sortKeys = false } = options
+  const usable = entries.filter((entry) => entry.key !== '' && (includeEmpty || entry.hasValue))
+  return sortKeys ? [...usable].sort(byKey) : usable
 }
 
-function collectEntries(value: unknown): QueryEntry[] | undefined {
-  if (Array.isArray(value)) {
-    const entries: QueryEntry[] = []
-    for (const item of value) {
-      if (typeof item === 'string') {
-        const equalsIndex = item.indexOf('=')
-        entries.push({ key: equalsIndex >= 0 ? item.slice(0, equalsIndex) : item, value: equalsIndex >= 0 ? item.slice(equalsIndex + 1) : '', hasValue: equalsIndex >= 0 })
-        continue
-      }
-      if (isPlainObject(item) && Object.keys(item).length === 1) {
-        const [key, entryValue] = Object.entries(item)[0]
-        entries.push({ key, value: entryValue === null ? '' : String(entryValue), hasValue: entryValue !== null })
-        continue
-      }
-      return undefined
-    }
-    return entries
-  }
+export function buildQueryString(entries: QueryEntry[], options: QueryBuildOptions = {}): string {
+  const { encode = true, encodeSpaceAsPlus = false, leadingQuestionMark = false, appendHash = false, hash = '' } = options
+  const ordered = selectEntries(entries, options)
 
-  if (isPlainObject(value)) {
-    return Object.entries(value).map(([key, entryValue]) => ({
-      key,
-      value: entryValue === null ? '' : typeof entryValue === 'object' ? JSON.stringify(entryValue) : String(entryValue),
-      hasValue: true
-    }))
-  }
-
-  return undefined
-}
-
-export function buildQueryString(input: string, options: QueryBuildOptions = {}): QueryResult {
-  const { encode = true, encodeSpaceAsPlus = false, keepEmpty = true, sortKeys = false } = options
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(input)
-  } catch {
-    return { ok: false, message: '输入不是合法的 JSON，无法生成查询字符串' }
-  }
-
-  const entries = collectEntries(parsed)
-  if (!entries) {
-    return { ok: false, message: '仅支持 JSON 对象、键值对数组或字符串数组' }
-  }
-
-  const usable = sortKeys ? [...entries].sort((left, right) => (left.key === right.key ? 0 : left.key < right.key ? -1 : 1)) : entries
-
-  const parts: string[] = []
-  for (const entry of usable) {
-    if (!entry.hasValue && !keepEmpty) continue
+  const parts = ordered.map((entry) => {
     const key = encode ? encodeURIComponent(entry.key) : entry.key
-    const encodedValue = encode ? encodeURIComponent(entry.value) : entry.value
-    const value = encodeSpaceAsPlus ? encodedValue.replace(encode ? /%20/g : / /g, '+') : encodedValue
-    parts.push(entry.hasValue ? `${key}=${value}` : key)
-  }
+    if (!entry.hasValue) return key
+    let value = encode ? encodeURIComponent(entry.value) : entry.value
+    if (encodeSpaceAsPlus) value = value.replace(encode ? /%20/g : / /g, '+')
+    return `${key}=${value}`
+  })
 
-  const output = parts.join('&')
-  const duplicateKeys = usable.length - new Set(usable.map((entry) => entry.key)).size
-
-  return { ok: true, output, entries: usable, duplicateKeys, count: usable.length }
+  const query = parts.join('&')
+  if (!query) return ''
+  const prefix = leadingQuestionMark ? '?' : ''
+  return appendHash && hash ? `${prefix}${query}#${hash}` : `${prefix}${query}`
 }

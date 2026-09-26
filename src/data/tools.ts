@@ -93,7 +93,7 @@ export const tools: Tool[] = [
   {
     id: 'query-string',
     name: 'Query String 解析',
-    description: '解析和生成查询参数',
+    description: '逐条编辑查询参数并实时同步查询串',
     category: '编码与数据',
     icon: 'lucide:list-ordered',
     keywords: ['query', '参数', 'url', '解析', 'query string', 'search params', '查询串'],

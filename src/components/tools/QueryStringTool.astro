@@ -3,7 +3,6 @@ import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import CheckboxField from '../ui/CheckboxField.astro'
-
 ---
 
 <section class="tool-workspace query-string-workspace">
@@ -12,75 +11,85 @@ import CheckboxField from '../ui/CheckboxField.astro'
       <div class="breadcrumb"><span>编码与数据</span><b>/</b><strong>Query String 解析</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:list-ordered" size={25} /></span>
-        <div><h1>Query String 解析</h1><p>在查询字符串与键值对结构之间转换</p></div>
+        <div><h1>Query String 解析</h1><p>粘贴查询串，逐条编辑参数，实时同步结果</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />本地处理</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />支持百分号编码、+ 号空格、重复键、哈希片段与 JSON 对象，所有解析在浏览器本地完成。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />支持粘贴完整 URL、<code>?</code> 开头或纯查询串，边输入边解析；百分号编码与 <code>+</code> 空格会显示为解码后的值，所有处理在浏览器本地完成。</div>
 
   <Card class="tool-card">
-    <div class="input-mode" role="tablist" aria-label="Query String 操作">
-      <button class="mode-button active" id="query-parse-tab" type="button" role="tab" aria-selected="true" aria-controls="query-panel" data-mode="parse"><Icon name="lucide:scan" size={17} />解析</button>
-      <button class="mode-button" id="query-build-tab" type="button" role="tab" aria-selected="false" aria-controls="query-panel" data-mode="build"><Icon name="lucide:combine" size={17} />生成</button>
+    <div class="field-heading">
+      <label for="query-input">查询字符串</label>
+      <span><b id="query-char-count">0</b> 字符</span>
     </div>
-    <div class="tool-options">
-      <div class="tool-options-row">
-        <span id="query-options-hint">支持粘贴完整 URL、<code>?</code> 开头或纯查询串。</span>
-      </div>
-      <div class="tool-option-section">
-        <span class="tool-option-heading" id="query-options-title">解析选项</span>
-        <div class="tool-option-grid" id="query-parse-options">
-          <CheckboxField id="query-keep-hash" label="保留哈希片段" />
-          <CheckboxField id="query-parse-empty" label="保留无值参数" />
-          <CheckboxField id="query-parse-sort" label="按键排序" />
-        </div>
-        <div class="tool-option-grid" id="query-build-options" hidden>
-          <CheckboxField id="query-encode" label="百分号编码" />
-          <CheckboxField id="query-plus" label="空格编码为 +" />
-          <CheckboxField id="query-build-empty" label="保留无值参数" />
-          <CheckboxField id="query-build-sort" label="按键排序" />
-        </div>
-      </div>
-    </div>
-    <div class="mode-panel active" id="query-panel" role="tabpanel" aria-labelledby="query-parse-tab" data-panel="parse">
-      <div class="field-heading">
-        <label for="query-input" id="query-input-label">查询字符串</label>
-        <span><b id="query-char-count">0</b> 字符</span>
-      </div>
-      <div class="textarea-wrap">
-        <textarea id="query-input" spellcheck="false" autocomplete="off" autofocus placeholder="?utm_source=weibo&tags=a"></textarea>
-      </div>
+    <div class="textarea-wrap">
+      <textarea id="query-input" spellcheck="false" autocomplete="off" autofocus placeholder="https://example.com/list?utm_source=weibo&tags=a&tags=b&draft#section"></textarea>
     </div>
     <div class="security-error" id="query-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="query-run" class="calculate-button" variant="primary" icon="lucide:list-ordered"><span id="query-run-label">开始解析</span></Button>
       <Button id="query-sample" icon="lucide:wand-2">示例</Button>
       <Button id="query-clear" icon="lucide:trash-2">清空</Button>
+      <span class="action-row-hint">输入即解析，编辑参数表会实时同步下方结果</span>
+    </div>
+    <div class="tool-options">
+      <div class="tool-option-section">
+        <span class="tool-option-heading">输出选项</span>
+        <div class="tool-option-grid">
+          <CheckboxField id="query-encode" label="百分号编码" checked />
+          <CheckboxField id="query-plus" label="空格编码为 +" />
+          <CheckboxField id="query-keep-empty" label="包含无值参数" checked />
+          <CheckboxField id="query-sort" label="按键排序" />
+          <CheckboxField id="query-prefix" label="输出带 ? 前缀" />
+          <CheckboxField id="query-append-hash" label="附加哈希片段" />
+        </div>
+      </div>
     </div>
   </Card>
 
-  <Card id="query-result" class="result-card" hidden>
+  <Card id="query-result" class="result-card">
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>处理结果</strong></div>
-      <span id="query-result-status">等待处理</span>
+      <div><span class="status-dot"></span><strong>参数表</strong></div>
+      <span id="query-result-status">等待输入</span>
     </div>
-    <div class="result-subheading"><strong id="query-output-label">解析结果</strong><span>只读结果</span></div>
-    <textarea id="query-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="Query String 处理结果"></textarea>
-    <div class="tool-result-actions">
-      <Button id="query-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="query-download" icon="lucide:download" disabled>下载结果</Button>
+
+    <div class="field-heading tool-filter-bar">
+      <label for="query-filter">筛选参数</label>
+      <div class="field-heading-actions">
+        <input id="query-filter" type="text" placeholder="按键或值筛选" autocomplete="off" spellcheck="false" />
+        <Button id="query-add" icon="lucide:plus">添加参数</Button>
+      </div>
+    </div>
+
+    <div class="query-source" id="query-source" hidden>
+      <span class="query-source-label">来源</span>
+      <code id="query-source-value"></code>
+    </div>
+
+    <div class="query-table">
+      <div class="query-row query-row-head">
+        <span>#</span>
+        <span>键</span>
+        <span>值</span>
+        <span class="query-row-head-actions">操作</span>
+      </div>
+      <div id="query-rows"></div>
+      <p class="tool-empty-note" id="query-empty-state" hidden></p>
+    </div>
+
+    <div class="security-error query-warning" id="query-duplicate-warning" role="status" hidden></div>
+
+    <div class="result-subheading tool-subsection"><strong>查询字符串</strong><span>点击即可复制</span></div>
+    <div class="query-output-row">
+      <input id="query-output" class="query-output" type="text" readonly spellcheck="false" autocomplete="off" title="点击复制查询字符串" placeholder="解析后在此显示纯查询字符串" aria-label="查询字符串" />
+      <Button id="query-download" icon="lucide:download" disabled>下载</Button>
     </div>
     <div class="tool-stats">
-      <div><span>参数数量</span><strong id="query-stat-count">—</strong></div>
+      <div><span>输出参数</span><strong id="query-stat-count">—</strong></div>
+      <div><span>键数量</span><strong id="query-stat-keys">—</strong></div>
       <div><span>重复键</span><strong id="query-stat-duplicates">—</strong></div>
       <div><span>输出长度</span><strong id="query-stat-length">—</strong></div>
-      <div><span>键数量</span><strong id="query-stat-keys">—</strong></div>
-    </div>
-    <div id="query-table-wrap" hidden>
-      <div class="result-subheading tool-subsection"><strong>参数明细</strong><span>键与值均已解码</span></div>
-      <div class="tool-rows" id="query-rows"></div>
     </div>
   </Card>
 </section>
