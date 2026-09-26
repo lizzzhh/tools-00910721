@@ -278,7 +278,7 @@ function init() {
 
   async function copyAll() {
     if (!results.size) {
-      showToast('请先计算摘要')
+      showToast(currentTranslator()('toolUi.hash.runtime.needDigest'))
       return
     }
     const text = [...results.entries()].map(([id, value]) => `${labelById.get(id) ?? id}: ${formatOutput(value)}`).join('\n')
@@ -287,7 +287,7 @@ function init() {
       await navigator.clipboard.writeText(text)
       showToast(currentTranslator()('toolUi.hash.runtime.copiedAll'))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择结果')
+      showToast(currentTranslator()('toolUi.hash.runtime.manualCopy'))
     }
   }
 

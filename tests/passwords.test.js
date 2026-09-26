@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import test from 'node:test'
-import { estimatePasswordStrength, generatePassword } from '../src/lib/security/passwords.ts'
+import { estimatePasswordStrength, generatePassword, PasswordGenerateError } from '../src/lib/security/passwords.ts'
 
 const allOptions = { lowercase: true, uppercase: true, numbers: true, symbols: true }
 
@@ -16,8 +16,21 @@ test('generates a password with every selected character class', () => {
 })
 
 test('rejects invalid password generation options', () => {
-  assert.throws(() => generatePassword(12, { lowercase: false, uppercase: false, numbers: false, symbols: false }, () => 0), /至少选择/)
-  assert.throws(() => generatePassword(2, allOptions, () => 0), /长度不能/)
+  const noClass = { lowercase: false, uppercase: false, numbers: false, symbols: false }
+  const tooShort = { ...allOptions }
+
+  assert.throws(
+    () => generatePassword(12, noClass, () => 0),
+    (error) => error instanceof PasswordGenerateError && error.code === 'noCharacterClass'
+  )
+  assert.throws(
+    () => generatePassword(2, tooShort, () => 0),
+    (error) => error instanceof PasswordGenerateError && error.code === 'lengthBelowClassCount'
+  )
+  assert.throws(
+    () => generatePassword(0, allOptions, () => 0),
+    (error) => error instanceof PasswordGenerateError && error.code === 'lengthOutOfRange'
+  )
 })
 
 test('penalizes common passwords and rewards varied long passwords', () => {

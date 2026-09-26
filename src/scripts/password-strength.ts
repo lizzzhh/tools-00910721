@@ -49,7 +49,7 @@ function init() {
     if (result) result.dataset.level = value.level
     if (status) status.textContent = currentTranslator()(password ? 'toolUi.password-strength.runtime.done' : 'workspace.waitingInput')
     if (score) score.textContent = password ? String(value.score) : '—'
-    if (label) label.textContent = value.label
+    if (label) label.textContent = currentTranslator()(`toolUi.password-strength.levels.${value.level}`)
     if (bar) {
       bar.style.width = password ? `${value.score}%` : '0%'
       bar.dataset.level = value.level
@@ -59,8 +59,8 @@ function init() {
     if (length) length.textContent = String(value.length)
     if (classes) classes.textContent = String(value.poolSize ? [/[a-z]/, /[A-Z]/, /[0-9]/].filter((pattern) => pattern.test(password)).length + ([...password].some((character) => !/[A-Za-z0-9\s]/.test(character)) ? 1 : 0) : 0)
     if (unique) unique.textContent = String(value.uniqueCharacters)
-    fillList(messages, value.messages)
-    fillList(suggestions, value.suggestions)
+    fillList(messages, value.notes.map((note) => currentTranslator()(`toolUi.password-strength.notes.${note.code}`, note.params)))
+    fillList(suggestions, value.advice.map((note) => currentTranslator()(`toolUi.password-strength.notes.${note.code}`, note.params)))
   }
 
   function evaluate(record = false) {

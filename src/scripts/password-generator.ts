@@ -1,5 +1,5 @@
-import { defaultPasswordOptions, estimatePasswordStrength, generatePassword, type PasswordOptions } from '../lib/security/passwords'
 import { currentTranslator } from '../i18n/client'
+import { defaultPasswordOptions, estimatePasswordStrength, generatePassword, PasswordGenerateError, type PasswordOptions } from '../lib/security/passwords'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
 
@@ -83,7 +83,7 @@ function init() {
   function renderStrength(password: string) {
     const result = estimatePasswordStrength(password)
     if (strengthLabel) {
-      strengthLabel.textContent = result.label
+      strengthLabel.textContent = currentTranslator()(`toolUi.password-strength.levels.${result.level}`)
       strengthLabel.dataset.level = result.level
     }
     if (strengthScore) strengthScore.textContent = `${result.score} / 100`
@@ -107,7 +107,7 @@ function init() {
       recordToolUsage('password-generator')
     } catch (error) {
       resetResult()
-      showError(error instanceof Error ? error.message : currentTranslator()('toolUi.password-generator.runtime.failed'))
+      showError(currentTranslator()(error instanceof PasswordGenerateError ? `toolUi.password-generator.errors.${error.code}` : 'toolUi.password-generator.runtime.failed'))
     }
   }
 

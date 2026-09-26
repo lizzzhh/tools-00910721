@@ -1,6 +1,7 @@
 import { decodeJwt, type JwtDecodeResult, type JsonObject } from '../lib/security/jwt'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
+import { currentTranslator } from '../i18n/client'
 
 type DecodedJwt = Extract<JwtDecodeResult, { ok: true }>
 
@@ -54,15 +55,16 @@ function init() {
   function setState(result: DecodedJwt) {
     if (!state) return
     state.dataset.level = result.status
+    const t = currentTranslator()
     state.textContent = result.kind === 'jwe'
-      ? '加密令牌：仅能读取 Header'
+      ? t('toolUi.jwt-decode.runtime.stateEncrypted')
       : result.status === 'expired'
-        ? '令牌已过期'
+        ? t('toolUi.jwt-decode.runtime.stateExpired')
         : result.status === 'not-yet-valid'
-          ? '令牌尚未生效'
+          ? t('toolUi.jwt-decode.runtime.stateNotYetValid')
           : result.status === 'unknown-expiry'
-            ? '未提供过期时间声明'
-            : '令牌当前未过期'
+            ? t('toolUi.jwt-decode.runtime.stateUnknownExpiry')
+            : t('toolUi.jwt-decode.runtime.stateValid')
   }
 
   function renderClaims(payload: JsonObject | null) {
@@ -71,23 +73,24 @@ function init() {
     if (!payload) {
       const empty = document.createElement('p')
       empty.className = 'security-empty'
-      empty.textContent = 'JWE 载荷已加密，无法直接读取。'
+      empty.textContent = currentTranslator()('toolUi.jwt-decode.runtime.claimsEncrypted')
       claims.append(empty)
       return
     }
+    const t = currentTranslator()
     const definitions: [string, string][] = [
-      ['iss', '签发者'],
-      ['sub', '主题'],
-      ['aud', '受众'],
-      ['iat', '签发时间'],
-      ['nbf', '生效时间'],
-      ['exp', '过期时间']
+      ['iss', t('toolUi.jwt-decode.runtime.claimIss')],
+      ['sub', t('toolUi.jwt-decode.runtime.claimSub')],
+      ['aud', t('toolUi.jwt-decode.runtime.claimAud')],
+      ['iat', t('toolUi.jwt-decode.runtime.claimIat')],
+      ['nbf', t('toolUi.jwt-decode.runtime.claimNbf')],
+      ['exp', t('toolUi.jwt-decode.runtime.claimExp')]
     ]
     const available = definitions.filter(([key]) => payload[key] !== undefined)
     if (!available.length) {
       const empty = document.createElement('p')
       empty.className = 'security-empty'
-      empty.textContent = '载荷中没有常见时间或身份声明。'
+      empty.textContent = currentTranslator()('toolUi.jwt-decode.runtime.claimsEmpty')
       claims.append(empty)
       return
     }
@@ -108,18 +111,18 @@ function init() {
     warnings.replaceChildren()
     result.warnings.forEach((warning) => {
       const item = document.createElement('li')
-      item.textContent = warning
+      item.textContent = currentTranslator()(`toolUi.jwt-decode.warnings.${warning}`)
       warnings.append(item)
     })
   }
 
   function renderResult(result: DecodedJwt) {
     if (resultCard) resultCard.hidden = false
-    if (resultStatus) resultStatus.textContent = result.kind === 'jwe' ? 'JWE 已解析' : '解析完成'
+    if (resultStatus) resultStatus.textContent = currentTranslator()(result.kind === 'jwe' ? 'toolUi.jwt-decode.runtime.statusJwe' : 'toolUi.jwt-decode.runtime.statusDone')
     setState(result)
     renderClaims(result.payload)
     if (headerOutput) headerOutput.textContent = JSON.stringify(result.header, null, 2)
-    if (payloadOutput) payloadOutput.textContent = result.payload ? JSON.stringify(result.payload, null, 2) : '载荷已加密，无法直接读取。'
+    if (payloadOutput) payloadOutput.textContent = result.payload ? JSON.stringify(result.payload, null, 2) : currentTranslator()('toolUi.jwt-decode.runtime.payloadEncrypted')
     renderWarnings(result)
     if (copyHeaderButton) copyHeaderButton.disabled = false
     if (copyPayloadButton) copyPayloadButton.disabled = !result.payload
@@ -138,7 +141,12 @@ function init() {
     const result = decodeJwt(value)
     if (!result.ok) {
       resetResult()
-      showError(result.error)
+      const t = currentTranslator()
+      showError(
+        result.params
+          ? t(`toolUi.jwt-decode.errors.${result.code}`, { part: t(`toolUi.jwt-decode.runtime.${result.params.part === 'header' ? 'partHeader' : 'partPayload'}`) })
+          : t(`toolUi.jwt-decode.errors.${result.code}`)
+      )
       return
     }
     renderResult(result)
@@ -157,9 +165,9 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(element.textContent)
-      showToast(`${label}已复制`)
+      showToast(currentTranslator()('toolUi.jwt-decode.runtime.copied', { label }))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择内容')
+      showToast(currentTranslator()('toolUi.jwt-decode.runtime.manualCopy'))
     }
   }
 

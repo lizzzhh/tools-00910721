@@ -12,7 +12,7 @@ const tables = Object.fromEntries(Object.entries(locales).map(([tag, dict]) => [
 /** Technical terms that legitimately appear inside Japanese strings. */
 const jaLatinAllow = new Set([
   'Base', 'Base16', 'Base32', 'Base58', 'Base62', 'Base64', 'Base91', 'Ascii', 'Ascii85', 'JSON',
-  'JWT', 'MD5', 'URL', 'HTML', 'Unicode', 'Query', 'String', 'UUID', 'Unix', 'HTTP', 'cURL',
+  'JWT', 'JWE', 'MD5', 'URL', 'HTML', 'Unicode', 'Query', 'String', 'UUID', 'Unix', 'HTTP', 'cURL',
   'Docker', 'Compose', 'Nginx', 'Markdown', 'EXIF', 'OpenAPI', 'JSONPath', 'TypeScript', 'Schema',
   'SHA', 'HMAC', 'GUID', 'ULID', 'CSV', 'XML', 'YAML', 'SQL', 'Cron', 'API', 'APIs', 'HEX', 'RGB',
   'HSL', 'QR', 'TODO', 'OAuth', 'CRC32', 'bcrypt', 'argon2', 'AES', 'RSA', 'EC', 'ES', 'HS', 'PS',

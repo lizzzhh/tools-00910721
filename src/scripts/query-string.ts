@@ -77,10 +77,10 @@ function init() {
     key.type = 'text'
     key.className = 'query-cell query-cell-key'
     key.value = entry.key
-    key.placeholder = '参数名'
+    key.placeholder = currentTranslator()('toolUi.query-string.runtime.keyPlaceholder')
     key.autocomplete = 'off'
     key.spellcheck = false
-    key.setAttribute('aria-label', `第 ${position} 个参数的键`)
+    key.setAttribute('aria-label', currentTranslator()('toolUi.query-string.runtime.keyAria', { position }))
     key.addEventListener('input', () => {
       entries[index].key = key.value
       sync(true)
@@ -90,10 +90,10 @@ function init() {
     value.type = 'text'
     value.className = 'query-cell query-cell-value'
     value.value = entry.value
-    value.placeholder = entry.hasValue ? '参数值' : '无值参数'
+    value.placeholder = currentTranslator()(entry.hasValue ? 'toolUi.query-string.runtime.valuePlaceholder' : 'toolUi.query-string.runtime.valuelessPlaceholder')
     value.autocomplete = 'off'
     value.spellcheck = false
-    value.setAttribute('aria-label', `第 ${position} 个参数的值`)
+    value.setAttribute('aria-label', currentTranslator()('toolUi.query-string.runtime.valueAria', { position }))
     value.addEventListener('input', () => {
       entries[index].value = value.value
       entries[index].hasValue = value.value !== ''
@@ -105,8 +105,8 @@ function init() {
     valueToggle.type = 'button'
     valueToggle.className = 'query-value-toggle'
     valueToggle.textContent = '='
-    valueToggle.title = '以「键=值」形式输出；关闭时输出为「键」'
-    valueToggle.setAttribute('aria-label', `第 ${position} 个参数是否输出等号`)
+    valueToggle.title = currentTranslator()('toolUi.query-string.runtime.equalsToggleTitle')
+    valueToggle.setAttribute('aria-label', currentTranslator()('toolUi.query-string.runtime.equalsToggleAria', { position }))
     valueToggle.addEventListener('click', () => {
       entries[index].hasValue = !entries[index].hasValue
       if (entries[index].hasValue) entries[index].value = entries[index].value || ''
@@ -118,10 +118,10 @@ function init() {
       const hasValue = entries[index].hasValue
       row.dataset.empty = hasValue ? 'false' : 'true'
       valueToggle.setAttribute('aria-pressed', String(hasValue))
-      value.placeholder = hasValue ? '参数值' : '无值参数'
+      value.placeholder = currentTranslator()(hasValue ? 'toolUi.query-string.runtime.valuePlaceholder' : 'toolUi.query-string.runtime.valuelessPlaceholder')
     }
 
-    const removeButton = createIconButton('icon-trash-2', `删除第 ${position} 个参数`)
+    const removeButton = createIconButton('icon-trash-2', currentTranslator()('toolUi.query-string.runtime.removeAria', { position }))
     removeButton.addEventListener('click', () => {
       entries.splice(index, 1)
       renderRows()
@@ -151,9 +151,7 @@ function init() {
     toggleHidden(emptyState, visible.length > 0)
     setText(
       emptyState,
-      entries.length === 0
-        ? '在上方粘贴查询串即可自动解析，也可以用「添加参数」逐条填写。'
-        : '没有匹配当前筛选条件的参数。'
+      currentTranslator()(entries.length === 0 ? 'toolUi.query-string.runtime.hintEmpty' : 'toolUi.query-string.runtime.hintFiltered')
     )
   }
 
@@ -182,15 +180,15 @@ function init() {
     }
     setText(sourceValue, base)
     toggleHidden(sourceBlock, !base)
-    setText(resultStatus, entries.length > 0 ? '已同步' : '等待输入')
+    setText(resultStatus, currentTranslator()(entries.length > 0 ? 'toolUi.query-string.runtime.synced' : 'workspace.waitingInput'))
     setDisabled(downloadButton, processed === '')
     setStat(root, 'query-stat-count', formatNumber(selected.length))
     setStat(root, 'query-stat-keys', formatNumber(new Set(selected.map((entry) => entry.key)).size))
     setStat(root, 'query-stat-duplicates', formatNumber(duplicates))
-    setStat(root, 'query-stat-length', `${formatNumber(processed.length)} 字符`)
+    setStat(root, 'query-stat-length', currentTranslator()('toolUi.query-string.runtime.lengthUnit', { count: formatNumber(processed.length) }))
 
     if (duplicateWarning) {
-      duplicateWarning.textContent = duplicates > 0 ? `有 ${duplicates} 个重复键，输出会保留全部同名参数。` : ''
+      duplicateWarning.textContent = duplicates > 0 ? currentTranslator()('toolUi.query-string.runtime.duplicateWarning', { count: duplicates }) : ''
       duplicateWarning.hidden = duplicates === 0
     }
   }
@@ -265,7 +263,7 @@ function init() {
   })
   clearButton?.addEventListener('click', clearAll)
   output?.addEventListener('click', () => {
-    if (processed) void copyText(processed, '查询字符串已复制到剪贴板')
+    if (processed) void copyText(processed, currentTranslator()('toolUi.query-string.runtime.copied'))
   })
   downloadButton?.addEventListener('click', () => downloadText(processed, 'query-string.txt'))
   renderRows()
