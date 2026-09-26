@@ -19,8 +19,18 @@ const jaLatinAllow = new Set([
   'none', 'PBKDF2', 'scrypt', 'HTTPS', 'iOS', 'Web', 'ISO', 'RFC', 'plain', 'DEFLATE', 'GZIP',
   'eyJ', 'ey', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'Nil', 'Max', 'NilUUID', 'MaxUUID',
   'UTF', 'Bitcoin', 'RFC', 'DNS', 'Punycode', 'IDN', 'Nginx', 'WebP', 'SVG', 'PDF', 'OCR',
+  'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
   'RAW', 'UTC', 'GMT', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
 ])
+
+/**
+ * Japanese shinjitai that collide with simplified Chinese forms. 辞書 is correct
+ * Japanese, so these must be exempt from the simplified-character scan or the
+ * check produces false positives on legitimate copy.
+ */
+const jaKanjiAllow = new Set(
+  ('会 覚 権 挙 効 図 雑 賛 残 歯 児 辞 湿 実 舎 写 釈 収 寿 従 渋 処 緒 乗 剰 浄 済 縄 転 伝 灯 盗 稲 徳 突 難 弐 悩 拝 廃 髪 秘 浜 払 仏 辺 弁 舗 穂 宝 豊 翻 嚢 脳 麦 発 変 別 訳 唯 揺 様 謡 覧 竜 両 猟 緑 涙 塁 齢 暦 歴 練 錬 郎 廊 録 湾 対 択 単 嘆 弾 遅 虫 鋳 庁 徴 聴 点 徳 匿 拝 麦 仏 変 弁 豊 翻 訳 陆续 単 竜 覧 両 涼 糧 ').split(/\s+/).filter(Boolean)
+)
 
 /**
  * Simplified forms whose Japanese shinjitai differs. Kanji valid in both
@@ -44,10 +54,12 @@ for (const [tag, table] of Object.entries(tables)) {
     if (/[\u0400-\u04ff]/.test(value)) problems.push(`${tag}.${key}: CYRILLIC -> ${value}`)
     if (tag === 'en' && /[\u3000-\u9fff\uff00-\uffef]/.test(value)) problems.push(`${tag}.${key}: CJK in english -> ${value}`)
     if (tag === 'ja') {
-      const bad = [...value].find((ch) => simplifiedOnly.includes(ch))
+      const bad = [...value].find((ch) => simplifiedOnly.includes(ch) && !jaKanjiAllow.has(ch))
       if (bad) problems.push(`${tag}.${key}: SIMPLIFIED "${bad}" -> ${value}`)
-      // eyebrow labels are intentionally Latin design elements in every locale
-      if (!key.endsWith('.eyebrow')) {
+      // A value with no Japanese characters at all is a locale-neutral token
+      // (camelCase, path/case, an eyebrow label) and cannot contain stray Latin.
+      const hasJapanese = /[\u3040-\u30ff\u4e00-\u9fff]/.test(value)
+      if (!key.endsWith('.eyebrow') && hasJapanese) {
         const stray = (value.replace(/\{\w+\}/g, '').match(/[A-Za-z]{2,}/g) ?? []).find((run) => !jaLatinAllow.has(run))
         if (stray) problems.push(`${tag}.${key}: STRAY LATIN "${stray}" -> ${value}`)
       }

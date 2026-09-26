@@ -3,41 +3,40 @@ import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
 import SelectField from '../ui/SelectField.astro'
-import { caseStyleHints, caseStyleLabels } from '../../lib/text'
+import { caseStyleHints, caseStyleIds, type CaseStyle } from '../../lib/text'
 import { createTranslator } from '../../i18n'
 
-type Style = keyof typeof caseStyleLabels
-
-const caseOptions = (Object.keys(caseStyleLabels) as Style[]).map((value) => ({ value, label: `${caseStyleLabels[value]}（${caseStyleHints[value]}）` }))
-
-const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant', 'dot', 'path', 'title']
+type Style = CaseStyle
 
 const t = createTranslator(Astro.locals.locale)
+const caseOptions = caseStyleIds.map((value) => ({ value, label: `${t(`toolUi.text-case.styles.${value}`)}（${caseStyleHints[value]}）` }))
+
+const shortcutStyles: Style[] = ['camel', 'pascal', 'snake', 'kebab', 'constant', 'dot', 'path', 'title']
 ---
 
 <section class="tool-workspace text-case-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>大小写转换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>{t('tools.text-case.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:case-sensitive" size={25} /></span>
-        <div><h1>大小写转换</h1><p>命名风格与字符顺序转换</p></div>
+        <div><h1>{t('tools.text-case.name')}</h1><p>{t('toolUi.text-case.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />自动识别驼峰、下划线、连字符与空格分隔，并保留中英文数字混排的可读性。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.text-case.notice')}</div>
 
   <Card class="tool-card">
     <div class="tool-options">
       <div class="tool-options-row">
-        <SelectField id="text-case-style" label="目标风格" options={caseOptions} value="camel" />
-        <span>常见命名风格会统一分隔符并按单词边界重新拼接。</span>
+        <SelectField id="text-case-style" label={t('toolUi.text-case.styleLabel')} options={caseOptions} value="camel" />
+        <span>{t('toolUi.text-case.styleHint')}</span>
       </div>
     </div>
     <div class="field-heading">
-      <label for="text-case-input">输入文本</label>
+      <label for="text-case-input">{t('workspace.inputLabel')}</label>
       <span><b id="text-case-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
@@ -45,16 +44,16 @@ const t = createTranslator(Astro.locals.locale)
     </div>
     <div class="security-error" id="text-case-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="text-case-run" class="calculate-button" variant="primary" icon="lucide:case-sensitive"><span>开始转换</span></Button>
-      <Button id="text-case-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="text-case-run" class="calculate-button" variant="primary" icon="lucide:case-sensitive"><span>{t('toolUi.text-case.startButton')}</span></Button>
+      <Button id="text-case-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="text-case-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
     <div class="tool-option-section">
-      <span class="tool-option-heading">常用风格</span>
+      <span class="tool-option-heading">{t('toolUi.text-case.presets')}</span>
       <div class="tool-option-grid" id="text-case-shortcuts">
         {shortcutStyles.map((style) => (
           <button class="shortcut-button" type="button" data-style={style}>
-            <strong>{caseStyleLabels[style]}</strong>
+            <strong>{t(`toolUi.text-case.styles.${style}`)}</strong>
             <code>{caseStyleHints[style]}</code>
           </button>
         ))}
@@ -67,17 +66,17 @@ const t = createTranslator(Astro.locals.locale)
       <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
       <span id="text-case-result-status">{t('workspace.waiting')}</span>
     </div>
-    <div class="result-subheading"><strong>结果</strong><span>只读结果</span></div>
-    <textarea id="text-case-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="大小写转换结果"></textarea>
+    <div class="result-subheading"><strong>{t('toolUi.text-case.resultTitle')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="text-case-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.text-case.resultAria')}></textarea>
     <div class="tool-result-actions">
-      <Button id="text-case-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="text-case-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="text-case-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="text-case-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
     </div>
     <div class="tool-stats">
-      <div><span>识别单词</span><strong id="text-case-stat-words">—</strong></div>
-      <div><span>转换字符</span><strong id="text-case-stat-converted">—</strong></div>
-      <div><span>输入长度</span><strong id="text-case-stat-input">—</strong></div>
-      <div><span>输出长度</span><strong id="text-case-stat-output">—</strong></div>
+      <div><span>{t('toolUi.text-case.statWords')}</span><strong id="text-case-stat-words">—</strong></div>
+      <div><span>{t('toolUi.text-case.statChars')}</span><strong id="text-case-stat-converted">—</strong></div>
+      <div><span>{t('toolUi.text-case.statInputLength')}</span><strong id="text-case-stat-input">—</strong></div>
+      <div><span>{t('toolUi.text-case.statOutputLength')}</span><strong id="text-case-stat-output">—</strong></div>
     </div>
   </Card>
 </section>

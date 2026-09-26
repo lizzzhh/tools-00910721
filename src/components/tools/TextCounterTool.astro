@@ -10,27 +10,27 @@ const t = createTranslator(Astro.locals.locale)
 <section class="tool-workspace text-counter-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>字数统计</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>{t('tools.text-counter.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:bar-chart-3" size={25} /></span>
-        <div><h1>字数统计</h1><p>实时统计字符、单词、行数与中英文字符占比</p></div>
+        <div><h1>{t('tools.text-counter.name')}</h1><p>{t('toolUi.text-counter.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />输入即统计，支持 Unicode 码点计数，中日韩字符与拉丁单词分别按各自规则统计。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.text-counter.notice')}</div>
 
   <Card class="tool-card">
     <div class="field-heading">
-      <label for="text-counter-input">输入文本</label>
+      <label for="text-counter-input">{t('workspace.inputLabel')}</label>
       <span><b id="text-counter-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
-      <textarea id="text-counter-input" placeholder="在此输入或粘贴文本…" spellcheck="false" autocomplete="off" autofocus></textarea>
+      <textarea id="text-counter-input" placeholder={t('toolUi.text-counter.inputPlaceholder')} spellcheck="false" autocomplete="off" autofocus></textarea>
     </div>
     <div class="action-row">
-      <Button id="text-counter-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="text-counter-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="text-counter-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
@@ -41,21 +41,21 @@ const t = createTranslator(Astro.locals.locale)
       <span id="text-counter-result-status">{t('workspace.waiting')}</span>
     </div>
     <div class="tool-stats">
-      <div><span>字符总数</span><strong id="text-counter-stat-characters">0</strong></div>
-      <div><span>不含空格</span><strong id="text-counter-stat-no-spaces">0</strong></div>
-      <div><span>单词数</span><strong id="text-counter-stat-words">0</strong></div>
-      <div><span>不重复单词</span><strong id="text-counter-stat-unique">0</strong></div>
-      <div><span>行数</span><strong id="text-counter-stat-lines">0</strong></div>
-      <div><span>段落数</span><strong id="text-counter-stat-paragraphs">0</strong></div>
-      <div><span>句子数</span><strong id="text-counter-stat-sentences">0</strong></div>
-      <div><span>UTF-8 字节</span><strong id="text-counter-stat-bytes">0</strong></div>
-      <div><span>中文字符</span><strong id="text-counter-stat-cjk">0</strong></div>
-      <div><span>拉丁字母</span><strong id="text-counter-stat-letters">0</strong></div>
-      <div><span>数字</span><strong id="text-counter-stat-digits">0</strong></div>
-      <div><span>标点符号</span><strong id="text-counter-stat-punctuation">0</strong></div>
-      <div><span>空白字符</span><strong id="text-counter-stat-whitespace">0</strong></div>
-      <div><span>最长词长度</span><strong id="text-counter-stat-longest">0</strong></div>
-      <div><span>预计阅读</span><strong id="text-counter-stat-reading">0 分钟</strong></div>
+      <div><span>{t('toolUi.text-counter.statChars')}</span><strong id="text-counter-stat-characters">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statNoSpaces')}</span><strong id="text-counter-stat-no-spaces">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statWords')}</span><strong id="text-counter-stat-words">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statUniqueWords')}</span><strong id="text-counter-stat-unique">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statLines')}</span><strong id="text-counter-stat-lines">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statParagraphs')}</span><strong id="text-counter-stat-paragraphs">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statSentences')}</span><strong id="text-counter-stat-sentences">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statBytes')}</span><strong id="text-counter-stat-bytes">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statCjk')}</span><strong id="text-counter-stat-cjk">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statLatin')}</span><strong id="text-counter-stat-letters">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statDigits')}</span><strong id="text-counter-stat-digits">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statPunctuation')}</span><strong id="text-counter-stat-punctuation">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statWhitespace')}</span><strong id="text-counter-stat-whitespace">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statLongestWord')}</span><strong id="text-counter-stat-longest">0</strong></div>
+      <div><span>{t('toolUi.text-counter.statReading')}</span><strong id="text-counter-stat-reading">{t('toolUi.text-counter.minutesUnit', { count: 0 })}</strong></div>
     </div>
   </Card>
 </section>

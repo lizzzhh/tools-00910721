@@ -24,23 +24,24 @@ export type TextResult = {
 
 const separatorPattern = /[^\p{L}\p{N}]+/u
 
-export const caseStyleLabels: Record<CaseStyle, string> = {
-  upper: '全部大写',
-  lower: '全部小写',
-  title: '单词首字母大写',
-  sentence: '句首字母大写',
-  camel: 'camelCase',
-  pascal: 'PascalCase',
-  train: 'train-case',
-  snake: 'snake_case',
-  kebab: 'kebab-case',
-  constant: 'CONSTANT_CASE',
-  dot: 'dot.case',
-  path: 'path/case',
-  alternating: 'aLtErNaTiNg',
-  reverse: '反转字符顺序',
-  'first-upper': '首字母大写'
-}
+/** Display names live in the dictionaries as `toolUi.text-case.styles.*`. */
+export const caseStyleIds = [
+  'upper',
+  'lower',
+  'title',
+  'sentence',
+  'camel',
+  'pascal',
+  'train',
+  'snake',
+  'kebab',
+  'constant',
+  'dot',
+  'path',
+  'alternating',
+  'reverse',
+  'first-upper'
+] as const satisfies readonly CaseStyle[]
 
 export const caseStyleHints: Record<CaseStyle, string> = {
   upper: 'HELLO WORLD',

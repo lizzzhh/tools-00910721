@@ -12,72 +12,72 @@ const t = createTranslator(Astro.locals.locale)
 <section class="tool-workspace text-replace-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>文本查找替换</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>{t('tools.text-replace.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:replace" size={25} /></span>
-        <div><h1>文本查找替换</h1><p>支持普通文本与正则表达式的批量替换</p></div>
+        <div><h1>{t('tools.text-replace.name')}</h1><p>{t('toolUi.text-replace.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />启用正则后使用 JavaScript 语法，支持 $1、$& 与命名分组替换，替换在浏览器本地完成。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.text-replace.notice')}</div>
 
   <Card class="tool-card">
     <div class="tool-field-grid">
       <div class="tool-field">
-        <label for="text-replace-find">查找内容</label>
+        <label for="text-replace-find">{t('toolUi.text-replace.findLabel')}</label>
         <input id="text-replace-find" type="text" placeholder="getUserName" autocomplete="off" spellcheck="false" autofocus />
       </div>
       <div class="tool-field">
-        <label for="text-replace-to">替换为</label>
-        <input id="text-replace-to" type="text" placeholder="$1 或替换文本" autocomplete="off" spellcheck="false" />
+        <label for="text-replace-to">{t('toolUi.text-replace.replaceLabel')}</label>
+        <input id="text-replace-to" type="text" placeholder={t('toolUi.text-replace.replacePlaceholder')} autocomplete="off" spellcheck="false" />
       </div>
     </div>
     <div class="tool-options">
       <div class="tool-option-section">
-        <span class="tool-option-heading">匹配选项</span>
+        <span class="tool-option-heading">{t('toolUi.text-replace.matchLabel')}</span>
         <div class="tool-option-grid">
-          <CheckboxField id="text-replace-regex" label="正则表达式" />
-          <CheckboxField id="text-replace-case" label="忽略大小写" />
-          <CheckboxField id="text-replace-word" label="全词匹配" />
+          <CheckboxField id="text-replace-regex" label={t('toolUi.text-replace.optRegex')} />
+          <CheckboxField id="text-replace-case" label={t('toolUi.text-replace.optIgnoreCase')} />
+          <CheckboxField id="text-replace-word" label={t('toolUi.text-replace.optWholeWord')} />
         </div>
       </div>
     </div>
     <div class="field-heading">
-      <label for="text-replace-input">输入文本</label>
+      <label for="text-replace-input">{t('workspace.inputLabel')}</label>
       <span><b id="text-replace-char-count">0</b> {t('common.charactersUnit')}</span>
     </div>
     <div class="textarea-wrap">
-      <textarea id="text-replace-input" spellcheck="false" autocomplete="off" placeholder="粘贴需要替换的文本"></textarea>
+      <textarea id="text-replace-input" spellcheck="false" autocomplete="off" placeholder={t('toolUi.text-replace.inputPlaceholder')}></textarea>
     </div>
     <div class="security-error" id="text-replace-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="text-replace-run" class="calculate-button" variant="primary" icon="lucide:replace"><span>开始替换</span></Button>
-      <Button id="text-replace-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="text-replace-run" class="calculate-button" variant="primary" icon="lucide:replace"><span>{t('toolUi.text-replace.startButton')}</span></Button>
+      <Button id="text-replace-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="text-replace-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
 
   <Card id="text-replace-result" class="result-card" hidden>
     <div class="result-heading">
-      <div><span class="status-dot"></span><strong>替换结果</strong></div>
+      <div><span class="status-dot"></span><strong>{t('toolUi.text-replace.resultTitle')}</strong></div>
       <span id="text-replace-result-status">{t('workspace.waiting')}</span>
     </div>
-    <div class="result-subheading"><strong>替换后</strong><span>只读结果</span></div>
-    <textarea id="text-replace-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="替换结果"></textarea>
+    <div class="result-subheading"><strong>{t('toolUi.text-replace.outputLabel')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="text-replace-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.text-replace.resultAria')}></textarea>
     <div class="tool-result-actions">
-      <Button id="text-replace-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="text-replace-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="text-replace-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="text-replace-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
     </div>
     <div class="tool-stats">
-      <div><span>匹配数量</span><strong id="text-replace-stat-matches">—</strong></div>
-      <div><span>输入长度</span><strong id="text-replace-stat-input">—</strong></div>
-      <div><span>输出长度</span><strong id="text-replace-stat-output">—</strong></div>
-      <div><span>长度变化</span><strong id="text-replace-stat-delta">—</strong></div>
+      <div><span>{t('toolUi.text-replace.statMatches')}</span><strong id="text-replace-stat-matches">—</strong></div>
+      <div><span>{t('toolUi.text-replace.statInputLength')}</span><strong id="text-replace-stat-input">—</strong></div>
+      <div><span>{t('toolUi.text-replace.statOutputLength')}</span><strong id="text-replace-stat-output">—</strong></div>
+      <div><span>{t('toolUi.text-replace.statDelta')}</span><strong id="text-replace-stat-delta">—</strong></div>
     </div>
     <div id="text-replace-groups-wrap" hidden>
-      <div class="result-subheading tool-subsection"><strong>捕获分组</strong><span>去重后的分组值</span></div>
+      <div class="result-subheading tool-subsection"><strong>{t('toolUi.text-replace.statGroups')}</strong><span>{t('toolUi.text-replace.groupsHint')}</span></div>
       <div class="tool-rows" id="text-replace-groups"></div>
     </div>
   </Card>

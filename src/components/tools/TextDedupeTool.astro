@@ -6,63 +6,62 @@ import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
 import { createTranslator } from '../../i18n'
 
+const t = createTranslator(Astro.locals.locale)
+
 const modeOptions = [
-  { value: 'dedupe', label: '按首次出现去重' },
-  { value: 'sort', label: '排序' },
-  { value: 'reverse', label: '倒序排列' },
-  { value: 'shuffle', label: '随机打乱' }
+  { value: 'dedupe', label: t('toolUi.text-deduplicate.modeDedupe') },
+  { value: 'sort', label: t('toolUi.text-deduplicate.modeSort') },
+  { value: 'reverse', label: t('toolUi.text-deduplicate.modeReverse') },
+  { value: 'shuffle', label: t('toolUi.text-deduplicate.modeShuffle') }
 ]
 
 const sortModeOptions = [
-  { value: 'line', label: '字典序' },
-  { value: 'numeric', label: '数字大小' },
-  { value: 'length', label: '行长度' }
+  { value: 'line', label: t('toolUi.text-deduplicate.sortLexical') },
+  { value: 'numeric', label: t('toolUi.text-deduplicate.sortNumeric') },
+  { value: 'length', label: t('toolUi.text-deduplicate.sortLength') }
 ]
-
-
-const t = createTranslator(Astro.locals.locale)
 ---
 
 <section class="tool-workspace text-dedupe-workspace">
   <div class="workspace-header">
     <div>
-      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>文本去重排序</strong></div>
+      <div class="breadcrumb"><span>{t('categories.text')}</span><b>/</b><strong>{t('tools.text-deduplicate.name')}</strong></div>
       <div class="title-line">
         <span class="title-icon"><Icon name="lucide:list-checks" size={25} /></span>
-        <div><h1>文本去重排序</h1><p>按行去重、排序、倒序与随机打乱</p></div>
+        <div><h1>{t('tools.text-deduplicate.name')}</h1><p>{t('toolUi.text-deduplicate.subtitle')}</p></div>
       </div>
     </div>
     <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
   </div>
 
-  <div class="security-notice"><Icon name="lucide:info" size={16} />按 \n 分行处理，可选择忽略大小写、去除首尾空白以及排序前先去重。</div>
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.text-deduplicate.notice')}</div>
 
   <Card class="tool-card">
     <div class="tool-options">
       <div class="tool-options-row">
-        <SelectField id="text-dedupe-mode" label="处理方式" options={modeOptions} value="dedupe" />
-        <SelectField id="text-dedupe-sort-mode" label="排序依据" options={sortModeOptions} value="line" />
+        <SelectField id="text-dedupe-mode" label={t('toolUi.text-deduplicate.modeLabel')} options={modeOptions} value="dedupe" />
+        <SelectField id="text-dedupe-sort-mode" label={t('toolUi.text-deduplicate.sortLabel')} options={sortModeOptions} value="line" />
       </div>
       <div class="tool-option-section">
-        <span class="tool-option-heading">选项</span>
+        <span class="tool-option-heading">{t('toolUi.text-deduplicate.optionsLabel')}</span>
         <div class="tool-option-grid">
-          <CheckboxField id="text-dedupe-ignore-case" label="忽略大小写" />
-          <CheckboxField id="text-dedupe-trim" label="去除首尾空白" />
-          <CheckboxField id="text-dedupe-unique" label="排序前去重" />
+          <CheckboxField id="text-dedupe-ignore-case" label={t('toolUi.text-deduplicate.optIgnoreCase')} />
+          <CheckboxField id="text-dedupe-trim" label={t('toolUi.text-deduplicate.optTrim')} />
+          <CheckboxField id="text-dedupe-unique" label={t('toolUi.text-deduplicate.optDedupeFirst')} />
         </div>
       </div>
     </div>
     <div class="field-heading">
-      <label for="text-dedupe-input">输入文本</label>
-      <span><b id="text-dedupe-line-count">0</b> 行</span>
+      <label for="text-dedupe-input">{t('workspace.inputLabel')}</label>
+      <span><b id="text-dedupe-line-count">0</b> {t('toolUi.text-deduplicate.linesUnit')}</span>
     </div>
     <div class="textarea-wrap">
-      <textarea id="text-dedupe-input" spellcheck="false" autocomplete="off" autofocus placeholder="每行一条内容"></textarea>
+      <textarea id="text-dedupe-input" spellcheck="false" autocomplete="off" autofocus placeholder={t('toolUi.text-deduplicate.inputPlaceholder')}></textarea>
     </div>
     <div class="security-error" id="text-dedupe-error" role="alert" hidden></div>
     <div class="action-row">
-      <Button id="text-dedupe-run" class="calculate-button" variant="primary" icon="lucide:list-checks"><span>开始处理</span></Button>
-      <Button id="text-dedupe-sample" icon="lucide:wand-2">示例</Button>
+      <Button id="text-dedupe-run" class="calculate-button" variant="primary" icon="lucide:list-checks"><span>{t('toolUi.text-deduplicate.startButton')}</span></Button>
+      <Button id="text-dedupe-sample" icon="lucide:wand-2">{t('common.sample')}</Button>
       <Button id="text-dedupe-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
     </div>
   </Card>
@@ -72,17 +71,17 @@ const t = createTranslator(Astro.locals.locale)
       <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
       <span id="text-dedupe-result-status">{t('workspace.waiting')}</span>
     </div>
-    <div class="result-subheading"><strong>结果</strong><span>只读结果</span></div>
-    <textarea id="text-dedupe-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label="去重排序结果"></textarea>
+    <div class="result-subheading"><strong>{t('toolUi.text-deduplicate.resultTitle')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="text-dedupe-output" class="tool-output" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.text-deduplicate.resultAria')}></textarea>
     <div class="tool-result-actions">
-      <Button id="text-dedupe-copy" icon="lucide:copy" disabled>复制结果</Button>
-      <Button id="text-dedupe-download" icon="lucide:download" disabled>下载结果</Button>
+      <Button id="text-dedupe-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="text-dedupe-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
     </div>
     <div class="tool-stats">
-      <div><span>原始行数</span><strong id="text-dedupe-stat-total">—</strong></div>
-      <div><span>输出行数</span><strong id="text-dedupe-stat-kept">—</strong></div>
-      <div><span>移除行数</span><strong id="text-dedupe-stat-removed">—</strong></div>
-      <div><span>重复比例</span><strong id="text-dedupe-stat-ratio">—</strong></div>
+      <div><span>{t('toolUi.text-deduplicate.statInputLines')}</span><strong id="text-dedupe-stat-total">—</strong></div>
+      <div><span>{t('toolUi.text-deduplicate.statOutputLines')}</span><strong id="text-dedupe-stat-kept">—</strong></div>
+      <div><span>{t('toolUi.text-deduplicate.statRemoved')}</span><strong id="text-dedupe-stat-removed">—</strong></div>
+      <div><span>{t('toolUi.text-deduplicate.statRatio')}</span><strong id="text-dedupe-stat-ratio">—</strong></div>
     </div>
   </Card>
 </section>
