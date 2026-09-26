@@ -1,13 +1,24 @@
-export const numberBases = [2, 8, 10, 16, 32, 36] as const
+export const minBase = 2
 
-export type NumberBase = (typeof numberBases)[number]
+export const maxBase = 36
+
+export const extraBases = [58, 62]
+
+export const numberBases: number[] = [
+  ...Array.from({ length: maxBase - minBase + 1 }, (_, index) => index + minBase),
+  ...extraBases
+]
+
+export const commonBases: number[] = [2, 8, 10, 16, 32, 36, 58, 62]
+
+export type NumberBase = number
 
 export type NumberResult =
   | {
       ok: true
       value: bigint
       negative: boolean
-      digits: Record<NumberBase, string>
+      digits: Record<number, string>
       inputLength: number
     }
   | {
@@ -16,35 +27,42 @@ export type NumberResult =
       position?: number
     }
 
-const prefixes: Record<number, string> = {
-  2: '0b',
-  8: '0o',
-  10: '',
-  16: '0x',
-  32: '',
-  36: ''
-}
+// Bitcoin omits 0, O, I and l so glyphs stay unambiguous.
+const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+const base62Alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
-export const baseLabels: Record<NumberBase, string> = {
+const namedBases: Record<number, string> = {
   2: '二进制',
   8: '八进制',
   10: '十进制',
   16: '十六进制',
   32: 'Base32',
-  36: 'Base36'
+  36: 'Base36',
+  58: 'Base58',
+  62: 'Base62'
 }
 
-export const basePrefixes: Record<NumberBase, string> = {
-  2: '0b',
-  8: '0o',
-  10: '',
-  16: '0x',
-  32: '',
-  36: ''
+const prefixedBases: Record<number, string> = { 2: '0b', 8: '0o', 16: '0x' }
+
+export function baseLabel(base: number) {
+  return namedBases[base] ?? `${base} 进制`
+}
+
+export function basePrefix(base: number) {
+  return prefixedBases[base] ?? ''
 }
 
 export function isNumberBase(value: number | string): value is NumberBase {
-  return (numberBases as readonly number[]).includes(Number(value))
+  const base = Number(value)
+  return Number.isInteger(base) && numberBases.includes(base)
+}
+
+export function detectBase(input: string): NumberBase {
+  const value = input.trim().toLowerCase().replace(/^[+-]/, '')
+  for (const base of [2, 8, 16]) {
+    if (value.startsWith(prefixedBases[base])) return base
+  }
+  return 10
 }
 
 function digitValue(character: string) {
@@ -53,6 +71,28 @@ function digitValue(character: string) {
   const lower = character.toLowerCase()
   if (lower >= 'a' && lower <= 'z') return lower.charCodeAt(0) - 87
   return -1
+}
+
+function formatWithAlphabet(value: bigint, base: number, alphabet: string) {
+  const radix = BigInt(base)
+  const negative = value < 0n
+  let remaining = negative ? -value : value
+  if (remaining === 0n) return '0'
+
+  let output = ''
+  while (remaining > 0n) {
+    output = alphabet[Number(remaining % radix)] + output
+    remaining /= radix
+  }
+
+  return negative ? `-${output}` : output
+}
+
+export function toDigits(value: bigint, base: number): string {
+  if (base === 58) return formatWithAlphabet(value, base, base58Alphabet)
+  if (base === 62) return formatWithAlphabet(value, base, base62Alphabet)
+  if (base < minBase || base > maxBase) throw new RangeError(`不支持 ${base} 进制`)
+  return value.toString(base).toUpperCase()
 }
 
 function parseMagnitude(body: string, radix: number): { ok: true; value: bigint } | { ok: false; message: string; position: number } {
@@ -79,7 +119,7 @@ export function convertNumber(input: string, from: NumberBase): NumberResult {
   if (!value) return { ok: false, message: '请输入要转换的数字' }
 
   const cleaned = value.replace(/[\s_,]/g, '')
-  const prefix = prefixes[from]
+  const prefix = basePrefix(from)
   const body = prefix && cleaned.toLowerCase().startsWith(prefix) ? cleaned.slice(prefix.length) : cleaned
   if (!body) return { ok: false, message: `请输入 ${from} 进制的数字，不能只填写进制前缀` }
   if (body.includes('.')) return { ok: false, message: '仅支持整数，暂不支持小数转换', position: body.indexOf('.') + 1 }
@@ -88,8 +128,8 @@ export function convertNumber(input: string, from: NumberBase): NumberResult {
   if (!magnitude.ok) return magnitude
 
   const signed = negative ? -magnitude.value : magnitude.value
-  const digits = {} as Record<NumberBase, string>
-  for (const base of numberBases) digits[base] = signed.toString(base).toUpperCase()
+  const digits: Record<number, string> = {}
+  for (const base of numberBases) digits[base] = toDigits(signed, base)
 
   return { ok: true, value: signed, negative, digits, inputLength: input.length }
 }

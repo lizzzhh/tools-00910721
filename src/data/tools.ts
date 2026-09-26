@@ -102,10 +102,10 @@ export const tools: Tool[] = [
   {
     id: 'number-base',
     name: '进制转换',
-    description: '二进制与十进制互转',
+    description: '2-36 进制与 Base58、Base62 实时互转',
     category: '编码与数据',
     icon: 'lucide:binary',
-    keywords: ['进制', 'binary', 'hex', '转换', 'base', 'radix', '十进制', '十六进制'],
+    keywords: ['进制', 'binary', 'hex', 'octal', '转换', 'base', 'radix', '十进制', '十六进制', '八进制', 'base58', 'base62', '任意精度'],
     available: true
   },
   {
