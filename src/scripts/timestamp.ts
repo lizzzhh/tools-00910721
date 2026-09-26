@@ -1,40 +1,53 @@
 import { describeDate, parseDateInput, parseTimestamp, type DateDirection, type DateParts, type TimestampUnit } from '../lib/datetime'
 import { recordToolUsage } from './usage'
+import { currentTranslator } from '../i18n/client'
 import { clearError, copyText, showError, toggleHidden } from './tool-panel'
 
 const mountedRoots = new WeakSet<HTMLElement>()
 
+const WEEKDAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
+
+/** Weekday names follow the page locale rather than the browser default. */
+function formatWeekday(index: number) {
+  return currentTranslator()(`common.weekdays.${WEEKDAY_KEYS[index]}`)
+}
+
 function renderDetails(container: HTMLElement, rows: [string, string][]) {
+  const t = currentTranslator()
   container.replaceChildren(
     ...rows.map(([label, value]) => {
       const element = document.createElement('button')
       element.className = 'tool-row tool-row-copy'
       element.type = 'button'
-      element.title = `点击复制${label}`
+      element.title = t('toolUi.timestamp-converter.runtime.copyTitle', { label })
       const name = document.createElement('span')
       name.textContent = label
       const content = document.createElement('span')
       content.textContent = value
       element.append(name, content)
-      element.addEventListener('click', () => void copyText(value, `${label}已复制`))
+      element.addEventListener('click', () => void copyText(value, t('toolUi.timestamp-converter.runtime.copied', { label })))
       return element
     })
   )
 }
 
 function toRows(parts: DateParts, detectedUnit: string | null): [string, string][] {
+  const t = currentTranslator()
   const rows: [string, string][] = [
     ['ISO 8601', parts.iso],
     ['UTC', parts.utc],
-    ['本地时间', `${parts.local} (${parts.weekday})`],
-    ['本地日期', parts.date],
-    ['本地时刻', parts.time],
-    ['时区', `${parts.timezone} ${parts.offset}`]
+    [t('toolUi.timestamp-converter.runtime.rowLocalTime'), `${parts.local} (${formatWeekday(parts.weekdayIndex)})`],
+    [t('toolUi.timestamp-converter.runtime.rowLocalDate'), parts.date],
+    [t('toolUi.timestamp-converter.runtime.rowLocalClock'), parts.time],
+    [t('toolUi.timestamp-converter.runtime.rowTimezone'), `${parts.timezone} ${parts.offset}`]
   ]
 
-  if (detectedUnit) rows.push(['识别单位', detectedUnit])
+  if (detectedUnit) rows.push([t('toolUi.timestamp-converter.runtime.rowDetectedUnit'), detectedUnit])
 
-  rows.push(['Unix 秒', parts.unixSeconds], ['Unix 毫秒', parts.unixMilliseconds])
+  rows.push(
+    [t('toolUi.timestamp-converter.runtime.rowUnixSeconds'), parts.unixSeconds],
+    [t('toolUi.timestamp-converter.runtime.rowUnixMilliseconds'), parts.unixMilliseconds]
+  )
   return rows
 }
 
@@ -62,12 +75,13 @@ function init() {
   function resetResult() {
     toggleHidden(resultCard, true)
     rows?.replaceChildren()
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
   }
 
   function showResult(date: Date, unit: string, status: string) {
     const parts = describeDate(date)
-    const detected = direction === 'from-timestamp' ? (unit === 'milliseconds' ? '毫秒（13 位）' : '秒（10 位）') : null
+    const t = currentTranslator()
+    const detected = direction === 'from-timestamp' ? t(unit === 'milliseconds' ? 'toolUi.timestamp-converter.unitMilliseconds' : 'toolUi.timestamp-converter.unitSeconds') : null
     if (rows) renderDetails(rows, toRows(parts, detected))
     toggleHidden(resultCard, false)
     if (resultStatus) resultStatus.textContent = status
@@ -78,7 +92,7 @@ function init() {
     const value = input?.value ?? ''
     if (!value.trim()) {
       resetResult()
-      showError(errorBox, direction === 'from-timestamp' ? '请输入时间戳' : '请输入日期或时间')
+      showError(errorBox, currentTranslator()(direction === 'from-timestamp' ? 'toolUi.timestamp-converter.runtime.needTimestamp' : 'toolUi.timestamp-converter.runtime.needDateTime'))
       return
     }
 
@@ -89,14 +103,20 @@ function init() {
 
     if (!result.ok) {
       resetResult()
-      showError(errorBox, result.message)
+      showError(errorBox, currentTranslator()(`toolUi.timestamp-converter.errors.${result.code}`))
       return
     }
 
     showResult(
       result.date,
       result.unit,
-      direction === 'from-timestamp' ? (result.unit === 'milliseconds' ? '已按毫秒解析' : '已按秒解析') : '已解析日期'
+      currentTranslator()(
+        direction === 'from-timestamp'
+          ? result.unit === 'milliseconds'
+            ? 'toolUi.timestamp-converter.runtime.parsedMilliseconds'
+            : 'toolUi.timestamp-converter.runtime.parsedSeconds'
+          : 'toolUi.timestamp-converter.runtime.parsedDate'
+      )
     )
     recordToolUsage('timestamp-converter')
   }
@@ -112,8 +132,9 @@ function init() {
     panel?.setAttribute('aria-labelledby', direction === 'from-timestamp' ? 'timestamp-from-tab' : 'timestamp-date-tab')
     toggleHidden(unitRow, direction !== 'from-timestamp')
     toggleHidden(utcRow, direction !== 'from-date')
-    if (inputLabel) inputLabel.textContent = direction === 'from-timestamp' ? '时间戳' : '日期时间'
-    if (hint) hint.textContent = direction === 'from-timestamp' ? '自动识别秒与毫秒，10 位以下按秒处理。' : '支持 2026-01-31 08:30:00、2026-01-31T08:30:00Z 与纯时间戳。'
+    const t = currentTranslator()
+    if (inputLabel) inputLabel.textContent = direction === 'from-timestamp' ? t('toolUi.timestamp-converter.runtime.labelTimestamp') : t('toolUi.timestamp-converter.runtime.labelDateTime')
+    if (hint) hint.textContent = direction === 'from-timestamp' ? t('toolUi.timestamp-converter.runtime.hintTimestamp') : t('toolUi.timestamp-converter.runtime.hintDateTime')
     if (input) input.placeholder = direction === 'from-timestamp' ? '1767225600' : '2026-01-31 08:30:00'
     clearError(errorBox)
     resetResult()

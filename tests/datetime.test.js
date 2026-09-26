@@ -40,13 +40,13 @@ test('rejects invalid timestamps and dates', () => {
   const outOfRange = parseDateInput('2026-13-01')
 
   assert.equal(text.ok, false)
-  if (!text.ok) assert.match(text.message, /整数/)
+  if (!text.ok) assert.equal(text.code, 'notInteger')
   assert.equal(unsafe.ok, false)
-  if (!unsafe.ok) assert.match(unsafe.message, /安全整数范围/)
+  if (!unsafe.ok) assert.equal(unsafe.code, 'unsafeInteger')
   assert.equal(broken.ok, false)
-  if (!broken.ok) assert.match(broken.message, /格式无法识别/)
+  if (!broken.ok) assert.equal(broken.code, 'unrecognisedFormat')
   assert.equal(outOfRange.ok, false)
-  if (!outOfRange.ok) assert.match(outOfRange.message, /有效范围/)
+  if (!outOfRange.ok) assert.equal(outOfRange.code, 'outOfValidRange')
 })
 
 test('describes a date in ISO, UTC and local forms', () => {
@@ -58,7 +58,7 @@ test('describes a date in ISO, UTC and local forms', () => {
   assert.equal(parts.unixSeconds, '1769848200')
   assert.equal(parts.unixMilliseconds, '1769848200000')
   assert.equal(parts.local, `${parts.date} ${parts.time}`)
-  assert.equal(parts.weekday, '星期六')
+  assert.equal(parts.weekdayIndex, 6)
   assert.equal(parts.offset, getTimezoneOffset(date))
   assert.ok(parts.timezone.length > 0)
 })

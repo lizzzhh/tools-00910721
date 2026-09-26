@@ -1,6 +1,7 @@
 import { createHashHashers, hashAlgorithms, isHmacAlgorithm, type HashAlgorithmId } from '../lib/security/digests'
 import { showToast } from './site'
 import { recordToolUsage } from './usage'
+import { currentTranslator } from '../i18n/client'
 
 type InputMode = 'text' | 'file'
 
@@ -81,7 +82,7 @@ function init() {
 
   function updateAlgorithmCount() {
     const count = getSelectedIds().length
-    if (algorithmCount) algorithmCount.textContent = count ? `已选 ${count} 个算法` : '未选择算法'
+    if (algorithmCount) algorithmCount.textContent = count ? currentTranslator()('toolUi.hash.runtime.selectedCount', { count }) : currentTranslator()('toolUi.hash.runtime.noneSelected')
   }
 
   function formatBytes(bytes: number) {
@@ -101,7 +102,7 @@ function init() {
 
   function resetProgress() {
     if (progress) progress.hidden = false
-    if (progressLabel) progressLabel.textContent = '准备计算'
+    if (progressLabel) progressLabel.textContent = currentTranslator()('toolUi.hash.runtime.readyToRun')
     if (progressPercent) progressPercent.textContent = '0%'
     if (progressBar) progressBar.style.width = '0%'
     if (progressDetail) progressDetail.textContent = '0 B / 0 B'
@@ -113,8 +114,8 @@ function init() {
     void activeReader?.cancel()
     activeReader = undefined
     setCalculating(false)
-    if (status) status.textContent = '已停止'
-    if (progressLabel) progressLabel.textContent = '已停止'
+    if (status) status.textContent = currentTranslator()('toolUi.hash.runtime.stopped')
+    if (progressLabel) progressLabel.textContent = currentTranslator()('toolUi.hash.runtime.stopped')
   }
 
   function cancelPending() {
@@ -136,8 +137,8 @@ function init() {
     copy.className = 'hash-result-copy'
     copy.type = 'button'
     copy.dataset.algo = id
-    copy.textContent = '复制'
-    copy.setAttribute('aria-label', `复制 ${labelById.get(id) ?? id} 结果`)
+    copy.textContent = currentTranslator()('toolUi.hash.runtime.copy')
+    copy.setAttribute('aria-label', currentTranslator()('toolUi.hash.runtime.copyAria', { label: labelById.get(id) ?? id }))
     row.append(label, value, copy)
     return row
   }
@@ -150,7 +151,7 @@ function init() {
     ids.forEach((id) => {
       const row = createRow(id)
       const value = row.querySelector<HTMLElement>('.hash-result-value')
-      if (value) value.textContent = results.has(id) ? formatOutput(results.get(id) ?? '') : '等待计算'
+      if (value) value.textContent = results.has(id) ? formatOutput(results.get(id) ?? '') : currentTranslator()('toolUi.hash.runtime.waitingCalc')
       if (!results.has(id)) row.classList.add('is-pending')
       resultList.append(row)
     })
@@ -159,15 +160,15 @@ function init() {
   function computed(computedResults: Map<HashAlgorithmId, string>, source: string) {
     results = computedResults
     renderList()
-    if (status) status.textContent = '计算完成'
+    if (status) status.textContent = currentTranslator()('toolUi.hash.runtime.done')
     if (detail) detail.textContent = source
   }
 
   function resetResult() {
     results = new Map()
     renderList()
-    if (status) status.textContent = '等待输入'
-    if (detail) detail.textContent = getSelectedIds().length ? '选择算法后计算摘要' : '请至少选择一个算法'
+    if (status) status.textContent = currentTranslator()('workspace.waitingInput')
+    if (detail) detail.textContent = currentTranslator()(getSelectedIds().length ? 'toolUi.hash.runtime.hintSelected' : 'toolUi.hash.runtime.hintNone')
   }
 
   async function hashBytes(ids: HashAlgorithmId[], bytes: Uint8Array, id: number) {
@@ -180,7 +181,7 @@ function init() {
   }
 
   async function hashFileStream(file: File, ids: HashAlgorithmId[], id: number) {
-    if (progressLabel) progressLabel.textContent = '正在读取文件'
+    if (progressLabel) progressLabel.textContent = currentTranslator()('toolUi.hash.runtime.readingFile')
     updateProgress(0, file.size)
     await new Promise<void>((resolve) => window.setTimeout(resolve, 0))
     const hashers = await createHashHashers(ids, getKey())
@@ -200,7 +201,7 @@ function init() {
         updateProgress(loaded, file.size)
         if (chunkCount % 4 === 0) await new Promise<void>((resolve) => window.setTimeout(resolve, 0))
       }
-      if (progressLabel) progressLabel.textContent = '计算完成'
+      if (progressLabel) progressLabel.textContent = currentTranslator()('toolUi.hash.runtime.done')
       const computedResults = new Map<HashAlgorithmId, string>()
       hashers.forEach((hasher, algorithmId) => computedResults.set(algorithmId, hasher.digest('hex')))
       return computedResults
@@ -220,7 +221,7 @@ function init() {
       const bytes = encoder.encode(value)
       const computedResults = await hashBytes(ids, bytes, id)
       if (!computedResults || id !== runId) return
-      computed(computedResults, `实时计算 · ${bytes.byteLength} 字节`)
+      computed(computedResults, currentTranslator()('toolUi.hash.runtime.liveCalc', { bytes: formatBytes(bytes.byteLength) }))
     })
   }
 
@@ -228,16 +229,16 @@ function init() {
     if (isCalculating) return
     const ids = getSelectedIds()
     if (!ids.length) {
-      showToast('请至少选择一个算法')
+      showToast(currentTranslator()('toolUi.hash.runtime.needAlgorithm'))
       return
     }
     if (mode === 'file' && !selectedFile) {
-      showToast('请先选择一个文件')
+      showToast(currentTranslator()('toolUi.hash.runtime.needFile'))
       return
     }
     const id = ++runId
     setCalculating(true)
-    if (status) status.textContent = '正在计算…'
+    if (status) status.textContent = currentTranslator()('toolUi.hash.runtime.calculating')
     await new Promise<void>((resolve) => window.setTimeout(resolve, 20))
     try {
       if (mode === 'text') {
@@ -245,15 +246,15 @@ function init() {
         const bytes = encoder.encode(value)
         const computedResults = await hashBytes(ids, bytes, id)
         if (!computedResults || id !== runId) return
-        computed(computedResults, `来源：文本 · ${bytes.byteLength} 字节`)
+        computed(computedResults, currentTranslator()('toolUi.hash.runtime.sourceText', { bytes: formatBytes(bytes.byteLength) }))
       } else if (selectedFile) {
         const computedResults = await hashFileStream(selectedFile, ids, id)
         if (!computedResults || id !== runId) return
-        computed(computedResults, `来源：${selectedFile.name} · ${formatBytes(selectedFile.size)}`)
+        computed(computedResults, currentTranslator()('toolUi.hash.runtime.sourceFile', { name: selectedFile.name, size: formatBytes(selectedFile.size) }))
       }
       recordToolUsage('hash')
     } catch {
-      if (id === runId) showToast('计算失败，请检查输入后重试')
+      if (id === runId) showToast(currentTranslator()('toolUi.hash.runtime.failed'))
     } finally {
       if (id === runId) setCalculating(false)
     }
@@ -263,15 +264,15 @@ function init() {
     const id = algoId as HashAlgorithmId
     const value = results.get(id)
     if (!value) {
-      showToast('请先计算摘要')
+      showToast(currentTranslator()('toolUi.hash.runtime.needDigest'))
       return
     }
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(formatOutput(value))
-      showToast(`${labelById.get(id) ?? id} 结果已复制`)
+      showToast(currentTranslator()('toolUi.hash.runtime.copiedOne', { label: labelById.get(id) ?? id }))
     } catch {
-      showToast('当前环境不支持自动复制，请手动选择结果')
+      showToast(currentTranslator()('toolUi.hash.runtime.manualCopy'))
     }
   }
 
@@ -284,7 +285,7 @@ function init() {
     try {
       if (!navigator.clipboard) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(text)
-      showToast('全部结果已复制')
+      showToast(currentTranslator()('toolUi.hash.runtime.copiedAll'))
     } catch {
       showToast('当前环境不支持自动复制，请手动选择结果')
     }
@@ -313,8 +314,8 @@ function init() {
   function resetFile() {
     selectedFile = undefined
     if (fileInput) fileInput.value = ''
-    if (dropTitle) dropTitle.textContent = '拖放文件到这里，或点击选择'
-    if (dropMeta) dropMeta.textContent = '支持任意文件类型，文件不会离开你的设备'
+    if (dropTitle) dropTitle.textContent = currentTranslator()('toolUi.hash.dropLabel')
+    if (dropMeta) dropMeta.textContent = currentTranslator()('toolUi.hash.dropHint')
     dropZone?.classList.remove('has-file')
     if (progress) progress.hidden = true
   }
@@ -334,11 +335,11 @@ function init() {
     if (!file || isCalculating) return
     selectedFile = file
     if (dropTitle) dropTitle.textContent = file.name
-    if (dropMeta) dropMeta.textContent = `${formatBytes(file.size)} · 文件已就绪，等待计算`
+    if (dropMeta) dropMeta.textContent = currentTranslator()('toolUi.hash.runtime.fileReady', { size: formatBytes(file.size) })
     dropZone?.classList.add('has-file')
     resetProgress()
-    if (status) status.textContent = '等待计算'
-    if (detail) detail.textContent = `已选择：${file.name}`
+    if (status) status.textContent = currentTranslator()('toolUi.hash.runtime.waitingRun')
+    if (detail) detail.textContent = currentTranslator()('toolUi.hash.runtime.selectedFile', { name: file.name })
   }
 
   workspace?.addEventListener('click', (event) => {

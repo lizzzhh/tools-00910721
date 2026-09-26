@@ -31,9 +31,12 @@ const SKIP_PATTERNS = [
   // Registry entries inline multilingual search keywords on one line; those are
   // data, not UI copy, so CJK there is expected in every locale.
   /^\s*(?:plannedTool|tool)\(/,
+  // Conversion samples for the fullwidth/halfwidth tool intentionally mix
+  // scripts, so CJK in the English dictionary is correct on these keys.
+  /placeholderTo(?:Half|Full):/,
   // Locale endonyms in the language switcher. Each locale is deliberately named
   // in its own language, so these must stay literal CJK in every build.
-  /^\s*'(?:zh-CN|zh-TW|ja)':\s*\{\s*label:/,
+  /^\s*'?\s*(?:'zh-CN'|'zh-TW'|ja)\s*'?:\s*\{\s*label:/,
 ]
 
 const CJK = /[\u4e00-\u9fff\u3005\u3007]/

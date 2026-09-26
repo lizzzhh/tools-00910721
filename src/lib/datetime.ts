@@ -1,3 +1,14 @@
+/** Codes the UI maps to `toolUi.timestamp-converter.errors.*`. */
+export type DateTimeErrorCode =
+  | 'needTimestamp'
+  | 'needDateTime'
+  | 'notInteger'
+  | 'unsafeInteger'
+  | 'invalidTimestamp'
+  | 'outOfRange'
+  | 'unrecognisedFormat'
+  | 'outOfValidRange'
+
 export type TimestampUnit = 'auto' | 'seconds' | 'milliseconds'
 
 export type DateDirection = 'from-timestamp' | 'from-date'
@@ -12,7 +23,7 @@ export type TimestampResult =
     }
   | {
       ok: false
-      message: string
+      code: DateTimeErrorCode
     }
 
 export type DateParts = {
@@ -21,14 +32,13 @@ export type DateParts = {
   local: string
   date: string
   time: string
-  weekday: string
+  /** 0 = Sunday. The UI formats the name with the active locale. */
+  weekdayIndex: number
   timezone: string
   offset: string
   unixSeconds: string
   unixMilliseconds: string
 }
-
-const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
 function pad(value: number, length = 2) {
   return String(value).padStart(length, '0')
@@ -51,7 +61,7 @@ export function describeDate(date: Date): DateParts {
     local: `${localDate} ${localTime}`,
     date: localDate,
     time: localTime,
-    weekday: weekdays[date.getDay()],
+    weekdayIndex: date.getDay(),
     timezone,
     offset: getTimezoneOffset(date),
     unixSeconds: String(Math.floor(date.getTime() / 1000)),
@@ -67,19 +77,19 @@ function detectUnit(value: number): Exclude<TimestampUnit, 'auto'> {
 
 export function parseTimestamp(input: string, unit: TimestampUnit = 'auto'): TimestampResult {
   const value = input.trim()
-  if (!value) return { ok: false, message: '请输入时间戳' }
+  if (!value) return { ok: false, code: 'needTimestamp' }
 
-  if (!/^[+-]?\d+$/.test(value)) return { ok: false, message: '时间戳只能是整数秒或毫秒' }
+  if (!/^[+-]?\d+$/.test(value)) return { ok: false, code: 'notInteger' }
 
   const numeric = Number(value)
-  if (!Number.isSafeInteger(numeric)) return { ok: false, message: '时间戳超出安全整数范围' }
+  if (!Number.isSafeInteger(numeric)) return { ok: false, code: 'unsafeInteger' }
 
   const resolved = unit === 'auto' ? detectUnit(numeric) : unit
   const date = new Date(resolved === 'seconds' ? numeric * 1000 : numeric)
 
-  if (Number.isNaN(date.getTime())) return { ok: false, message: '时间戳无法转换为有效日期' }
+  if (Number.isNaN(date.getTime())) return { ok: false, code: 'invalidTimestamp' }
   const year = date.getUTCFullYear()
-  if (year < 1 || year > 9999) return { ok: false, message: '时间戳超出可表示的日期范围' }
+  if (year < 1 || year > 9999) return { ok: false, code: 'outOfRange' }
 
   return { ok: true, output: date.toISOString(), date, unit: resolved, timestamp: date.getTime() }
 }
@@ -88,12 +98,12 @@ const dateTimePattern = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})
 
 export function parseDateInput(input: string, assumeUtc = false): TimestampResult {
   const value = input.trim()
-  if (!value) return { ok: false, message: '请输入日期或时间' }
+  if (!value) return { ok: false, code: 'needDateTime' }
 
   if (/^\d{9,}$/.test(value)) return parseTimestamp(value, 'auto')
 
   const match = dateTimePattern.exec(value)
-  if (!match) return { ok: false, message: '日期格式无法识别，请使用 2026-01-31 08:30:00 这样的写法' }
+  if (!match) return { ok: false, code: 'unrecognisedFormat' }
 
   const [, year, month, day, hour, minute, second, millisecond, zone] = match
   const numbers = {
@@ -115,7 +125,7 @@ export function parseDateInput(input: string, assumeUtc = false): TimestampResul
     numbers.minute > 59 ||
     numbers.second > 59
 
-  if (invalid) return { ok: false, message: '日期或时间数值超出有效范围' }
+  if (invalid) return { ok: false, code: 'outOfValidRange' }
 
   const normalizedZone = zone ? zone.replace(':', '') : ''
   const hasZone = normalizedZone !== ''
@@ -130,7 +140,7 @@ export function parseDateInput(input: string, assumeUtc = false): TimestampResul
     date = new Date(numbers.year, numbers.month, numbers.day, numbers.hour, numbers.minute, numbers.second, numbers.millisecond)
   }
 
-  if (Number.isNaN(date.getTime())) return { ok: false, message: '日期数值超出有效范围' }
+  if (Number.isNaN(date.getTime())) return { ok: false, code: 'outOfValidRange' }
 
   return { ok: true, output: date.toISOString(), date, unit: 'milliseconds', timestamp: date.getTime() }
 }

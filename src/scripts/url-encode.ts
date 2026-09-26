@@ -72,7 +72,7 @@ function init() {
     }
     if (copyButton) copyButton.disabled = true
     if (downloadButton) downloadButton.disabled = true
-    if (resultStatus) resultStatus.textContent = '等待处理'
+    if (resultStatus) resultStatus.textContent = currentTranslator()('workspace.waiting')
     if (statInput) statInput.textContent = '—'
     if (statOutput) statOutput.textContent = '—'
     if (statBytes) statBytes.textContent = '—'
