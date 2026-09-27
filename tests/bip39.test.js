@@ -629,6 +629,49 @@ test('valid words in the wrong order are a checksum fault with nothing to mark',
   assert.deepEqual(result.indices, [])
 })
 
+test('a valid mnemonic is not called a mix just because the lists overlap', async () => {
+  // The two Chinese lists share a large share of their characters, so a perfectly
+  // valid simplified mnemonic has most of its words in the traditional list as
+  // well. Counting lists a word appears in is therefore not the same as counting
+  // words that are foreign: doing the former calls almost every Chinese mnemonic
+  // a mix, and reports it while marking nothing, which is a message blaming a
+  // problem that does not exist. The fixtures above cannot catch this, because
+  // their fake words belong to exactly one list each by construction — the overlap
+  // only exists in the real lists, so it has to be tested against those.
+  const lists = await Promise.all(bip39Languages.map((language) => loadWordlist(language)))
+  const sets = lists.map((list) => new Set(list))
+  const realOwner = (word) => bip39Languages.flatMap((language, index) => (sets[index].has(word) ? [language] : []))
+
+  for (const [language, index] of [
+    ['chinese-simplified', 1],
+    ['chinese-traditional', 2]
+  ]) {
+    const words = lists[index]
+    // A real, valid mnemonic, so the only fault left to report is a mix. The
+    // overlap is asserted rather than assumed: if the lists ever stop sharing
+    // characters this test would pass for the wrong reason, and the shared count
+    // is what makes the mix check reachable at all.
+    const shared = words.slice(0, 12).filter((word) => sets[index === 1 ? 2 : 1].has(word))
+    assert.ok(shared.length >= 2, `${language} no longer overlaps the other Chinese list`)
+    const result = inspectMnemonic(words.slice(0, 12), realOwner)
+    assert.equal(result.reason, 'checksum', `a valid ${language} mnemonic was reported as ${result.reason}`)
+    assert.deepEqual(result.indices, [])
+  }
+
+  // The overlap must not blunt a real mix either: the same words, with one
+  // replaced by a character from the other Chinese list that this list lacks, is
+  // still a mix and still marks exactly that word.
+  const simplified = lists[1]
+  const only = lists[1].find((word) => !sets[2].has(word))
+  assert.ok(only, 'the simplified list has no word the traditional list lacks')
+  const intruder = lists[2].find((word) => !sets[1].has(word))
+  assert.ok(intruder, 'the traditional list has no word the simplified list lacks')
+  const mixed = [...simplified.slice(0, 11), intruder]
+  const flagged = inspectMnemonic(mixed, realOwner)
+  assert.equal(flagged.reason, 'mixed')
+  assert.deepEqual(flagged.indices, [11])
+})
+
 test('the inspection agrees with the real wordlists it will be given', async () => {
   // The fixtures above use invented words, so check a real case end to end. A real
   // English mnemonic with one word swapped for a real character from another list:

@@ -497,10 +497,18 @@ export function inspectMnemonic(
     }
   }
   // Marking the majority instead would point at everything except the mistake.
-  return {
-    reason: 'mixed',
-    indices: parts.flatMap((word, index) => (ownerOf(word).includes(intended) ? [] : [index]))
-  }
+  const foreign = parts.flatMap((word, index) => (ownerOf(word).includes(intended) ? [] : [index]))
+  // More than one list represented is *not* on its own a mix. The two Chinese
+  // lists share so many characters that a perfectly valid 12-word simplified
+  // mnemonic has most of its words in the traditional list too — up to eleven of
+  // twelve — so a valid mnemonic builds a second group while no word is actually
+  // foreign. Reporting that as a mix gives the worst of both worlds: a message
+  // blaming a mix that does not exist, and its own count reading "0 words from
+  // another wordlist have been marked". A mix means words that are *not* in the
+  // intended list, so if none are, the words were all in that list and the fault
+  // is whatever comes after.
+  if (foreign.length === 0) return { reason: 'checksum', indices: [] }
+  return { reason: 'mixed', indices: foreign }
 }
 
 /**

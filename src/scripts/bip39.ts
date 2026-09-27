@@ -204,19 +204,16 @@ function init() {
   function paintHighlight(
     value: string,
     spans: MnemonicWordSpan[],
-    unknown: number[],
-    active: MnemonicWordSpan | null
+    flagged: number[],
+    skip: number | null
   ) {
     if (!highlight) return
-    const bad = new Set(unknown)
+    const bad = new Set(flagged)
     const fragment = document.createDocumentFragment()
     let cursor = 0
     for (const span of spans) {
       if (span.start > cursor) fragment.append(value.slice(cursor, span.start))
-      // The word under the caret is never marked: it is the one still being
-      // typed, and flagging it red on every keypress reads as a broken field
-      // rather than as feedback.
-      if (bad.has(span.index) && span !== active) {
+      if (bad.has(span.index) && span.index !== skip) {
         fragment.append(make('mark', 'bip39-word-bad', span.text))
       } else {
         fragment.append(span.text)
@@ -400,7 +397,7 @@ function init() {
     const active = activeSpan(spans, caret)
     const marksWanted = options.marks !== false && !composing
     if (!marksWanted) {
-      paintHighlight(value, spans, [], active)
+      paintHighlight(value, spans, [], null)
       return
     }
     // A word is only a typo if *no* bundled list has it. Checking all four is
@@ -414,8 +411,24 @@ function init() {
     // typo that means the words pulled in from a second list get marked too:
     // saying "these come from different wordlists" without showing which is a
     // puzzle the user has to solve by eye.
-    const indices = everyListReady ? inspectMnemonic(spans.map((span) => span.text), listsWith).indices : []
-    paintHighlight(value, spans, indices, active)
+    let flagged: number[] = []
+    let skip: number | null = null
+    if (everyListReady) {
+      const fault = inspectMnemonic(
+        spans.map((span) => span.text),
+        listsWith
+      )
+      flagged = fault.indices
+      // The word under the caret is normally still being typed, and flagging it
+      // on every keypress reads as a broken field rather than as feedback — so
+      // an unrecognised word there is left unmarked. A word from another list is
+      // not that case: it is already a whole, valid word, no keystroke will turn
+      // it into the one that was wanted, and the caret sits on the last word after
+      // a paste. Leaving that one unmarked is how "these words come from different
+      // wordlists, N are marked" could appear under a field with nothing marked.
+      if (fault.reason === 'unknown') skip = active?.index ?? null
+    }
+    paintHighlight(value, spans, flagged, skip)
     setText(wordCount, String(spans.length))
     renderSuggest(active)
   }
@@ -802,6 +815,19 @@ function init() {
 
   input?.addEventListener('compositionend', () => {
     composing = false
+    renderEditor()
+  })
+
+  input?.addEventListener('blur', () => {
+    // An IME does not reliably deliver `compositionend`: losing focus can end a
+    // composition without it, and some platforms never report the paste of CJK
+    // text as a composition at all. A flag left set is not a cosmetic problem —
+    // it silently switches off every mark and the candidate popup for the rest of
+    // the session, with the field looking perfectly healthy and no error to
+    // explain it. Losing focus is a hard boundary on any composition, so treat it
+    // as one here rather than waiting for an event that may not come.
+    composing = false
+    closeSuggest()
     renderEditor()
   })
 
