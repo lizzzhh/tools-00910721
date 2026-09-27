@@ -14,6 +14,23 @@ import {
 } from '../src/i18n/config.ts'
 import { createTranslator, resolveLocale, translate } from '../src/i18n/index.ts'
 import { currentIntlLocale, currentLocale, currentTranslator } from '../src/i18n/client.ts'
+import { allTools, tools } from '../src/data/tools.ts'
+import enDict from '../src/i18n/locales/en.ts'
+import jaDict from '../src/i18n/locales/ja.ts'
+import zhCNDict from '../src/i18n/locales/zh-CN.ts'
+import zhTWDict from '../src/i18n/locales/zh-TW.ts'
+
+const dictionaries = { 'zh-CN': zhCNDict, en: enDict, ja: jaDict, 'zh-TW': zhTWDict }
+
+/** Reads a dotted path straight out of a raw dictionary, with no locale fallback. */
+function raw(source, dotted) {
+  let node = source
+  for (const part of dotted.split('.')) {
+    if (typeof node !== 'object' || node === null || !(part in node)) return undefined
+    node = node[part]
+  }
+  return node
+}
 
 // ------------------------------------------------------------------ locale config
 
@@ -208,4 +225,37 @@ test('client helpers fall back when the document locale is missing or unsupporte
     assert.equal(currentLocale(), defaultLocale)
     assert.equal(currentIntlLocale(), 'zh-Hans')
   })
+})
+
+// ------------------------------------------------- tool id <-> dictionary key
+
+test('every tool id has its own name and description in every raw dictionary', () => {
+  // The catalog label is looked up as `tools.<id>.name`, and the cast to
+  // MessageKey inside localizeTool hides a mismatch from the compiler. A
+  // camelCase dictionary key under a hyphenated tool id therefore renders an
+  // empty label with no type error and no build warning.
+  //
+  // These assertions read the raw dictionaries on purpose: translate() falls
+  // back to zh-CN and then to the key itself, so going through a translator
+  // would let a key that is missing from en/ja/zh-TW pass unnoticed.
+  for (const [locale, dictionary] of Object.entries(dictionaries)) {
+    for (const tool of allTools) {
+      const name = raw(dictionary, `tools.${tool.id}.name`)
+      const description = raw(dictionary, `tools.${tool.id}.description`)
+      assert.equal(typeof name, 'string', `${locale}: tools.${tool.id}.name is missing`)
+      assert.equal(typeof description, 'string', `${locale}: tools.${tool.id}.description is missing`)
+      assert.ok(name.trim().length > 0, `${locale}: tools.${tool.id}.name is blank`)
+      assert.ok(description.trim().length > 0, `${locale}: tools.${tool.id}.description is blank`)
+    }
+  }
+})
+
+test('every available tool has a toolUi block keyed by its own id', () => {
+  // Same hazard for the per-tool strings, which are read as `toolUi.<id>.*`.
+  for (const [locale, dictionary] of Object.entries(dictionaries)) {
+    for (const tool of tools) {
+      const subtitle = raw(dictionary, `toolUi.${tool.id}.subtitle`)
+      assert.equal(typeof subtitle, 'string', `${locale}: toolUi.${tool.id}.subtitle is missing`)
+    }
+  }
 })

@@ -37,6 +37,15 @@ const SKIP_PATTERNS = [
   // Locale endonyms in the language switcher. Each locale is deliberately named
   // in its own language, so these must stay literal CJK in every build.
   /^\s*'?\s*(?:'zh-CN'|'zh-TW'|ja)\s*'?:\s*\{\s*label:/,
+  // BIP39 wordlist endonyms. A wordlist is named in its own script, so
+  // "简体中文" must stay literal rather than being routed through the
+  // dictionaries, which would show the wrong name for the language selected.
+  /^\s*'chinese-(?:simplified|traditional)':\s*'/,
+  /^\s*japanese:\s*'/,
+  // The official BIP39 wordlists themselves. These files are verbatim upstream
+  // data: the index of a word is what encodes entropy, so they cannot be
+  // translated and the CJK in them is the payload rather than UI copy.
+  /^const WORDS = '/,
 ]
 
 const CJK = /[\u4e00-\u9fff\u3005\u3007]/

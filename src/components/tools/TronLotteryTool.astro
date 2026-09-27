@@ -1,0 +1,142 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import { odds } from '../../lib/wallet/lottery'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+/**
+ * The advertised odds come from the same constant the draw uses, so the number
+ * on screen is the number being computed, not a decorative label.
+ */
+const chances = odds()
+---
+
+<section class="tool-workspace security-workspace lottery-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>{t('categories.security')}</span><b>/</b><strong>{t('tools.tron-lottery.name')}</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:party-popper" size={25} /></span>
+        <div><h1>{t('tools.tron-lottery.name')}</h1><p>{t('toolUi.tron-lottery.subtitle')}</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:triangle-alert" size={16} />{t('toolUi.tron-lottery.notice')}</div>
+
+  <Card class="tool-card">
+    <div class="field-heading">
+      <label for="lottery-source">{t('toolUi.tron-lottery.sourceLabel')}</label>
+      <span>{t('toolUi.tron-lottery.sourceHint')}</span>
+    </div>
+    <input id="lottery-source" class="lottery-source" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.tron-lottery.sourcePlaceholder')} />
+    <div class="security-error" id="lottery-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="lottery-draw" class="calculate-button" variant="primary" icon="lucide:dice-5">{t('toolUi.tron-lottery.drawButton')}</Button>
+      <Button id="lottery-replay" icon="lucide:rotate-ccw">{t('toolUi.tron-lottery.replayButton')}</Button>
+      <span class="action-row-hint">{t('toolUi.tron-lottery.drawHint')}</span>
+    </div>
+
+    <div class="result-subheading tool-subsection">
+      <strong>{t('toolUi.tron-lottery.oddsTitle')}</strong>
+    </div>
+    <div class="lottery-odds">
+      <div class="lottery-odds-row">
+        <span>{t('toolUi.tron-lottery.oddsFraction')}</span>
+        <code>{chances.fraction}</code>
+      </div>
+      <div class="lottery-odds-row">
+        <span>{t('toolUi.tron-lottery.oddsOneIn')}</span>
+        <code>1 / {chances.oneIn}</code>
+      </div>
+      <div class="lottery-odds-row">
+        <span>{t('toolUi.tron-lottery.oddsSpace')}</span>
+        <code>{chances.space}</code>
+      </div>
+      <div class="lottery-odds-decimal">
+        <span>{t('toolUi.tron-lottery.oddsDecimal')}</span>
+        <code>{chances.decimal}</code>
+      </div>
+    </div>
+
+    <div class="tool-stats" data-columns="4">
+      <div><span>{t('toolUi.tron-lottery.statDraws')}</span><strong id="lottery-stat-draws">0</strong></div>
+      <div><span>{t('toolUi.tron-lottery.statAddresses')}</span><strong id="lottery-stat-addresses">0</strong></div>
+      <div><span>{t('toolUi.tron-lottery.statWins')}</span><strong id="lottery-stat-wins">0</strong></div>
+      <div><span>{t('toolUi.tron-lottery.statChecks')}</span><strong id="lottery-stat-checks">0</strong></div>
+    </div>
+    <p class="lottery-idle" id="lottery-idle">{t('toolUi.tron-lottery.idle')}</p>
+
+    <div class="result-subheading tool-subsection">
+      <strong>{t('toolUi.tron-lottery.historyTitle')}</strong>
+      <button id="lottery-clear-history" type="button" class="inline-copy"><Icon name="lucide:trash-2" size={14} />{t('toolUi.tron-lottery.clearHistory')}</button>
+    </div>
+    <div id="lottery-history" class="lottery-history"></div>
+  </Card>
+
+  <Card id="lottery-result" class="result-card security-result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>{t('toolUi.tron-lottery.resultTitle')}</strong></div>
+      <span id="lottery-result-status">{t('workspace.waiting')}</span>
+    </div>
+    <div class="result-subheading tool-subsection">
+      <strong>{t('toolUi.tron-lottery.addressesTitle')}</strong>
+      <button id="lottery-reveal" type="button" class="inline-copy" aria-pressed="false"><Icon name="lucide:eye" size={14} /><span id="lottery-reveal-label">{t('toolUi.tron-lottery.revealKeys')}</span></button>
+    </div>
+    <ul class="security-warnings" id="lottery-warnings"></ul>
+    <div id="lottery-entries"></div>
+  </Card>
+
+  <dialog id="lottery-win-dialog" class="lottery-dialog" aria-labelledby="lottery-dialog-title">
+    <div class="lottery-dialog-form">
+      <h2 id="lottery-dialog-title">{t('toolUi.tron-lottery.winDialogTitle')}</h2>
+      <p class="lottery-dialog-body" id="lottery-dialog-body"></p>
+
+      <div class="lottery-dialog-step" data-step="ask">
+        <div class="lottery-dialog-actions">
+          <button type="button" class="ui-button primary-button" data-answer="yes">
+            <Icon name="lucide:trophy" size={16} />{t('toolUi.tron-lottery.winDialogYes')}
+          </button>
+          <button type="button" class="ui-button secondary-button" data-answer="no">
+            {t('toolUi.tron-lottery.winDialogNo')}
+          </button>
+        </div>
+      </div>
+
+      <div class="lottery-dialog-step" data-step="amount" hidden>
+        <label class="lottery-dialog-label" for="lottery-win-amount">{t('toolUi.tron-lottery.winDialogAmountLabel')}</label>
+        <input
+          id="lottery-win-amount"
+          class="lottery-dialog-input"
+          type="text"
+          name="lottery-win-amount"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore="true"
+          placeholder={t('toolUi.tron-lottery.winDialogAmountPlaceholder')}
+        />
+        <p class="lottery-dialog-hint">{t('toolUi.tron-lottery.winDialogAmountHint')}</p>
+        <div class="lottery-dialog-actions">
+          <button type="button" class="ui-button primary-button" data-answer="save">
+            <Icon name="lucide:check" size={16} />{t('toolUi.tron-lottery.winDialogConfirm')}
+          </button>
+          <button type="button" class="ui-button secondary-button" data-answer="cancel">
+            {t('toolUi.tron-lottery.winDialogCancel')}
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+</section>
+
+<script>
+  import '../../scripts/tron-lottery'
+</script>

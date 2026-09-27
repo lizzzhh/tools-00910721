@@ -53,6 +53,20 @@ export const tools: Tool[] = [
     available: true
   },
   {
+    id: 'tron-lottery',
+    category: 'security',
+    icon: 'lucide:party-popper',
+    keywords: ['tron', 'lottery', 'trx', 'bip39', 'draw', '抽奖', '随机', '助记词', '地址', 'trl', '抽選', 'ランダム', 'ニモニック', 'アドレス', '抽獎', '亂數'],
+    available: true
+  },
+  {
+    id: 'bip39',
+    category: 'security',
+    icon: 'lucide:key-round',
+    keywords: ['bip39', 'mnemonic', 'seed phrase', 'hd wallet', 'bip32', 'bip44', 'bitcoin', 'ethereum', 'tron', '助记词', '种子', '助記詞', 'ニモニック', 'HDウォレット', '秘密鍵', '地址', 'アドレス'],
+    available: true
+  },
+  {
     id: 'json-format',
     category: 'encoding',
     icon: 'lucide:braces',

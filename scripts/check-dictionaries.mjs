@@ -19,6 +19,8 @@ const jaLatinAllow = new Set([
   'none', 'bits', 'PBKDF2', 'scrypt', 'HTTPS', 'iOS', 'Web', 'ISO', 'RFC', 'plain', 'DEFLATE', 'GZIP',
   'eyJ', 'ey', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'Nil', 'Max', 'NilUUID', 'MaxUUID',
   'UTF', 'Bitcoin', 'RFC', 'DNS', 'Punycode', 'IDN', 'Nginx', 'WebP', 'SVG', 'PDF', 'OCR',
+  'BIP', 'BIP39', 'BIP32', 'BIP44', 'HD', 'xprv', 'xpub', 'PKH', 'WPKH', 'SH', 'SegWit',
+  'EIP', 'Check', 'BTC', 'LTC', 'DOGE', 'ETH', 'BNB', 'TRX', 'TRON', 'Keccak', 'Bech32', 'secp256k1',
   'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
   'BigInt', 'base', 'kebab', 'camel', 'snake', 'pascal', 'train', 'dot', 'path', 'alternating',
   'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8',, 'encodeURIComponent', 'encodeURI', 'Person', 'Group', 'Org', 'DCE', 'MD', 'SHA', 'www', 'user', 'example', 'com', 'undefined', 'NaN', 'null',

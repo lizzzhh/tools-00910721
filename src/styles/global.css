@@ -27,6 +27,10 @@
   --field-bg: oklch(0.975 0.006 var(--hue));
   --sidebar-bg: oklch(0.985 0.005 var(--hue));
   --success: oklch(0.65 0.14 150);
+  --lottery-gold: oklch(0.72 0.13 82);
+  --lottery-gold-strong: oklch(0.58 0.12 78);
+  --lottery-gold-bg: color-mix(in oklch, var(--lottery-gold) 15%, transparent);
+  --lottery-gold-border: color-mix(in oklch, var(--lottery-gold) 55%, transparent);
   --warning: oklch(0.72 0.14 75);
   --font-sans: 'Zen Maru Gothic', 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -69,6 +73,10 @@
 }
 
 :root.dark {
+  --lottery-gold: oklch(0.83 0.13 86);
+  --lottery-gold-strong: oklch(0.9 0.11 90);
+  --lottery-gold-bg: color-mix(in oklch, var(--lottery-gold) 18%, transparent);
+  --lottery-gold-border: color-mix(in oklch, var(--lottery-gold) 60%, transparent);
   --primary: oklch(0.75 0.14 var(--hue));
   --primary-strong: oklch(0.82 0.11 var(--hue));
   --page-bg: oklch(0.16 0.014 var(--hue));
@@ -4080,6 +4088,226 @@ textarea:focus {
   font-weight: 600;
 }
 
+/* BIP39 workspace: mnemonics, conversion and per-chain key material. */
+.bip39-mnemonic {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  word-break: break-word;
+}
+
+.bip39-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.bip39-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.bip39-meta span {
+  color: var(--content-meta);
+  font-size: 0.68rem;
+}
+
+.bip39-meta strong {
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.bip39-entropy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: var(--spacing-sm);
+}
+
+.bip39-entropy-label {
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.bip39-entropy-row code {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.bip39-converted {
+  display: block;
+  min-height: 3rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  overflow-wrap: anywhere;
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.bip39-advanced {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.bip39-advanced > summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bip39-advanced-hint {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--content-meta);
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+
+.bip39-path-grid {
+  display: grid;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.bip39-path-grid input {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.bip39-chain {
+  padding: var(--spacing-md);
+  background: var(--card-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.bip39-chain + .bip39-chain {
+  margin-top: var(--spacing-sm);
+}
+
+.bip39-chain-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--line-divider);
+}
+
+.bip39-chain-title {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+}
+
+.bip39-chain-symbol {
+  font-size: 0.95rem;
+}
+
+.bip39-chain-name,
+.bip39-chain-path {
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.bip39-chain-path {
+  font-family: var(--font-mono);
+}
+
+.bip39-address-list {
+  display: grid;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) 0;
+}
+
+.bip39-address {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 2fr) auto;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.bip39-address-label,
+.bip39-key-label {
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.bip39-address-value {
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.bip39-copy {
+  padding: 0.1rem 0.35rem;
+  color: var(--content-meta);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.bip39-copy:hover {
+  color: var(--primary);
+  border-color: var(--line-divider);
+}
+
+.bip39-key-grid {
+  display: grid;
+  gap: var(--spacing-xs);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--line-divider);
+}
+
+.bip39-key {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 2fr);
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.bip39-key-value {
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+/* Masked until the user opts in, so a screenshot or a shoulder surfer does
+   not capture live key material. The value never reaches the DOM while masked. */
+.bip39-key-masked {
+  color: var(--content-meta);
+  background: var(--input-bg);
+  letter-spacing: 0.12em;
+  user-select: none;
+}
+
+@media (max-width: 760px) {
+  .bip39-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bip39-address,
+  .bip39-key {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+
+  .bip39-copy {
+    justify-self: start;
+  }
+}
+
 @media (max-width: 900px) {
   .locale-current {
     display: none;
@@ -4089,4 +4317,305 @@ textarea:focus {
     padding: 0;
     width: 2.4rem;
   }
+}
+
+/* TRON lottery: a joke, but the layout is a real list of ten addresses. */
+.lottery-source {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.lottery-odds {
+  display: grid;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.lottery-odds-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.lottery-odds-row > span {
+  flex: 0 0 100%;
+  color: var(--content-meta);
+  font-size: 0.7rem;
+}
+
+.lottery-odds-row code {
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.lottery-odds-decimal {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.lottery-odds-decimal > span {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--content-meta);
+  font-size: 0.7rem;
+}
+
+.lottery-odds-decimal code {
+  display: block;
+  font-size: 0.7rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.lottery-idle {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.lottery-history {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.lottery-history-empty {
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.lottery-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  font-size: 0.7rem;
+}
+
+.lottery-history-source {
+  font-size: 0.72rem;
+}
+
+.lottery-history-time {
+  flex: 1 1 auto;
+  color: var(--content-meta);
+}
+
+.lottery-entry {
+  padding: var(--spacing-md);
+  background: var(--card-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.lottery-entry + .lottery-entry {
+  margin-top: var(--spacing-sm);
+}
+
+.lottery-entry-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+}
+
+.lottery-entry-index {
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lottery-entry-hex {
+  color: var(--content-meta);
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.lottery-entry-address {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: var(--spacing-sm);
+}
+
+.lottery-address {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.lottery-entry-secret {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) minmax(0, 1fr);
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--line-divider);
+}
+
+.lottery-secret-label {
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.lottery-mnemonic {
+  font-size: 0.72rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.lottery-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.lottery-check {
+  padding: 0.3rem 0.7rem;
+  color: var(--primary-strong);
+  background: var(--btn-regular-bg);
+  border: 1px solid var(--line-divider);
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.lottery-check:hover {
+  border-color: var(--primary);
+}
+
+.lottery-badge-winner {
+  padding: 0.05rem 0.4rem;
+  color: var(--success);
+  border: 1px solid currentcolor;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+
+@media (max-width: 760px) {
+  .lottery-entry-secret {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+}
+
+/* A reported win: the history row and the matching entry card turn gold and are
+   exempt from the history cap, so they survive however long the list grows. */
+.lottery-history-row.is-winner,
+.lottery-entry.is-winner {
+  background: var(--lottery-gold-bg);
+  border-color: var(--lottery-gold-border);
+}
+
+.lottery-history-row.is-winner {
+  box-shadow: inset 3px 0 0 var(--lottery-gold);
+}
+
+.lottery-entry.is-winner {
+  box-shadow: inset 3px 0 0 var(--lottery-gold);
+}
+
+.lottery-win-amount {
+  padding: 0.05rem 0.45rem;
+  color: var(--lottery-gold-strong);
+  background: var(--lottery-gold-bg);
+  border: 1px solid var(--lottery-gold-border);
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.lottery-badge-winner {
+  color: var(--lottery-gold-strong);
+  background: var(--lottery-gold-bg);
+}
+
+/* Win dialog, built on the native <dialog> so focus trapping, Esc and the
+   inert backdrop come from the platform rather than from script. */
+.lottery-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0;
+  color: var(--deep-text);
+  background: var(--card-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 28%);
+}
+
+.lottery-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.lottery-dialog-form {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+}
+
+.lottery-dialog h2 {
+  font-size: 1.05rem;
+}
+
+.lottery-dialog-body {
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.lottery-dialog-step {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.lottery-dialog-step[hidden] {
+  display: none;
+}
+
+.lottery-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.lottery-dialog-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lottery-dialog-input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  color: var(--deep-text);
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.lottery-dialog-hint {
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.68rem;
+  line-height: 1.7;
 }

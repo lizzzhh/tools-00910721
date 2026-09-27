@@ -1,0 +1,154 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import SelectField from '../ui/SelectField.astro'
+import { bip39LanguageLabels, bip39Languages, bip39Strengths, bip39WordCounts } from '../../lib/wallet/bip39'
+import { chains } from '../../lib/wallet'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+/**
+ * Wordlist names are endonyms (English, 简体中文, 日本語), so they come straight
+ * from the library rather than the dictionary: they are correct in every UI
+ * language and translating them would be wrong.
+ */
+const languageOptions = bip39Languages.map((language) => ({
+  value: language,
+  label: bip39LanguageLabels[language]
+}))
+
+const strengthOptions = bip39Strengths.map((strength) => ({
+  value: String(strength),
+  label: `${bip39WordCounts[strength]}`
+}))
+
+const chainNames: Record<string, string> = {
+  bitcoin: t('toolUi.bip39.chains.bitcoin'),
+  litecoin: t('toolUi.bip39.chains.litecoin'),
+  dogecoin: t('toolUi.bip39.chains.dogecoin'),
+  ethereum: t('toolUi.bip39.chains.ethereum'),
+  binance: t('toolUi.bip39.chains.binance'),
+  tron: t('toolUi.bip39.chains.tron')
+}
+---
+
+<section class="tool-workspace security-workspace bip39-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>{t('categories.security')}</span><b>/</b><strong>{t('tools.bip39.name')}</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:key-round" size={25} /></span>
+        <div><h1>{t('tools.bip39.name')}</h1><p>{t('toolUi.bip39.subtitle')}</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:triangle-alert" size={16} />{t('toolUi.bip39.notice')}</div>
+
+  <Card class="tool-card">
+    <div class="security-form-grid">
+      <SelectField id="bip39-language" label={t('toolUi.bip39.languageLabel')} options={languageOptions} value="english" />
+      <SelectField id="bip39-strength" label={t('toolUi.bip39.strengthLabel')} options={strengthOptions} value="16" />
+    </div>
+
+    <div class="field-heading">
+      <label for="bip39-input">{t('toolUi.bip39.inputLabel')}</label>
+      <span><b id="bip39-word-count">0</b> {t('toolUi.bip39.wordsUnit')}</span>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="bip39-input" class="bip39-mnemonic" spellcheck="false" autocomplete="off" placeholder={t('toolUi.bip39.inputPlaceholder')}></textarea>
+    </div>
+    <div class="security-error" id="bip39-error" role="alert" hidden></div>
+    <div class="action-row">
+      <Button id="bip39-generate" class="calculate-button" variant="primary" icon="lucide:dice-5">{t('toolUi.bip39.generateButton')}</Button>
+      <Button id="bip39-copy-mnemonic" icon="lucide:copy" disabled>{t('common.copy')}</Button>
+      <Button id="bip39-clear" icon="lucide:trash-2">{t('common.clear')}</Button>
+      <span class="action-row-hint">{t('toolUi.bip39.generateHint')}</span>
+    </div>
+
+    <div class="bip39-meta">
+      <div><span>{t('toolUi.bip39.statLanguage')}</span><strong id="bip39-stat-language">—</strong></div>
+      <div><span>{t('toolUi.bip39.statWords')}</span><strong id="bip39-stat-words">—</strong></div>
+      <div><span>{t('toolUi.bip39.statEntropy')}</span><strong id="bip39-stat-entropy">—</strong></div>
+      <div><span>{t('toolUi.bip39.statChecksum')}</span><strong id="bip39-stat-checksum">—</strong></div>
+    </div>
+    <div class="bip39-entropy-row">
+      <span class="bip39-entropy-label">{t('toolUi.bip39.entropyLabel')}</span>
+      <code id="bip39-entropy">—</code>
+      <button id="bip39-copy-entropy" type="button" class="inline-copy" disabled><Icon name="lucide:copy" size={14} />{t('common.copy')}</button>
+    </div>
+
+    <details class="bip39-advanced">
+      <summary>{t('toolUi.bip39.convertTitle')}</summary>
+      <p class="bip39-advanced-hint">{t('toolUi.bip39.convertHint')}</p>
+      <div class="security-form-grid">
+        <SelectField id="bip39-convert-language" label={t('toolUi.bip39.convertLabel')} options={languageOptions} value="english" />
+        <div class="security-field">
+          <span class="security-label">{t('toolUi.bip39.convertedLabel')}</span>
+          <code id="bip39-converted" class="bip39-converted">—</code>
+        </div>
+      </div>
+    </details>
+  </Card>
+
+  <Card class="tool-card">
+    <div class="result-subheading tool-subsection"><strong>{t('toolUi.bip39.deriveTitle')}</strong><span>{t('toolUi.bip39.autoDeriveHint')}</span></div>
+    <details class="bip39-advanced">
+      <summary>{t('toolUi.bip39.advancedTitle')}</summary>
+      <p class="bip39-advanced-hint">{t('toolUi.bip39.deriveHint')}</p>
+      <div class="security-form-grid">
+        <div class="security-field">
+          <label for="bip39-passphrase">{t('toolUi.bip39.passphraseLabel')}</label>
+          <input id="bip39-passphrase" type="password" autocomplete="off" spellcheck="false" placeholder={t('toolUi.bip39.passphrasePlaceholder')} />
+          <span class="security-field-hint">{t('toolUi.bip39.passphraseHint')}</span>
+        </div>
+        <div class="security-field">
+          <label for="bip39-account">{t('toolUi.bip39.accountLabel')}</label>
+          <input id="bip39-account" class="security-number-input" type="number" min="0" max="2147483647" step="1" value="0" />
+          <span class="security-field-hint">{t('toolUi.bip39.accountHint')}</span>
+        </div>
+      </div>
+      <div class="bip39-path-grid">
+        {chains.map((chain) => (
+          <div class="security-field">
+            <label for={`bip39-path-${chain.id}`}>{chain.symbol} · {chainNames[chain.id]}</label>
+            <input id={`bip39-path-${chain.id}`} type="text" spellcheck="false" autocomplete="off" placeholder={chain.defaultPath} data-default-path={chain.defaultPath} />
+          </div>
+        ))}
+      </div>
+      <div class="action-row">
+        <Button id="bip39-reset-paths" icon="lucide:rotate-ccw">{t('toolUi.bip39.resetPaths')}</Button>
+        <span class="action-row-hint">{t('toolUi.bip39.customPathHint')}</span>
+      </div>
+    </details>
+  </Card>
+
+  <Card id="bip39-result" class="result-card security-result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>{t('toolUi.bip39.resultTitle')}</strong></div>
+      <span id="bip39-result-status">{t('workspace.waiting')}</span>
+    </div>
+
+    <div class="tool-stats" data-columns="4">
+      <div><span>{t('toolUi.bip39.statChains')}</span><strong id="bip39-stat-chains">—</strong></div>
+      <div><span>{t('toolUi.bip39.statAddresses')}</span><strong id="bip39-stat-addresses">—</strong></div>
+      <div><span>{t('toolUi.bip39.statSeed')}</span><strong id="bip39-stat-seed">—</strong></div>
+      <div><span>{t('toolUi.bip39.statFingerprint')}</span><strong id="bip39-stat-fingerprint">—</strong></div>
+    </div>
+
+    <div class="result-subheading tool-subsection">
+      <strong>{t('toolUi.bip39.addressesTitle')}</strong>
+      <button id="bip39-reveal" type="button" class="inline-copy" aria-pressed="false"><Icon name="lucide:eye" size={14} /><span id="bip39-reveal-label">{t('toolUi.bip39.revealKeys')}</span></button>
+    </div>
+    <div id="bip39-chains"></div>
+
+    <ul class="security-warnings" id="bip39-warnings"></ul>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/bip39'
+</script>

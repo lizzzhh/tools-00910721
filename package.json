@@ -14,6 +14,8 @@
     "@astrojs/check": "^0.9.4",
     "@iconify-json/lucide": "^1.2.71",
     "@iconify-json/mdi": "^1.2.3",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "astro": "^5.13.5",
     "astro-icon": "^1.1.5",
     "crypto-js": "^4.2.0",
