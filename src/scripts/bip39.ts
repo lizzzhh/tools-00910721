@@ -5,14 +5,22 @@ import {
   bip39Strengths,
   convertMnemonic,
   detectLanguage,
+  findWordCandidates,
+  findWordPosition,
   generateMnemonic,
   isBip39Language,
   loadWordlist,
+  loadWordlistIndex,
+  readingOf,
   mnemonicToSeed,
   splitMnemonic,
+  strengthFromWordCount,
+  tokenizeMnemonic,
   validateMnemonic,
   type Bip39Language,
-  type Bip39Strength
+  type Bip39Strength,
+  type MnemonicWordSpan,
+  type WordlistIndex
 } from '../lib/wallet/bip39'
 import { chains, deriveChainEntry, type AddressFormatId, type ChainId, type DerivedEntry } from '../lib/wallet'
 import { recordToolUsage } from './usage'
@@ -29,6 +37,30 @@ function words(language: Bip39Language): Promise<string[]> {
   if (cached) return cached
   const pending = loadWordlist(language)
   wordlistCache.set(language, pending)
+  return pending
+}
+
+/**
+ * Canonical-form lookup tables, held both as promises (so concurrent callers
+ * share one fetch) and as resolved values (so the per-keystroke checks can stay
+ * synchronous).
+ */
+const wordIndexCache = new Map<Bip39Language, Promise<WordlistIndex>>()
+const wordIndexes = new Map<Bip39Language, WordlistIndex>()
+/** True once all four lists have resolved. The live checks wait for this. */
+let everyListReady = false
+
+function wordIndex(language: Bip39Language): Promise<WordlistIndex> {
+  const ready = wordIndexes.get(language)
+  if (ready) return Promise.resolve(ready)
+  const cached = wordIndexCache.get(language)
+  if (cached) return cached
+  const pending = loadWordlistIndex(language).then((index) => {
+    wordIndexes.set(language, index)
+    if (wordIndexes.size === bip39Languages.length) everyListReady = true
+    return index
+  })
+  wordIndexCache.set(language, pending)
   return pending
 }
 
@@ -82,6 +114,11 @@ function init() {
   const generateButton = el<HTMLButtonElement>(root, '#bip39-generate')
   const clearButton = el<HTMLButtonElement>(root, '#bip39-clear')
   const input = el<HTMLTextAreaElement>(root, '#bip39-input')
+  const editor = el<HTMLElement>(root, '.bip39-editor')
+  const highlight = el<HTMLElement>(root, '#bip39-highlight')
+  const caretRuler = el<HTMLElement>(root, '#bip39-caret-ruler')
+  const suggest = el<HTMLElement>(root, '#bip39-suggest')
+  const suggestList = el<HTMLElement>(root, '#bip39-candidates')
   const errorBox = el<HTMLElement>(root, '#bip39-error')
   const wordCount = el<HTMLElement>(root, '#bip39-word-count')
 
@@ -117,6 +154,12 @@ function init() {
   let currentLanguage: Bip39Language = 'english'
   let revealSecrets = false
 
+  /** True while an IME composition is in flight; the marks and popup wait for it. */
+  let composing = false
+  /** Candidate words currently offered, and which one the keyboard has reached. */
+  let suggestOptions: string[] = []
+  let optionIndex = -1
+
   const recordUsage = () => {
     if (usageRecorded) return
     usageRecorded = true
@@ -132,6 +175,267 @@ function init() {
     // 16 bytes is 128 bits of entropy, i.e. the 12-word default.
     const value = Number(strengthSelect?.value ?? 16)
     return (bip39Strengths as readonly number[]).includes(value) ? (value as Bip39Strength) : 16
+  }
+
+  // --- mnemonic editor ------------------------------------------------------
+
+  /**
+   * The word the caret sits in, or null when it sits in a run of separators.
+   *
+   * A caret exactly on the trailing edge of a word still counts as being in it,
+   * so the popup stays up for the word just typed; the next word only claims the
+   * caret once a separator has been typed, because then the offsets differ.
+   */
+  function activeSpan(spans: MnemonicWordSpan[], caret: number): MnemonicWordSpan | null {
+    for (const span of spans) {
+      if (caret >= span.start && caret <= span.end) return span
+    }
+    return null
+  }
+
+  /**
+   * Rebuilds the layer that sits behind the textarea.
+   *
+   * Every character of the value is written back out — the separators included —
+   * because the textarea is what holds the text, and this layer is only a
+   * picture of it. Dropping the whitespace would reflow the picture and slide
+   * the marks away from the words.
+   */
+  function paintHighlight(
+    value: string,
+    spans: MnemonicWordSpan[],
+    unknown: number[],
+    active: MnemonicWordSpan | null
+  ) {
+    if (!highlight) return
+    const bad = new Set(unknown)
+    const fragment = document.createDocumentFragment()
+    let cursor = 0
+    for (const span of spans) {
+      if (span.start > cursor) fragment.append(value.slice(cursor, span.start))
+      // The word under the caret is never marked: it is the one still being
+      // typed, and flagging it red on every keypress reads as a broken field
+      // rather than as feedback.
+      if (bad.has(span.index) && span !== active) {
+        fragment.append(make('mark', 'bip39-word-bad', span.text))
+      } else {
+        fragment.append(span.text)
+      }
+      cursor = span.end
+    }
+    if (cursor < value.length) fragment.append(value.slice(cursor))
+    // The textarea keeps a line box for the position past its last character;
+    // this sentinel gives the picture the same final line box.
+    fragment.append('\n')
+    highlight.replaceChildren(fragment)
+    highlight.scrollTop = input?.scrollTop ?? 0
+    highlight.scrollLeft = input?.scrollLeft ?? 0
+  }
+
+  /** Every bundled list that contains a word, in declared language order. */
+  function listsWith(word: string): Bip39Language[] {
+    const found: Bip39Language[] = []
+    for (const language of bip39Languages) {
+      const index = wordIndexes.get(language)
+      if (index && findWordPosition(word, index) >= 0) found.push(language)
+    }
+    return found
+  }
+
+  /**
+   * The list the candidate popup should draw from.
+   *
+   * The select says which wordlist the user is generating *into*, which is not
+   * necessarily the one being pasted. When the word is missing from the selected
+   * list but sits in exactly one other, that other list is what is actually
+   * being typed — so the popup follows the word rather than the control, and a
+   * Chinese or Japanese paste still gets useful suggestions without the user
+   * having to find the language dropdown first.
+   */
+  function candidateList(word: string, selected: Bip39Language): Bip39Language {
+    const current = wordIndexes.get(selected)
+    if (current && findWordPosition(word, current) >= 0) return selected
+    const owners = listsWith(word)
+    return owners.length === 1 ? owners[0] : selected
+  }
+
+  function closeSuggest() {
+    suggestOptions = []
+    optionIndex = -1
+    suggestList?.replaceChildren()
+    toggleHidden(suggest, true)
+    input?.setAttribute('aria-expanded', 'false')
+    input?.removeAttribute('aria-activedescendant')
+  }
+
+  /**
+   * Keeps the highlighted option inside the scrolling list.
+   *
+   * The list is capped at 13rem, so arrowing down past the eighth candidate
+   * would otherwise walk the selection off the top of the popup and leave the
+   * highlighted word invisible. The scroll is set on the list element directly
+   * rather than through `scrollIntoView`, which would also scroll the page and
+   * drag the field out from under the popup.
+   */
+  function revealOption(position: number) {
+    const list = suggestList
+    if (!list) return
+    const item = list.children[position] as HTMLElement | undefined
+    if (!item) return
+    const top = item.offsetTop
+    if (top < list.scrollTop) {
+      list.scrollTop = top
+    } else if (top + item.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = top + item.offsetHeight - list.clientHeight
+    }
+  }
+
+  /** Moves the keyboard highlight, or clears it with a negative index. */
+  function setSelectedOption(next: number) {
+    optionIndex = next
+    const items = suggestList?.children ?? []
+    for (let position = 0; position < items.length; position += 1) {
+      items[position].setAttribute('aria-selected', String(position === next))
+    }
+    if (next >= 0) revealOption(next)
+    if (!input) return
+    if (next < 0) input.removeAttribute('aria-activedescendant')
+    else input.setAttribute('aria-activedescendant', `bip39-candidate-${next}`)
+  }
+
+  /**
+   * Anchors the popup to the caret.
+   *
+   * The caret's line and column cannot be derived arithmetically, because soft
+   * wrapping makes the column depend on the rendered width of everything before
+   * it. So the ruler holds a copy of the text up to the caret with a zero-width
+   * marker at the end, and that marker is measured instead.
+   */
+  function placeSuggest() {
+    if (!suggest || !caretRuler || !editor || !input) return
+    const value = input.value
+    const marker = document.createElement('span')
+    marker.textContent = '\u200b'
+    caretRuler.replaceChildren(value.slice(0, input.selectionStart ?? value.length), marker)
+
+    const markerBox = marker.getBoundingClientRect()
+    const editorBox = editor.getBoundingClientRect()
+    const lineHeight = markerBox.height || Number.parseFloat(getComputedStyle(input).lineHeight) || 20
+    // The textarea scrolls its own content and the ruler does not, so the scroll
+    // offset has to come back out or the popup drifts on a long paste.
+    const top = markerBox.top - editorBox.top - input.scrollTop
+    const left = markerBox.left - editorBox.left - input.scrollLeft
+
+    const width = suggest.offsetWidth
+    const height = suggest.offsetHeight
+    // Flip above the caret line when the space below is too short, which is the
+    // common case near the bottom of a 12rem field on a phone.
+    const below = top + lineHeight
+    const flip = below + height > editorBox.height && top - height >= 0
+    suggest.style.left = `${Math.min(Math.max(0, left), Math.max(0, editorBox.width - width))}px`
+    suggest.style.top = flip ? `${top - height}px` : `${below}px`
+  }
+
+  function renderSuggest(active: MnemonicWordSpan | null) {
+    if (!active || composing || !input) {
+      closeSuggest()
+      return
+    }
+    const index = wordIndexes.get(candidateList(active.text, selectedLanguage()))
+    if (!index) {
+      closeSuggest()
+      return
+    }
+    // A word already in the list needs no completion. Offering the word the user
+    // just finished typing as a "candidate" is noise, not help.
+    const options = findWordPosition(active.text, index) >= 0 ? [] : findWordCandidates(active.text, index)
+    if (options.length === 0) {
+      closeSuggest()
+      return
+    }
+    const fragment = document.createDocumentFragment()
+    // A candidate reached by typing Latin is only useful if the user can see why
+    // it was offered, so the reading it matched is spelled out beside it. Han
+    // candidates were typed as Han and need no gloss.
+    const byReading = /^[a-z]+$/.test(active.text)
+    options.forEach((word, position) => {
+      const reading = byReading ? readingOf(word, index) : ''
+      const item = make('li', 'bip39-suggest-option', word)
+      if (reading) {
+        const gloss = make('span', 'bip39-suggest-reading', reading)
+        gloss.dir = 'ltr'
+        item.append(gloss)
+      }
+      item.id = `bip39-candidate-${position}`
+      item.setAttribute('role', 'option')
+      item.setAttribute('aria-selected', 'false')
+      fragment.append(item)
+    })
+    suggestList?.replaceChildren(fragment)
+    suggestOptions = options
+    // The first candidate starts highlighted, so Enter accepts it straight away
+    // without a preliminary arrow press. The list only opens while the word under
+    // the caret is *not* yet a valid one, so there is always something to accept
+    // and the default is the closest match by construction.
+    setSelectedOption(0)
+    toggleHidden(suggest, false)
+    input.setAttribute('aria-expanded', 'true')
+    placeSuggest()
+  }
+
+  /**
+   * Repaints the marks and the popup. Runs on every keystroke, so it stays on
+   * hash lookups and a single pass over an already-normalised wordlist.
+   *
+   * `marks: false` is the IME path. The overlay is still rebuilt — the
+   * textarea's own glyphs are transparent, so a stale overlay would be the only
+   * thing on screen — but nothing is flagged and no popup opens, because the
+   * text under the caret is a candidate phrase rather than a word.
+   */
+  function renderEditor(options: { marks?: boolean } = {}) {
+    if (!input) return
+    const value = input.value
+    const spans = tokenizeMnemonic(value)
+    const caret = input.selectionStart ?? value.length
+    const active = activeSpan(spans, caret)
+    const marksWanted = options.marks !== false && !composing
+    if (!marksWanted) {
+      paintHighlight(value, spans, [], active)
+      return
+    }
+    // A word is only a typo if *no* bundled list has it. Checking all four is
+    // what makes this field usable for the CJK wordlists: marking 一 as a mistake
+    // because the select still reads English would be wrong on nearly every
+    // paste. Until all four have resolved, nothing is marked rather than
+    // something marked against the wrong list.
+    const unknown = everyListReady
+      ? spans.filter((span) => listsWith(span.text).length === 0).map((span) => span.index)
+      : []
+    paintHighlight(value, spans, unknown, active)
+    setText(wordCount, String(spans.length))
+    renderSuggest(active)
+  }
+
+  /** Replaces the word under the caret with a candidate. */
+  function applyCandidate(position = optionIndex) {
+    const word = suggestOptions[position]
+    if (!word || !input) return
+    const spans = tokenizeMnemonic(input.value)
+    const active = activeSpan(spans, input.selectionStart ?? input.value.length)
+    if (!active) return
+    // A word span always stops at a separator or at the end of the field, so the
+    // only case that needs a gap is the end of the field: applying a candidate to
+    // the last word would otherwise leave the next keystroke glued to it. A word
+    // that already has a separator after it gets nothing — a second space would
+    // only be a stray one to clean up.
+    const trailing = input.value.slice(active.end)
+    const suffix = trailing === '' ? ' ' : ''
+    // `setRangeText` swaps exactly the active word and leaves the caret after it.
+    // It fires no `input` event, so one is raised by hand to keep the rest of
+    // the panel in step.
+    input.setRangeText(word + suffix, active.start, active.end, 'end')
+    closeSuggest()
+    input.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
   // --- mnemonic panel -------------------------------------------------------
@@ -181,7 +485,10 @@ function init() {
       currentEntropyHex = validation.entropyHex ?? ''
       clearError(errorBox)
       if (input) input.value = mnemonic
-      setText(wordCount, String(splitMnemonic(mnemonic).length))
+      // Valid by construction, so no word is ever marked, but the count and the
+      // popup still have to catch up with a value that changed without typing.
+      await wordIndex(language)
+      renderEditor()
       renderMnemonic()
       void refreshConversion()
       scheduleDerive(0)
@@ -189,6 +496,42 @@ function init() {
     } catch {
       showError(errorBox, t('toolUi.bip39.errors.generateFailed'))
     }
+  }
+
+  /**
+   * Explains why a mnemonic did not validate, rather than reporting that some
+   * number of words are unknown.
+   *
+   * The causes need different remedies, and lumping them together leaves the
+   * user guessing which one they have:
+   *
+   * - a word count that is not a BIP39 length means the paste was truncated,
+   *   doubled, or was never a mnemonic;
+   * - a word in no list has to be retyped, and the position and the word itself
+   *   say which one;
+   * - words drawn from more than one list can never validate, and no amount of
+   *   retyping fixes that;
+   * - a full set of individually valid words that still fails means the *order*
+   *   is wrong, which is a different mistake entirely and the one most likely to
+   *   be misread as a typo.
+   */
+  function diagnoseMnemonic(parts: string[]): string {
+    if (strengthFromWordCount(parts.length) === null) {
+      return t('toolUi.bip39.errors.wordCount').replace('{count}', String(parts.length))
+    }
+    const unknown = parts
+      .map((word, index) => ({ word, index }))
+      .filter((entry) => listsWith(entry.word).length === 0)
+    if (unknown.length > 0) {
+      return t('toolUi.bip39.errors.unknownWordAt')
+        .replace('{count}', String(unknown.length))
+        .replace('{index}', String(unknown[0].index + 1))
+        .replace('{word}', unknown[0].word)
+    }
+    if (new Set(parts.flatMap((word) => listsWith(word))).size > 1) {
+      return t('toolUi.bip39.errors.mixedLanguages')
+    }
+    return t('toolUi.bip39.errors.checksum')
   }
 
   /** Detects which bundled wordlist a pasted mnemonic uses, then adopts it. */
@@ -199,34 +542,40 @@ function init() {
       currentEntropyHex = ''
       clearError(errorBox)
       renderMnemonic()
-      setText(wordCount, '0')
+      renderEditor()
       return
     }
     const parts = splitMnemonic(trimmed)
     setText(wordCount, String(parts.length))
 
-    const loaded = await Promise.all(
-      bip39Languages.map(async (language) => ({ language, words: await words(language) }))
-    )
-    const language = detectLanguage(trimmed, loaded)
-    if (!language) {
-      // Keep the words visible so they can be checked or corrected by hand.
-      currentMnemonic = parts.join(' ')
-      currentEntropyHex = ''
-      showError(errorBox, t('toolUi.bip39.errors.unknownWords').replace('{count}', String(parts.length)))
+    try {
+      // Spreading the index gives `detectLanguage` the `words` it asks for, and
+      // resolves all four lists so the live checks can mark words from here on.
+      const loaded = await Promise.all(
+        bip39Languages.map(async (language) => ({ language, ...(await wordIndex(language)) }))
+      )
+      const language = detectLanguage(trimmed, loaded)
+      if (!language) {
+        // Keep the words visible so they can be checked or corrected by hand.
+        currentMnemonic = parts.join(' ')
+        currentEntropyHex = ''
+        showError(errorBox, diagnoseMnemonic(parts))
+        renderMnemonic()
+        setText(converted, '—')
+        return
+      }
+      const list = loaded.find((entry) => entry.language === language)!.words
+      const validation = validateMnemonic(trimmed, list)
+      currentLanguage = language
+      currentMnemonic = parts.join(bip39Separators[language])
+      currentEntropyHex = validation.entropyHex ?? ''
+      clearError(errorBox)
       renderMnemonic()
-      setText(converted, '—')
-      return
+      void refreshConversion()
+      scheduleDerive(0)
+    } finally {
+      renderEditor()
     }
-    const list = loaded.find((entry) => entry.language === language)!.words
-    const validation = validateMnemonic(trimmed, list)
-    currentLanguage = language
-    currentMnemonic = parts.join(bip39Separators[language])
-    currentEntropyHex = validation.entropyHex ?? ''
-    clearError(errorBox)
-    renderMnemonic()
-    void refreshConversion()
-    scheduleDerive(0)
   }
 
   function clearAll() {
@@ -234,7 +583,8 @@ function init() {
     currentMnemonic = ''
     currentEntropyHex = ''
     if (input) input.value = ''
-    setText(wordCount, '0')
+    closeSuggest()
+    renderEditor()
     clearError(errorBox)
     setText(converted, '—')
     renderMnemonic()
@@ -423,10 +773,100 @@ function init() {
   copyEntropy?.addEventListener('click', () => void copyText(currentEntropyHex, t('toolUi.bip39.messages.copiedEntropy')))
 
   let inputTimer = 0
-  input?.addEventListener('input', () => {
+  input?.addEventListener('input', (event) => {
+    // `isComposing` is the flag that says an IME is mid-phrase, and it is not on
+    // the `Event` lib.dom types the `input` event with, hence the narrowing. It
+    // is kept alongside the tracked flag because some IMEs emit an `input` after
+    // `compositionend` has already fired.
+    const isComposing = composing || (event as InputEvent).isComposing === true
+    // Three of the four wordlists are CJK, so the field has to stay usable under
+    // an IME. While a candidate phrase is being composed, the overlay is still
+    // repainted — the textarea's own glyphs are transparent, so a stale overlay
+    // would be the only thing on screen — but nothing is marked and no popup
+    // opens, because the text under the caret is not a word yet.
+    if (isComposing) {
+      renderEditor({ marks: false })
+      return
+    }
+    renderEditor()
     window.clearTimeout(inputTimer)
     inputTimer = window.setTimeout(() => void adoptMnemonic(input.value), 200)
   })
+
+  input?.addEventListener('compositionstart', () => {
+    composing = true
+    closeSuggest()
+  })
+
+  input?.addEventListener('compositionend', () => {
+    composing = false
+    renderEditor()
+  })
+
+  input?.addEventListener('keydown', (event) => {
+    if (composing || event.isComposing || suggestOptions.length === 0) return
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault()
+        setSelectedOption((optionIndex + 1) % suggestOptions.length)
+        return
+      case 'ArrowUp':
+        event.preventDefault()
+        setSelectedOption((optionIndex - 1 + suggestOptions.length) % suggestOptions.length)
+        return
+      case 'Enter':
+      case 'Tab':
+        // The first candidate is highlighted from the moment the list opens, so
+        // either key applies it without an arrow press first. The list is only
+        // open while the word under the caret is not a valid one, so there is
+        // always a correction on offer and never a valid word to overwrite.
+        if (optionIndex < 0) return
+        event.preventDefault()
+        applyCandidate()
+        return
+      case 'Escape':
+        event.preventDefault()
+        closeSuggest()
+        return
+      default:
+    }
+  })
+
+  // Pointer events rather than click: a plain `mousedown` would blur the field
+  // and lose the caret, and the caret is what says which word to replace.
+  suggestList?.addEventListener('pointerdown', (event) => {
+    const item = (event.target as Element | null)?.closest<HTMLElement>('.bip39-suggest-option')
+    if (!item) return
+    event.preventDefault()
+    applyCandidate(Number(item.id.replace('bip39-candidate-', '')))
+  })
+
+  suggestList?.addEventListener('pointerover', (event) => {
+    const item = (event.target as Element | null)?.closest<HTMLElement>('.bip39-suggest-option')
+    if (item) setSelectedOption(Number(item.id.replace('bip39-candidate-', '')))
+  })
+
+  input?.addEventListener('scroll', () => {
+    if (!highlight) return
+    highlight.scrollTop = input.scrollTop
+    highlight.scrollLeft = input.scrollLeft
+    if (suggestOptions.length > 0) placeSuggest()
+  })
+
+  // The caret also moves on arrow keys, a click or a drag, none of which fire
+  // `input`, and the popup follows it.
+  document.addEventListener('selectionchange', () => {
+    if (document.activeElement !== input) return
+    renderEditor()
+  })
+
+  // Not captured, so this is the page's own scroll and not the field's: the
+  // field handles its own above. Moving the page would leave the popup behind.
+  window.addEventListener('scroll', () => closeSuggest(), { passive: true })
+  window.addEventListener('resize', () => {
+    if (suggestOptions.length > 0) placeSuggest()
+  })
+
 
   // Derivation is automatic, so Ctrl/Cmd+Enter is only a manual re-run.
   root.addEventListener('keydown', (event) => {
@@ -436,6 +876,10 @@ function init() {
     }
   })
 
+  // Prime the selected list so the first keystroke can offer candidates without
+  // waiting on a ~50 KB wordlist fetch. The remaining three load on the first
+  // edit, which is when the marks start needing them.
+  void wordIndex(selectedLanguage())
   renderMnemonic()
   renderWarnings()
 }

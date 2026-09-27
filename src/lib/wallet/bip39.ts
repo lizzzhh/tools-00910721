@@ -92,6 +92,41 @@ const loaders: Record<Bip39Language, () => Promise<string[]>> = {
 }
 
 const wordlistCache = new Map<Bip39Language, Promise<string[]>>()
+const indexCache = new Map<Bip39Language, Promise<WordlistIndex>>()
+
+/**
+ * Romanised readings, where the list has them.
+ *
+ * Both Chinese lists are 2048 characters in the same order, so they share one
+ * module. The dynamic import is resolved once per session by the bundler, so
+ * loading it for both lists costs a single fetch.
+ */
+const readingLoaders: Partial<Record<Bip39Language, () => Promise<string[]>>> = {
+  'chinese-simplified': () => import('./wordlists/chinese-pinyin.ts').then((module) => module.default),
+  'chinese-traditional': () => import('./wordlists/chinese-pinyin.ts').then((module) => module.default)
+}
+
+/** Whether the text is plain Latin letters, the only thing a reading can match. */
+function isLatin(value: string): boolean {
+  return value.length > 0 && value.length <= 16 && /^[a-z]+$/.test(value)
+}
+
+/**
+ * Loads a wordlist and the search index for it, including romanised readings
+ * where the list has them.
+ *
+ * Separate from {@link loadWordlist} so that callers which only need the words —
+ * entropy conversion, checksum validation — never pull the extra table in.
+ */
+export function loadWordlistIndex(language: Bip39Language): Promise<WordlistIndex> {
+  const cached = indexCache.get(language)
+  if (cached) return cached
+  const pending = Promise.all([loadWordlist(language), readingLoaders[language]?.() ?? null]).then(
+    ([words, readings]) => createWordlistIndex(words, readings ?? undefined)
+  )
+  indexCache.set(language, pending)
+  return pending
+}
 
 export function isBip39Language(value: string): value is Bip39Language {
   return (bip39Languages as readonly string[]).includes(value)
@@ -119,20 +154,277 @@ export function strengthFromWordCount(count: number): Bip39Strength | null {
 }
 
 /**
- * Looks a word up case-insensitively. BIP39 wordlists are lowercase, and the
- * Japanese list is stored in NFKD, so the lookup normalises both sides rather
- * than requiring the caller to.
+ * Runs of characters that separate mnemonic words: ordinary whitespace plus the
+ * ideographic space, which is what the Japanese list conventionally uses.
+ *
+ * Validation, highlighting and word-replacement all have to agree on where a
+ * word begins and ends, so they share this one pattern. A second, subtly
+ * different copy is how the red highlight ends up one character off from the
+ * word the validator actually rejected.
  */
+const SEPARATORS = /[\s　]+/u
+
+/**
+ * Canonical form every wordlist lookup is keyed on.
+ *
+ * Two things have to be folded or lookups fail: case, because the user may
+ * paste `Abandon`; and NFKD, because the Japanese list is *stored* decomposed
+ * while the IME hands over precomposed kana such as `あい` (U+3042 U+3044) for
+ * the same text the list spells `あい` (U+3042 U+309A U+3044). Without the fold
+ * Japanese suggestions would never match anything.
+ */
+const canonicalWord = (word: string): string => normalize(word.trim().toLowerCase())
+
+/** Looks a word up case-insensitively, in both raw and canonical form. */
 function indexOfWord(words: string[], word: string): number {
-  return words.indexOf(normalize(word.trim().toLowerCase()))
+  return words.indexOf(canonicalWord(word))
 }
 
 /** Splits user input into words, tolerating newlines, tabs and full-width spaces. */
 export function splitMnemonic(value: string): string[] {
   return value
     .trim()
-    .split(/[\s　]+/u)
+    .split(SEPARATORS)
     .filter(Boolean)
+}
+
+export type MnemonicWordSpan = {
+  /** The text between separators, exactly as typed. */
+  text: string
+  /** Inclusive start offset in the source string. */
+  start: number
+  /** Exclusive end offset in the source string. */
+  end: number
+  /** Zero-based position among the words, ignoring separators. */
+  index: number
+}
+
+/**
+ * Splits a mnemonic while recording where each word sits in the source string.
+ *
+ * `splitMnemonic` returns bare strings and throws the separators away, which is
+ * enough to validate but not enough to paint: highlighting a word in place
+ * needs its offsets, and replacing a word needs its bounds. This is the single
+ * tokenizer the editor drives its cursor logic from.
+ */
+export function tokenizeMnemonic(value: string): MnemonicWordSpan[] {
+  const spans: MnemonicWordSpan[] = []
+  let cursor = 0
+  while (cursor < value.length) {
+    if (SEPARATORS.test(value[cursor])) {
+      cursor += 1
+      continue
+    }
+    let end = cursor
+    while (end < value.length && !SEPARATORS.test(value[end])) end += 1
+    spans.push({ text: value.slice(cursor, end), start: cursor, end, index: spans.length })
+    cursor = end
+  }
+  return spans
+}
+
+/**
+ * A wordlist prepared for the per-keystroke work the editor does on it.
+ *
+ * NFKD-normalising 2048 entries on every keypress is the one genuinely
+ * expensive thing here, so the canonical forms are computed once and reused.
+ */
+export type WordlistIndex = {
+  /** The wordlist, verbatim. */
+  words: string[]
+  /** Canonical form to list position. */
+  positions: Map<string, number>
+  /** Canonical form of each entry, parallel to `words`. */
+  canonical: string[]
+  /**
+   * Romanised reading of each entry, parallel to `words`, when the list has one.
+   *
+   * The two Chinese lists are 2048 single characters, so the field can only be
+   * filled in by an IME that produces Han — or by a person who knows the
+   * characters. Matching the reading as well lets a Latin keyboard reach the same
+   * words, which is the only way to type them once the IME is set to English.
+   */
+  readings?: string[]
+}
+
+export function createWordlistIndex(words: string[], readings?: string[]): WordlistIndex {
+  const canonical = words.map(canonicalWord)
+  const positions = new Map<string, number>()
+  for (let position = 0; position < canonical.length; position += 1) {
+    // First occurrence wins, so a hypothetical duplicate resolves the way
+    // `indexOf` would rather than to whichever copy came last.
+    if (!positions.has(canonical[position])) positions.set(canonical[position], position)
+  }
+  if (readings && readings.length !== words.length) {
+    throw new Error(`wordlist has ${words.length} entries but ${readings.length} readings`)
+  }
+  return readings ? { words, positions, canonical, readings } : { words, positions, canonical }
+}
+
+/** The romanised reading of a word in the list, or '' when the list has none. */
+export function readingOf(word: string, index: WordlistIndex): string {
+  if (!index.readings) return ''
+  const position = index.positions.get(canonicalWord(word))
+  return position === undefined ? '' : index.readings[position]
+}
+
+/** List position of a typed word, or -1 when the list does not contain it. */
+export function findWordPosition(word: string, index: WordlistIndex): number {
+  return index.positions.get(canonicalWord(word)) ?? -1
+}
+
+/** Whether every typed word exists in the list. Cheap enough to run per keypress. */
+export function findUnknownWordIndices(spans: MnemonicWordSpan[], index: WordlistIndex): number[] {
+  const unknown: number[] = []
+  for (const span of spans) {
+    if (!index.positions.has(canonicalWord(span.text))) unknown.push(span.index)
+  }
+  return unknown
+}
+
+/**
+ * Whether every character of `needle` appears in `haystack` in order, with
+ * anything allowed in between.
+ *
+ * Indexed by UTF-16 code unit on both sides so that an astral character only
+ * matches as a whole pair rather than half-matching against a neighbour.
+ */
+function isSubsequence(needle: string, haystack: string): boolean {
+  let matched = 0
+  for (let cursor = 0; cursor < haystack.length && matched < needle.length; cursor += 1) {
+    if (haystack[cursor] === needle[matched]) matched += 1
+  }
+  return matched === needle.length
+}
+
+/**
+ * Levenshtein distance with a hard ceiling, computed on a single rolling row.
+ *
+ * The ceiling is what keeps this affordable: a scan over 2048 words is only
+ * acceptable while the distance function is linear in the input length, and a
+ * user pasting a whole sentence into the field would otherwise make every
+ * comparison quadratic. Once a whole row sits above the ceiling the answer
+ * cannot come back under it, so the scan stops there.
+ */
+function editDistanceWithin(a: string, b: string, ceiling: number): number {
+  if (a === b) return 0
+  if (Math.abs(a.length - b.length) > ceiling) return ceiling + 1
+  let previous = Array.from({ length: b.length + 1 }, (_, position) => position)
+  for (let row = 1; row <= a.length; row += 1) {
+    const current = [row]
+    let rowBest = row
+    for (let column = 1; column <= b.length; column += 1) {
+      const substitution = a[row - 1] === b[column - 1] ? 0 : 1
+      const value = Math.min(current[column - 1] + 1, previous[column] + 1, previous[column - 1] + substitution)
+      current.push(value)
+      if (value < rowBest) rowBest = value
+    }
+    if (rowBest > ceiling) return ceiling + 1
+    previous = current
+  }
+  return previous[b.length]
+}
+
+/**
+ * Ranks wordlist entries that could complete what the user has typed so far.
+ *
+ * Words that start with the input always come first, ranked by length: typing
+ * `ab` and seeing the shortest completion lead with `able` is the useful answer,
+ * and a word the user is simply part-way through typing needs no closer measure
+ * than that.
+ *
+ * Past that, a match no longer means "a completion" but "a recovery" — the user
+ * mistyped something and needs the word back. Those are ranked by edit distance
+ * rather than by a structural test, because a structural test cannot rank
+ * `bandon` (a dropped first letter) against `abandon` in any principled way.
+ *
+ * The returned strings are the *verbatim* wordlist entries, not their canonical
+ * forms, so applying a candidate writes the canonical spelling back into the
+ * textarea rather than the folded one the user typed.
+ */
+export function findWordCandidates(input: string, index: WordlistIndex, limit = 8): string[] {
+  const needle = canonicalWord(input)
+  // The longest entry in any shipped list is eight characters (`abstract`);
+  // nothing longer is a word, and refusing it keeps a pasted sentence from
+  // reaching the distance scan below.
+  if (needle.length === 0 || needle.length > 20) return []
+
+  // A slip is a few keystrokes, so a candidate further than this many edits away
+  // is not what was meant and costs nothing to discard.
+  const ceiling = Math.max(2, Math.ceil(needle.length / 2))
+  const prefix: { word: string; key: string }[] = []
+  const recovery: { word: string; distance: number }[] = []
+  const seen = new Set<string>()
+
+  // A candidate matched through its reading is ranked on the reading, not on the
+  // character, so `y` leads with the shortest reading rather than with whichever
+  // character happens to sit near the front of the list.
+  const rank = (word: string, key: string) => {
+    prefix.push({ word, key })
+    seen.add(word)
+  }
+
+  for (let position = 0; position < index.canonical.length; position += 1) {
+    const word = index.words[position]
+    if (seen.has(word)) continue
+    const haystacks = [index.canonical[position]]
+    // The reading is only reachable from Latin input. Testing it against a Han
+    // needle could only ever find a coincidental edit distance, never an intent.
+    if (index.readings && isLatin(needle)) haystacks.push(index.readings[position])
+
+    for (const haystack of haystacks) {
+      if (haystack === undefined) continue
+      if (haystack.startsWith(needle)) {
+        rank(word, haystack)
+        break
+      }
+      if (haystack.includes(needle) || isSubsequence(needle, haystack)) {
+        seen.add(word)
+        recovery.push({ word, distance: editDistanceWithin(needle, haystack, ceiling) })
+        break
+      }
+    }
+  }
+
+  // Swapping two keys breaks the subsequence order, so a transposed word is
+  // invisible to both passes above. Comparing every word is the only way to find
+  // it, so that pass runs last, and only when nothing starts with the input at
+  // all — a prefix match means the user is typing forward and is on course, and
+  // padding `aban` with unrelated near-misses would be noise, not help. The
+  // distance function bails out after a row or two for anything hopeless, which
+  // is what keeps the scan affordable.
+  //
+  // It is skipped outright for the single-character lists. Substituting one Han
+  // character for another is one edit, so every entry in the list ties at the same
+  // distance and the scan can only return the first few in wordlist order — the
+  // beginning of the list, offered as though it had anything to do with the input.
+  const singleCharacterList = index.canonical.every((word) => word.length === 1)
+  const distant: { word: string; distance: number }[] = []
+  if (prefix.length === 0 && recovery.length < limit && !(singleCharacterList && needle.length === 1)) {
+    for (let position = 0; position < index.canonical.length; position += 1) {
+      const word = index.words[position]
+      if (seen.has(word)) continue
+      const reading = index.readings && isLatin(needle) ? index.readings[position] : undefined
+      const distance = Math.min(
+        editDistanceWithin(needle, index.canonical[position], ceiling),
+        reading === undefined ? Number.POSITIVE_INFINITY : editDistanceWithin(needle, reading, ceiling)
+      )
+      if (distance <= ceiling) distant.push({ word, distance })
+    }
+  }
+
+  // Both sorts are stable, so equal keys keep wordlist order, which is
+  // alphabetical for English and codepoint order for the CJK lists. Among
+  // equidistant recoveries the closer length wins: a mistyped word is the right
+  // length, whereas a shorter word at the same distance is simply a different
+  // word that happens to be reachable (`acouunt` is two edits from both `account`
+  // and `amount`, and only the length tells them apart).
+  const byDistance = (a: { word: string; distance: number }, b: { word: string; distance: number }) =>
+    a.distance - b.distance ||
+    Math.abs(a.word.length - needle.length) - Math.abs(b.word.length - needle.length)
+  prefix.sort((a, b) => a.key.length - b.key.length)
+  const merged = [...recovery, ...distant].sort(byDistance)
+  return [...prefix.map((entry) => entry.word), ...merged.map((entry) => entry.word)].slice(0, limit)
 }
 
 /**

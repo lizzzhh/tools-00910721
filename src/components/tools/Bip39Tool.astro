@@ -58,9 +58,36 @@ const chainNames: Record<string, string> = {
       <label for="bip39-input">{t('toolUi.bip39.inputLabel')}</label>
       <span><b id="bip39-word-count">0</b> {t('toolUi.bip39.wordsUnit')}</span>
     </div>
-    <div class="textarea-wrap">
-      <textarea id="bip39-input" class="bip39-mnemonic" spellcheck="false" autocomplete="off" placeholder={t('toolUi.bip39.inputPlaceholder')}></textarea>
+    <div class="bip39-editor">
+      {/*
+        The textarea keeps the real text; a transparent twin underneath paints
+        the light-red marks. Splitting it this way — rather than styling chips —
+        is what keeps IME composition working, which matters for three of the
+        four wordlists. `aria-hidden` stops screen readers reading the text twice.
+      */}
+      <div class="bip39-highlight" id="bip39-highlight" aria-hidden="true"></div>
+      <div class="bip39-caret-ruler" id="bip39-caret-ruler" aria-hidden="true"></div>
+      <textarea
+        id="bip39-input"
+        class="bip39-mnemonic"
+        spellcheck="false"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="bip39-candidates"
+        aria-autocomplete="list"
+        aria-describedby="bip39-suggest-hint"
+        placeholder={t('toolUi.bip39.inputPlaceholder')}
+      ></textarea>
+      <div class="bip39-suggest" id="bip39-suggest" hidden>
+        <p class="bip39-suggest-label" id="bip39-suggest-label">{t('toolUi.bip39.suggestLabel')}</p>
+        <ul class="bip39-suggest-list" id="bip39-candidates" role="listbox" aria-labelledby="bip39-suggest-label"></ul>
+        <p class="bip39-suggest-hint" id="bip39-suggest-hint">{t('toolUi.bip39.suggestHint')}</p>
+      </div>
     </div>
+    <p class="bip39-ime-hint"><Icon name="lucide:keyboard" size={13} />{t('toolUi.bip39.imeHint')}</p>
     <div class="security-error" id="bip39-error" role="alert" hidden></div>
     <div class="action-row">
       <Button id="bip39-generate" class="calculate-button" variant="primary" icon="lucide:dice-5">{t('toolUi.bip39.generateButton')}</Button>

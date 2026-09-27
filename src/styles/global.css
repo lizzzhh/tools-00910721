@@ -2278,8 +2278,8 @@ textarea:focus {
   margin-top: var(--spacing-lg);
   padding: var(--spacing-sm) var(--spacing-md);
   color: oklch(0.58 0.16 25);
-  background: color-mix(in oklch, 0.65 0.18 25 10%, var(--card-bg));
-  border: 1px solid color-mix(in oklch, 0.65 0.18 25 25%, var(--line-color));
+  background: color-mix(in oklch, oklch(0.65 0.18 25 / 10%), var(--card-bg));
+  border: 1px solid color-mix(in oklch, oklch(0.65 0.18 25 / 25%), var(--line-color));
   font-size: 0.75rem;
 }
 
@@ -4109,10 +4109,194 @@ textarea:focus {
 }
 
 /* BIP39 workspace: mnemonics, conversion and per-chain key material. */
-.bip39-mnemonic {
+
+/*
+ * The mnemonic field is a textarea stacked over a transparent twin that paints
+ * the light-red marks on words the wordlist does not contain. The two layers
+ * have to lay text out identically or the marks drift off the words they
+ * belong to, so font, line box, padding, border width and wrapping are declared
+ * once for all three layers here. They cannot be inherited from the `textarea`
+ * element rule, because the twin is a div and would never match it.
+ */
+.bip39-editor {
+  position: relative;
+  /* Above the result card, which sets z-index: 1, so the candidate popup is
+     not painted over by the table that appears below the field. */
+  z-index: 2;
+  background: var(--input-bg);
+  border: 1px solid var(--line-color);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-normal), box-shadow var(--duration-normal);
+}
+
+.bip39-editor:hover {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--line-color));
+}
+
+.bip39-editor:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 13%, transparent);
+}
+
+.bip39-mnemonic,
+.bip39-highlight,
+.bip39-caret-ruler {
+  box-sizing: border-box;
   font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.8;
   letter-spacing: 0.02em;
+  padding: var(--spacing-lg);
+  border: 0;
+  white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: break-word;
+  tab-size: 4;
+}
+
+.bip39-mnemonic {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  min-height: 12rem;
+  resize: vertical;
+  color: transparent;
+  caret-color: var(--deep-text);
+  background: transparent;
+  border-radius: 0;
+}
+
+/* The element rule's own focus ring would draw a second ring one pixel inside
+   the editor's, since the textarea sits inside the editor's 1px border. */
+.bip39-mnemonic:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* The glyphs are painted on the layer underneath, so the selection wash has to
+   stay thin enough to read them through. */
+.bip39-mnemonic::selection {
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+}
+
+.bip39-highlight,
+.bip39-caret-ruler {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--deep-text);
+  background: transparent;
+}
+
+/* Measures where the caret sits. `visibility` rather than `display` so the span
+   still has a box to measure. */
+.bip39-caret-ruler {
+  visibility: hidden;
+}
+
+/*
+ * A word no bundled wordlist contains.
+ *
+ * Paint properties only. Any padding, border, margin or font change would shift
+ * every following character and desynchronise this layer from the textarea, so
+ * the highlight is background, an inset ring and a radius — none of which take
+ * part in layout. `color` is needed because the user-agent style for <mark> is
+ * black-on-yellow, which is unreadable in the dark theme.
+ */
+.bip39-word-bad {
+  color: inherit;
+  background: color-mix(in oklch, oklch(0.65 0.18 25 / 26%), transparent);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, oklch(0.65 0.18 25 / 42%), transparent);
+}
+
+.bip39-ime-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-top: var(--spacing-sm);
+  color: var(--content-meta);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.bip39-ime-hint :global(svg) {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.bip39-suggest {
+  position: absolute;
+  z-index: 3;
+  min-width: 11rem;
+  max-width: min(22rem, 100%);
+  padding: var(--spacing-sm);
+  background: var(--card-bg);
+  border: 1px solid var(--line-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.4);
+}
+
+.bip39-suggest[hidden] {
+  display: none;
+}
+
+.bip39-suggest-label {
+  margin: 0 0 var(--spacing-xs);
+  padding-inline: var(--spacing-sm);
+  color: var(--content-meta);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bip39-suggest-list {
+  /* The scroll container for the options, and their offset parent, so a
+     highlighted candidate can be measured against the box that scrolls. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 13rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bip39-suggest-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0.3rem var(--spacing-sm);
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.bip39-suggest-option[aria-selected='true'],
+.bip39-suggest-option:hover {
+  color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+}
+
+.bip39-suggest-reading {
+  margin-left: 0.5rem;
+  color: var(--content-meta);
+  font-size: 0.7em;
+  letter-spacing: 0.01em;
+}
+
+.bip39-suggest-hint {
+  margin: var(--spacing-xs) 0 0;
+  padding-inline: var(--spacing-sm);
+  color: var(--content-meta);
+  font-size: 0.66rem;
 }
 
 .bip39-meta {

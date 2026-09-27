@@ -9,16 +9,23 @@ import {
   bip39Strengths,
   bip39WordCounts,
   convertMnemonic,
+  createWordlistIndex,
   detectLanguage,
   entropyToMnemonic,
+  findUnknownWordIndices,
+  findWordCandidates,
+  findWordPosition,
   generateEntropy,
   generateMnemonic,
   loadWordlist,
+  loadWordlistIndex,
   mnemonicToSeed,
   mnemonicToSeedHex,
+  readingOf,
   parseEntropyHex,
   splitMnemonic,
   strengthFromWordCount,
+  tokenizeMnemonic,
   validateMnemonic
 } from '../src/lib/wallet/bip39.ts'
 import {
@@ -305,6 +312,350 @@ test('strengthFromWordCount accepts only the four valid counts', () => {
   assert.equal(strengthFromWordCount(21), 28)
   assert.equal(strengthFromWordCount(24), 32)
   for (const bad of [0, 11, 13, 23, 25]) assert.equal(strengthFromWordCount(bad), null, String(bad))
+})
+
+// --- live editor primitives --------------------------------------------------
+
+test('tokenizeMnemonic reports each word where it sits in the source', () => {
+  const spans = tokenizeMnemonic('abandon ability about')
+  assert.deepEqual(
+    spans.map((span) => [span.text, span.start, span.end, span.index]),
+    [
+      ['abandon', 0, 7, 0],
+      ['ability', 8, 15, 1],
+      ['about', 16, 21, 2]
+    ]
+  )
+  // Slicing by the recorded offsets has to reproduce the words exactly, since
+  // that is how the overlay paints and the editor replaces one.
+  for (const span of spans) assert.equal('abandon ability about'.slice(span.start, span.end), span.text)
+})
+
+test('tokenizeMnemonic treats every separator kind as one boundary', () => {
+  // A newline run, a tab, a plain space and the Japanese ideographic space.
+  const spans = tokenizeMnemonic('あい　う\n\tえ ')
+  assert.deepEqual(spans.map((span) => span.text), ['あい', 'う', 'え'])
+  assert.equal(spans[0].start, 0)
+  assert.deepEqual(spans.map((span) => span.index), [0, 1, 2])
+  assert.deepEqual(tokenizeMnemonic(''), [])
+  assert.deepEqual(tokenizeMnemonic('   \n\t  '), [])
+  // Offsets still line up when the run is a single character.
+  const tight = tokenizeMnemonic('a b')
+  assert.deepEqual(tight.map((span) => [span.text, span.start, span.end]), [['a', 0, 1], ['b', 2, 3]])
+})
+
+test('the tokenizer and splitMnemonic agree on where words begin', () => {
+  // The validator splits with splitMnemonic while the overlay splits with
+  // tokenizeMnemonic; if the two ever disagree the red mark lands on the wrong
+  // word, so they are checked against each other rather than trusted.
+  for (const sample of [
+    'abandon ability about',
+    '  abandon   ability  about  ',
+    'あい　う　え',
+    'a\nb\tc　d',
+    'abandon ability\nabout'
+  ]) {
+    assert.deepEqual(tokenizeMnemonic(sample).map((span) => span.text), splitMnemonic(sample), sample)
+  }
+})
+
+test('a wordlist index matches words case-insensitively and through NFKD', async () => {
+  const index = createWordlistIndex(await loadWordlist('english'))
+  assert.equal(findWordPosition('abandon', index), 0)
+  assert.equal(findWordPosition('Abandon', index), 0, 'case should not defeat a lookup')
+  assert.equal(findWordPosition('  ABANDON  ', index), 0, 'surrounding space should not either')
+  assert.equal(findWordPosition('zoo', index), 2047)
+  assert.equal(findWordPosition('abandonn', index), -1)
+})
+
+test('Japanese lookups survive the NFKD difference between IME input and the list', async () => {
+  const words = await loadWordlist('japanese')
+  const index = createWordlistIndex(words)
+  // Kana with a dakuten is the case that matters: the list stores が decomposed as
+  // か plus a combining mark, while an IME hands over the precomposed U+304C.
+  // Without folding, no Japanese suggestion would ever match.
+  const decomposed = words.find((word) => word.normalize('NFC').length < word.length)
+  assert.ok(decomposed, 'expected at least one entry with a combining mark')
+  const recomposed = decomposed.normalize('NFC')
+  assert.notEqual(recomposed, decomposed, 'the sample should differ once recomposed')
+  assert.equal(findWordPosition(recomposed, index), words.indexOf(decomposed))
+  assert.equal(findWordPosition(decomposed, index), words.indexOf(decomposed))
+  // Every entry resolves through the index, whichever form it is asked in.
+  for (const word of [words[0], words[500], words[2047]]) {
+    assert.equal(findWordPosition(word, index), words.indexOf(word))
+    assert.equal(findWordPosition(word.normalize('NFC'), index), words.indexOf(word))
+  }
+})
+
+test('findWordCandidates ranks a plain prefix first, shortest completion first', async () => {
+  const index = createWordlistIndex(await loadWordlist('english'))
+  const candidates = findWordCandidates('aban', index)
+  assert.equal(candidates[0], 'abandon')
+  assert.ok(candidates.length <= 8)
+  // A distinctive prefix admits nothing but real completions.
+  assert.ok(candidates.every((word) => word.startsWith('aban')))
+  // An ambiguous one leads with the shortest word it can complete to, which is
+  // `able` rather than `abandon` — a full extra word of typing is worse than a
+  // shorter word that still matches.
+  const ambiguous = findWordCandidates('ab', index)
+  assert.equal(ambiguous[0], 'able')
+  assert.equal(ambiguous.length, 8)
+  assert.deepEqual([...ambiguous].sort(), [...new Set(ambiguous)].sort(), 'no duplicates')
+})
+
+test('findWordCandidates recovers a word whose letters were mistyped', async () => {
+  const index = createWordlistIndex(await loadWordlist('english'))
+  // A dropped first letter is a substring; a dropped middle letter is only a
+  // subsequence. A strict prefix search returns nothing for either.
+  for (const typo of ['bandon', 'abndon']) {
+    const candidates = findWordCandidates(typo, index, 4)
+    assert.ok(
+      candidates.includes('abandon'),
+      `${typo} -> ${JSON.stringify(candidates)} should recover "abandon"`
+    )
+  }
+  // A transposition matches neither structure, so it is only reachable by the
+  // full distance scan, and it must still come first when it is one edit away.
+  assert.equal(findWordCandidates('abandno', index, 1)[0], 'abandon')
+  // `acouunt` is two edits from both `account` and `amount`; only the length
+  // proximity breaks the tie, and it has to break it the right way round.
+  assert.equal(findWordCandidates('acouunt', index, 1)[0], 'account')
+  // Long enough to be nothing like a word, so no candidate is offered at all.
+  assert.deepEqual(findWordCandidates('this is not a bip39 mnemonic', index), [])
+  // A distinctive prefix must not be padded out with unrelated near-misses.
+  assert.deepEqual(findWordCandidates('aban', index), ['abandon'])
+})
+
+test('findWordCandidates returns verbatim list entries, never the folded form', async () => {
+  const words = await loadWordlist('japanese')
+  const index = createWordlistIndex(words)
+  const [first] = findWordCandidates(words[0].slice(0, 3), index, 1)
+  assert.equal(first, words[0], 'applying a candidate must write the canonical spelling back')
+  assert.deepEqual(findWordCandidates('', index), [], 'an empty input has nothing to complete')
+  assert.deepEqual(findWordCandidates('   ', index), [])
+})
+
+test('findWordCandidates works for the CJK wordlists too', async () => {
+  for (const language of ['chinese-simplified', 'chinese-traditional']) {
+    const words = await loadWordlist(language)
+    const index = createWordlistIndex(words)
+    const sample = words[100]
+    const candidates = findWordCandidates(sample.slice(0, 1), index)
+    assert.ok(candidates.includes(sample), `${language}: a one-character prefix should reach word 100`)
+    // A Han character that starts no word falls through to the looser tiers.
+    assert.ok(Array.isArray(findWordCandidates('龘', index)))
+  }
+})
+
+test('findUnknownWordIndices reports exactly the words the list lacks', async () => {
+  const index = createWordlistIndex(await loadWordlist('english'))
+  const spans = tokenizeMnemonic('abandon ability abilty about')
+  assert.deepEqual(findUnknownWordIndices(spans, index), [2])
+  assert.deepEqual(findUnknownWordIndices(tokenizeMnemonic('abandon ability'), index), [])
+  // A case difference is a known word, not a typo.
+  assert.deepEqual(findUnknownWordIndices(tokenizeMnemonic('Abandon ABILITY'), index), [])
+  assert.deepEqual(findUnknownWordIndices([], index), [])
+})
+
+test('an index built from a list is as authoritative as validateMnemonic', async () => {
+  // The overlay decides what to mark with the index while the panel decides
+  // validity with validateMnemonic. If they ever disagree, a word is either
+  // flagged while the panel calls it valid, or accepted while it is flagged.
+  for (const language of bip39Languages) {
+    const words = await loadWordlist(language)
+    const index = createWordlistIndex(words)
+    for (const word of [words[0], words[1], words[1024], words[2047]]) {
+      assert.ok(findWordPosition(word, index) >= 0, `${language}: ${word} should resolve`)
+    }
+    // A word that is in no list at all.
+    const bogus = language === 'japanese' ? '　　　　' : 'zzzzzzzz'
+    assert.equal(findWordPosition(bogus, index), -1, `${language}: ${bogus} should not resolve`)
+    assert.equal(validateMnemonic(bogus, words).valid, false)
+  }
+})
+
+test('the first candidate is preselected, so Enter applies it directly', () => {
+  const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
+  // Opening the list must land on index 0, not on "nothing highlighted" — the
+  // point of the list is that Enter fixes the word without a preliminary arrow.
+  const open = script.slice(script.indexOf('suggestList?.replaceChildren(fragment)'))
+  assert.match(open.slice(0, 400), /setSelectedOption\(0\)/, 'the first candidate is not preselected')
+  // ...and the keydown handler must not require a selection to have been moved.
+  const keydown = script.slice(script.indexOf("case 'Enter':"), script.indexOf("case 'Escape':"))
+  assert.match(keydown, /applyCandidate\(\)/, 'Enter no longer applies the candidate')
+  assert.ok(!/optionIndex < 0\) return/.test(keydown.replace(/if \(optionIndex < 0\) return/, '')),
+    'Enter still requires a manual selection')
+})
+
+test('the arrowing highlight scrolls the candidate list, not the page', () => {
+  const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
+  // The list is capped in height, so a selection past the eighth candidate has to
+  // be scrolled back into the box. `scrollIntoView` would drag the whole page
+  // and move the field out from under the popup.
+  assert.match(script, /function revealOption/, 'nothing keeps the highlight in view')
+  const reveal = script.slice(script.indexOf('function revealOption'), script.indexOf('/** Moves the keyboard highlight'))
+  assert.match(reveal, /list\.scrollTop/, 'the list itself is not scrolled')
+  // Only a real call counts: the name appears in the comment explaining why not.
+  assert.ok(!/\.scrollIntoView\(/.test(script), 'scrollIntoView would scroll the page as well')
+  // And the selection handler has to call it.
+  const select = script.slice(script.indexOf('/** Moves the keyboard highlight'))
+  assert.match(select.slice(0, 600), /revealOption\(next\)/, 'moving the highlight does not scroll it into view')
+})
+
+test('the mnemonic field warns that the input method must be English', () => {
+  const component = readFileSync(new URL('../src/components/tools/Bip39Tool.astro', import.meta.url), 'utf8')
+  // The wordlist is matched character by character, so an IME that converts
+  // Latin letters into Han characters silently produces words that are all
+  // unknown. Nothing else in the UI says so.
+  assert.match(component, /bip39-ime-hint/)
+  // The hint is static, so it is rendered server-side from the dictionary and the
+  // script must not carry its own copy of the text.
+  assert.match(component, /t\('toolUi\.bip39\.imeHint'\)/, 'the hint is not read from the dictionary')
+  const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
+  assert.ok(!/imeHint: '/.test(script), 'the hint text is hardcoded in the script')
+  for (const tag of ['en', 'zh-CN', 'zh-TW', 'ja']) {
+    const dict = readFileSync(new URL(`../src/i18n/locales/${tag}.ts`, import.meta.url), 'utf8')
+    assert.match(dict, /imeHint: '[^']+'/, `${tag} has no imeHint`)
+    // A duplicate is invisible to the dictionary checker, which only compares
+    // locales against each other: a second copy can sit anywhere, including
+    // inside another key's object, and stay dead weight in all four files.
+    assert.equal(
+      dict.match(/imeHint: /g)?.length,
+      1,
+      `${tag} defines imeHint more than once, so one copy is unreachable`
+    )
+    // The copy that counts has to be at the path the component asks for.
+    assert.match(dict, /inputPlaceholder: '[^']*', imeHint: '[^']*'/, `${tag} has imeHint in the wrong object`)
+  }
+})
+
+test('a mnemonic that will not validate says which of the four reasons applies', () => {
+  const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
+  // "These N words are not in any bundled wordlist" was true of none of the four
+  // distinct failures it was shown for, and named no remedy for any of them.
+  assert.ok(!/errors\.unknownWords/.test(script), 'the generic message is back')
+  for (const key of ['wordCount', 'unknownWordAt', 'mixedLanguages', 'checksum']) {
+    assert.match(script, new RegExp(`errors\\.${key}`), `no specific reason for ${key}`)
+    for (const tag of ['en', 'zh-CN', 'zh-TW', 'ja']) {
+      const dict = readFileSync(new URL(`../src/i18n/locales/${tag}.ts`, import.meta.url), 'utf8')
+      assert.match(dict, new RegExp(`${key}: '[^']+'`), `${tag} is missing errors.${key}`)
+    }
+  }
+  // The word-count branch has to come first: a truncated paste is not a typo.
+  const diagnose = script.slice(script.indexOf('function diagnoseMnemonic'))
+  assert.ok(
+    diagnose.indexOf('strengthFromWordCount') < diagnose.indexOf('unknownWordAt'),
+    'the word-count check must run before the word checks'
+  )
+  // The checksum branch is the fallback, and only once every word is known.
+  assert.ok(
+    diagnose.indexOf('unknownWordAt') < diagnose.indexOf('checksum'),
+    'a known word must be reported before falling back to the checksum'
+  )
+  // Mixed lists are their own cause, and are named before the checksum fallback.
+  assert.ok(
+    diagnose.indexOf('mixedLanguages') < diagnose.indexOf('checksum'),
+    'mixed wordlists are not distinguished from a bad checksum'
+  )
+})
+
+test('the misspelled-word highlight is deep enough to read at a glance', () => {
+  const css = readFileSync('src/styles/global.css', 'utf8')
+  const block = css.split('}').find((part) => part.split('{')[0].includes('.bip39-word-bad'))
+  // A 16% wash was too faint to notice, which defeats the point of marking the
+  // word at all. The alphas are read out of the colour function rather than
+  // matched literally, so a rewrite cannot quietly lighten it again.
+  const alpha = block.match(/oklch\(0\.65 0\.18 25 \/ (\d+)%\)/)
+  assert.ok(alpha, 'the mark no longer uses the shared red')
+  assert.ok(Number(alpha[1]) >= 22, `the wash is only ${alpha[1]}%, too faint to notice`)
+  const ring = block.match(/oklch\(0\.65 0\.18 25 \/ (\d+)%\)/g) ?? []
+  assert.equal(ring.length, 2, 'expected a wash and a ring')
+  assert.ok(Number(ring[1].match(/(\d+)%/)[1]) >= 35, 'the ring around the mark is too faint')
+})
+
+test('the Chinese lists carry pinyin, so a Latin keyboard reaches them', async () => {
+  // Imported rather than parsed out of the source: the module splits on a single
+  // space, so any stray whitespace in the literal would quietly change the count
+  // and the test would pass on a table the page then misaligns.
+  const { default: readings } = await import('../src/lib/wallet/wordlists/chinese-pinyin.ts')
+  const { default: simplified } = await import('../src/lib/wallet/wordlists/chinese-simplified.ts')
+  const { default: traditional } = await import('../src/lib/wallet/wordlists/chinese-traditional.ts')
+
+  // The reading table is only usable if it lines up with the list: index N must be
+  // the reading of word N, and a table one entry short would silently misalign
+  // every reading from that point on, suggesting the wrong character for the
+  // rest of the list.
+  assert.equal(readings.length, 2048, 'there must be one reading per word')
+  assert.equal(simplified.length, 2048, 'the simplified list has 2048 entries')
+  assert.equal(traditional.length, 2048, 'the traditional list has 2048 entries')
+  // One table serves both lists, which is only true because they are in the same
+  // order — the traditional list is read through the same positions.
+  assert.equal(simplified.length, traditional.length)
+
+  // `v` for the umlaut, no tones, no spaces, nothing a pinyin IME would reject.
+  for (const reading of readings) {
+    assert.match(reading, /^[a-z]{1,6}$/, `"${reading}" is not a usable pinyin reading`)
+  }
+  // A handful of readings pinned to their characters, to catch a table that is
+  // the right length and the right shape but shifted or transposed.
+  for (const [position, reading] of [[0, 'de'], [1, 'yi'], [2, 'shi'], [6, 'you'], [7, 'he']]) {
+    assert.equal(readings[position], reading, `word ${simplified[position]} should read ${reading}`)
+  }
+})
+
+test('typing pinyin offers the characters that read that way', async () => {
+  const index = await loadWordlistIndex('chinese-simplified')
+  // The whole point of the readings: an English keyboard cannot produce 的, but it
+  // can produce `de`, and that has to lead somewhere.
+  assert.ok(index.readings, 'the Chinese index carries no readings')
+  assert.equal(findWordCandidates('de', index)[0], '的')
+  assert.ok(findWordCandidates('shi', index).includes('是'))
+  assert.ok(findWordCandidates('zhong', index).includes('中'))
+  // A reading is a way in, not a replacement: the characters still match directly.
+  assert.equal(findWordPosition('的', index), 0)
+  assert.equal(readingOf('的', index), 'de')
+  assert.equal(readingOf('一', index), 'yi')
+  // The traditional list reads through the same table, at the same positions.
+  const taiwan = await loadWordlistIndex('chinese-traditional')
+  assert.equal(taiwan.readings.length, 2048)
+  assert.equal(readingOf(taiwan.words[0], taiwan), 'de')
+})
+
+test('pinyin matching does not disturb the other lists', async () => {
+  const english = await loadWordlistIndex('english')
+  // No readings, and no change to the behaviour that was already covered above.
+  assert.equal(english.readings, undefined)
+  assert.equal(findWordCandidates('aban', english)[0], 'abandon')
+  const japanese = await loadWordlistIndex('japanese')
+  assert.equal(japanese.readings, undefined, 'the Japanese list must not be given readings')
+  // Hiragana and kana never match a reading even where one exists, so a Han
+  // needle cannot pick up a coincidental edit distance against Latin text.
+  const index = await loadWordlistIndex('chinese-simplified')
+  for (const candidate of findWordCandidates('猫', index)) {
+    assert.equal(readingOf(candidate, index).length > 0, false, 'a Han needle matched a reading')
+  }
+})
+
+test('a wrong single character is not answered with the first words of the list', async () => {
+  const index = await loadWordlistIndex('chinese-simplified')
+  // Every one-character entry is exactly one substitution from every other, so a
+  // distance scan over a mistyped character can only answer with the head of the
+  // list — 的 一 是 在 不 了 — which has nothing to do with what was typed. Returning
+  // nothing is more honest than returning the beginning of the list.
+  assert.deepEqual(findWordCandidates('猫', index), [])
+})
+
+test('applying a candidate opens the gap for the next word', () => {
+  const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
+  const apply = script.slice(script.indexOf('function applyCandidate'), script.indexOf('// --- mnemonic panel'))
+  // Words are applied one at a time, so the last word of the field is the common
+  // case: without a trailing space the next keystroke runs straight into it and
+  // the two are then read as one word.
+  assert.match(apply, /const trailing = input\.value\.slice\(active\.end\)/, 'the following text is never inspected')
+  assert.match(apply, /trailing === '' \? ' ' : ''/, 'a last word does not get a following space')
+  // ...and the space has to arrive with the word, not as a second edit, so the
+  // caret lands once and the `input` event still reports the final value.
+  assert.match(apply, /setRangeText\(word \+ suffix, active\.start, active\.end, 'end'\)/, 'the space is applied separately')
 })
 
 // --- BIP32 ------------------------------------------------------------------
