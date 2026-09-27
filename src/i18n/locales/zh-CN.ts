@@ -212,14 +212,42 @@ const zhCN = {
       replayButton: '复现',
       drawHint: '抽奖会生成新的随机源；填入已有随机源后点复现，可得到与首次完全一致的十个地址',
       oddsTitle: '中奖概率',
-      oddsFraction: '中奖概率（精确分数）',
-      oddsOneIn: '中奖概率（约合）',
-      oddsSpace: '抽样空间 2²⁵⁶',
-      oddsDecimal: '中奖概率（完整小数，精确值）',
+      oddsFraction: '中奖概率（精确分数）：',
       statDraws: '抽奖次数',
       statAddresses: '生成地址',
       statWins: '中奖次数',
       statChecks: '开奖次数',
+      oddsPercent: '中奖概率（百分比）：',
+
+
+
+
+
+
+
+
+
+      posteriorTitle: '下一次开奖',
+      posteriorBasisLabel: '后概率统计口径',
+      posteriorBasis: {
+        checks: '按开奖次数',
+        addresses: '按生成地址数'
+      },
+      posteriorValue: {
+        checks: '未来若干次开奖内至少中奖',
+        addresses: '未来若干个地址内至少中奖'
+      },
+      posteriorStreak: {
+        checks: '连续未中奖次数',
+        addresses: '连续未中奖地址数'
+      },
+      posteriorFormula: '$P = \\frac{m}{1/p+n+m}$，$n = {streak}$，$m = {horizon}$',
+      posteriorInfoLabel: '这个数字是怎么算的',
+      posteriorInfoTitle: '这个数字是怎么算的',
+      posteriorInfoFormula: '赔率 $p = {base}$。先验取 $\\operatorname{Beta}(1, 1/p-1)$，均值正好等于 $p$，也就是先按设计方公布的赔率来看。',
+      posteriorInfoDerivation: '观测到 $n$ 次未中奖后，后验变成 $\\operatorname{Beta}(1, 1/p-1+n)$。未来 $m$ 次里全不中的预测概率是 $\\frac{1/p+n}{1/p+n+m}$，所以至少中一次就是 $\\frac{m}{1/p+n+m}$。',
+      posteriorInfoCeiling: '关键在于：在这个赔率下，连续不中奖本来就是几乎必然的结果，所以 $n$ 次连败几乎不构成证据。数字上升只因为你展望的次数变多了，不代表变容易中。',
+      posteriorInfoOdds: '单次开奖的真实中奖概率不随连败上升，始终是每个地址 $\\frac{406{,}041{,}315}{2^{256}}$。要让累计概率接近一半，需要约 $2.85\\times 10^{68}$ 次尝试。',
       historyTitle: '抽奖记录',
       clearHistory: '清空记录',
       historyEmpty: '暂无记录。',

@@ -212,14 +212,42 @@ const en: Dictionary = {
       replayButton: 'Replay',
       drawHint: 'Drawing creates a new random source; enter an existing one and replay to get the same ten addresses back',
       oddsTitle: 'Winning odds',
-      oddsFraction: 'Winning odds (exact fraction)',
-      oddsOneIn: 'Winning odds (approximately)',
-      oddsSpace: 'Sample space 2²⁵⁶',
-      oddsDecimal: 'Winning odds (full decimal, exact)',
+      oddsFraction: 'Winning odds (exact fraction):',
       statDraws: 'Draws',
       statAddresses: 'Addresses',
       statWins: 'Wins',
       statChecks: 'Checks',
+      oddsPercent: 'Win probability (percentage):',
+
+
+
+
+
+
+
+
+
+      posteriorTitle: 'Next checks',
+      posteriorBasisLabel: 'Streak counted in',
+      posteriorBasis: {
+        checks: 'Checks',
+        addresses: 'Addresses'
+      },
+      posteriorValue: {
+        checks: 'At least one win in the checks ahead',
+        addresses: 'At least one win in the addresses ahead'
+      },
+      posteriorStreak: {
+        checks: 'Consecutive misses',
+        addresses: 'Consecutive missed addresses'
+      },
+      posteriorFormula: '$P = \\frac{m}{1/p+n+m}$, $n = {streak}$, $m = {horizon}$',
+      posteriorInfoLabel: 'How this number is computed',
+      posteriorInfoTitle: 'How this number is computed',
+      posteriorInfoFormula: 'The odds are $p = {base}$. The prior is $\\operatorname{Beta}(1, 1/p-1)$, whose mean is exactly $p$, so it starts from the published odds.',
+      posteriorInfoDerivation: 'After $n$ misses the posterior is $\\operatorname{Beta}(1, 1/p-1+n)$. The predictive chance that the next $m$ all miss is $\\frac{1/p+n}{1/p+n+m}$, so at least one win is $\\frac{m}{1/p+n+m}$.',
+      posteriorInfoCeiling: 'The key point: at these odds a losing streak is the expected outcome, so $n$ misses are almost no evidence at all. The figure rises only because you are looking further ahead, not because winning got easier.',
+      posteriorInfoOdds: 'The real chance of a single check winning does not rise with losses. It stays $\\frac{406{,}041{,}315}{2^{256}}$ per address. Getting the cumulative figure near one half would take about $2.85\\times 10^{68}$ attempts.',
       historyTitle: 'Draw history',
       clearHistory: 'Clear history',
       historyEmpty: 'Nothing here yet.',

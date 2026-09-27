@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar.astro'
 import Footer from '../components/Footer.astro'
 import { Icon } from 'astro-icon/components'
 import { ClientRouter } from 'astro:transitions'
-import { localeMeta, localePath, locales } from '../i18n/config'
+import { defaultLocale, localeMeta, localePath, locales } from '../i18n/config'
 import { createTranslator } from '../i18n'
 import '../styles/global.css'
 
@@ -38,6 +38,9 @@ const alternates = locales.map((candidate) => ({
   hreflang: localeMeta[candidate].htmlLang,
   href: new URL(localePath(candidate, canonicalPath), Astro.site ?? Astro.url.origin).href
 }))
+// The default locale is the one served without a path prefix, so it is the only
+// page where the browser's language preference may override what is on screen.
+const isDefaultLocale = locale === defaultLocale
 ---
 
 <!doctype html>
@@ -53,21 +56,39 @@ const alternates = locales.map((candidate) => ({
     {alternates.map((alternate) => <link rel="alternate" hreflang={alternate.hreflang} href={alternate.href} />)}
     <link rel="alternate" hreflang="x-default" href={alternates.find((item) => item.locale === 'zh-CN')?.href ?? canonical} />
     <title>{title}</title>
-    <script is:inline define:vars={{ locale, alternates }}>
+    <script is:inline define:vars={{ locale, alternates, isDefaultLocale }}>
       // Runs before paint so a first-time visitor with a non-Chinese browser
-      // language never sees a flash of the wrong language. An explicit choice
-      // in the switcher always wins and is never overridden.
+      // language never sees a flash of the wrong language. An explicit choice in
+      // the switcher always wins and is never overridden.
       ;(function () {
         try {
+          // `alternates[].href` is absolute and points at the configured site,
+          // which is not where a dev or preview server runs. Taking only the path
+          // keeps the language switch on the current origin, so visiting /ja
+          // locally serves the Japanese homepage instead of bouncing to the
+          // production host.
+          var localHref = function (href) {
+            try {
+              var url = new URL(href)
+              return url.origin === location.origin ? url.href : location.origin + url.pathname + url.search
+            } catch (e) {
+              return null
+            }
+          }
           var stored = localStorage.getItem('code-space-locale')
           if (stored) {
             if (stored !== locale) {
               var target = alternates.filter(function (a) { return a.locale === stored })[0]
-              if (target) location.replace(target.href)
+              if (target) {
+                var href = localHref(target.href)
+                if (href) location.replace(href)
+              }
             }
             return
           }
-          if (document.documentElement.lang) {
+          // A locale prefix in the URL is itself an explicit choice, so browser
+          // preference only gets a say on the unprefixed default.
+          if (isDefaultLocale && document.documentElement.lang) {
             var preferred = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || []
             var best = null
             for (var i = 0; i < preferred.length; i += 1) {
@@ -81,7 +102,10 @@ const alternates = locales.map((candidate) => ({
             }
             if (best && best !== locale) {
               var match = alternates.filter(function (a) { return a.locale === best })[0]
-              if (match) location.replace(match.href)
+              if (match) {
+                var next = localHref(match.href)
+                if (next) location.replace(next)
+              }
             }
           }
         } catch (e) {}
@@ -115,9 +139,9 @@ const alternates = locales.map((candidate) => ({
         <span class="zen-exit-name">{siteName}</span>
       </a>
       <span class="zen-badge"><Icon name="lucide:coffee" size={13} />{t('zen.badge')}</span>
-      <details class="zen-info">
+      <details class="info-dot">
         <summary title={t('zen.infoLabel')} aria-label={t('zen.infoLabel')}><Icon name="lucide:info" size={14} /></summary>
-        <div class="zen-info-panel">
+        <div class="info-note">
           <strong>{t('zen.title')}</strong>
           <p>{t('zen.summary')}</p>
           <ul>

@@ -212,14 +212,42 @@ const ja: Dictionary = {
       replayButton: '再現',
       drawHint: '抽選すると新しいランダムソースが作成されます。既存のものを入力して再現すると、同じ 10 個のアドレスが得られます',
       oddsTitle: '当選確率',
-      oddsFraction: '当選確率（厳密な分数）',
-      oddsOneIn: '当選確率（約）',
-      oddsSpace: '標本空間 2²⁵⁶',
-      oddsDecimal: '当選確率（完全な小数、厳密値）',
+      oddsFraction: '当選確率（厳密な分数）：',
       statDraws: '抽選回数',
       statAddresses: '生成アドレス',
       statWins: '当選回数',
       statChecks: '確認回数',
+      oddsPercent: '当選確率（パーセント）：',
+
+
+
+
+
+
+
+
+
+      posteriorTitle: '次回の確認',
+      posteriorBasisLabel: '後驗確率の集計単位',
+      posteriorBasis: {
+        checks: '確認回数',
+        addresses: '生成アドレス数'
+      },
+      posteriorValue: {
+        checks: '今後の確認で少なくとも 1 回',
+        addresses: '今後のアドレスで少なくとも 1 回当選'
+      },
+      posteriorStreak: {
+        checks: '連続当選なし回数',
+        addresses: '連続当選なしアドレス数'
+      },
+      posteriorFormula: '$P = \\frac{m}{1/p+n+m}$、$n = {streak}$、$m = {horizon}$',
+      posteriorInfoLabel: 'この数値の計算方法',
+      posteriorInfoTitle: 'この数値の計算方法',
+      posteriorInfoFormula: '勝率は $p = {base}$。事前分布は $\\operatorname{Beta}(1, 1/p-1)$ を用い、平均がちょうど $p$ になる、つまりまず公表されている勝率を前提とします。',
+      posteriorInfoDerivation: '$n$ 回の不当選を観測すると後験分布は $\\operatorname{Beta}(1, 1/p-1+n)$ になります。今後 $m$ 回すべて外れる予測確率は $\\frac{1/p+n}{1/p+n+m}$ なので、少なくとも 1 回は $\\frac{m}{1/p+n+m}$ です。',
+      posteriorInfoCeiling: '重要なのは、この勝率では連続当選なしがほぼ必然的な結果であり、$n$ 回の連続当選なしはほとんど証拠にならないという点です。数値が上がるのは見込む回数が増えるためで、当たりやすくなったからではありません。',
+      posteriorInfoOdds: '1 回の確認の当選確率は連続当選なし回数が増えても上がらず、常にアドレスごとに $\\frac{406{,}041{,}315}{2^{256}}$ です。累積確率を半分に近づけるには約 $2.85\\times 10^{68}$ 回の試行が必要です。',
       historyTitle: '抽選履歴',
       clearHistory: '履歴を消去',
       historyEmpty: '履歴はまだありません。',

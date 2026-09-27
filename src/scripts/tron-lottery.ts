@@ -1,15 +1,22 @@
 import {
   claimCountsAsWin,
   drawFromSource,
+  formatPercent,
   formatRandomSource,
   newRandomSource,
   parseRandomSource,
+  posteriorHitProbability,
+  posteriorStreak,
+  POSTERIOR_BASISES,
   trimHistory,
   tronscanUrl,
+  winProbability,
   type HistoryEntry,
   type LotteryEntry,
+  type PosteriorBasis,
   type WinClaim
 } from '../lib/wallet/lottery'
+import { renderMathInText, renderMathInto } from '../lib/math'
 import { recordToolUsage } from './usage'
 import { clearError, copyText, setText, showError, toggleHidden } from './tool-panel'
 import { currentTranslator } from '../i18n/client'
@@ -24,6 +31,23 @@ const WARNING_KEYS: readonly MessageKey[] = [
 
 const mountedRoots = new WeakSet<HTMLElement>()
 const STORAGE_KEY = 'tron-lottery:stats'
+const BASIS_KEY = 'tron-lottery:posterior-basis'
+
+/** Whether the streak is counted in checks or in addresses. Survives reloads. */
+function loadBasis(): PosteriorBasis {
+  if (typeof localStorage === 'undefined') return 'checks'
+  const stored = localStorage.getItem(BASIS_KEY)
+  return POSTERIOR_BASISES.find((basis) => basis === stored) ?? 'checks'
+}
+
+function saveBasis(basis: PosteriorBasis) {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(BASIS_KEY, basis)
+  } catch {
+    // A blocked storage must never stop the toggle from working for this session.
+  }
+}
 
 type Stats = {
   draws: number
@@ -94,6 +118,12 @@ function init() {
   const statAddresses = el<HTMLElement>(root, '#lottery-stat-addresses')
   const statWins = el<HTMLElement>(root, '#lottery-stat-wins')
   const statChecks = el<HTMLElement>(root, '#lottery-stat-checks')
+  const posteriorValue = el<HTMLElement>(root, '#lottery-posterior')
+  const posteriorValueLabel = el<HTMLElement>(root, '#lottery-posterior-value-label')
+  const posteriorStreakValue = el<HTMLElement>(root, '#lottery-posterior-streak')
+  const posteriorFormula = el<HTMLElement>(root, '#lottery-posterior-formula')
+  const posteriorStreakLabel = el<HTMLElement>(root, '#lottery-posterior-streak-label')
+  const basisButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-basis]')]
 
   const resultCard = el<HTMLElement>(root, '#lottery-result')
   const resultStatus = el<HTMLElement>(root, '#lottery-result-status')
@@ -110,6 +140,7 @@ function init() {
   const amountInput = el<HTMLInputElement>(root, '#lottery-win-amount')
 
   let stats = loadStats()
+  let basis = loadBasis()
   let entries: LotteryEntry[] = []
   let currentSource = ''
   let revealSecrets = false
@@ -121,6 +152,21 @@ function init() {
     setText(statAddresses, String(stats.addresses))
     setText(statWins, String(stats.wins))
     setText(statChecks, String(stats.checks))
+    // Recomputed on every render, so opening a check moves it immediately.
+    const measured = basis === 'addresses' ? stats.addresses : stats.checks
+    const streak = posteriorStreak(measured, stats.wins)
+    const horizon = streak
+    const estimate = posteriorHitProbability(winProbability(), streak, horizon)
+    // Both of these are TeX, so they are rendered rather than assigned as text.
+    if (posteriorValue) renderMathInto(posteriorValue, formatPercent(estimate))
+    setText(posteriorStreakValue, String(streak))
+    setText(posteriorStreakLabel, t(`toolUi.tron-lottery.posteriorStreak.${basis}`))
+    setText(posteriorValueLabel, t(`toolUi.tron-lottery.posteriorValue.${basis}`))
+    if (posteriorFormula) {
+      posteriorFormula.innerHTML = renderMathInText(
+        t('toolUi.tron-lottery.posteriorFormula', { streak, horizon })
+      )
+    }
   }
 
   function renderHistory() {
@@ -181,7 +227,6 @@ function init() {
     const card = make('div', 'lottery-entry')
     const claim = currentClaim()
     const claimed = claim?.index === entry.index
-    if (entry.winner || claimed) card.classList.add('is-winner')
     const head = make('div', 'lottery-entry-head')
     head.append(make('span', 'lottery-entry-index', `#${entry.index + 1}`))
     head.append(make('code', 'lottery-entry-hex', entry.addressHex))
@@ -363,6 +408,28 @@ function init() {
   if (sourceInput && !sourceInput.value && stats.history[0]) {
     sourceInput.value = stats.history[0].source
   }
+
+  /** Mirrors `basis` onto the tablist, so the stored choice is visible on load. */
+  function applyBasis() {
+    basisButtons.forEach((button) => {
+      const active = button.dataset.basis === basis
+      button.classList.toggle('active', active)
+      button.setAttribute('aria-selected', active ? 'true' : 'false')
+    })
+  }
+
+  basisButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const next = button.dataset.basis
+      if (!POSTERIOR_BASISES.find((candidate) => candidate === next)) return
+      basis = next as PosteriorBasis
+      saveBasis(basis)
+      applyBasis()
+      renderStats()
+    })
+  })
+
+  applyBasis()
   renderStats()
   renderHistory()
   renderWarnings()

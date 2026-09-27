@@ -2,7 +2,9 @@
 import { Icon } from 'astro-icon/components'
 import Button from '../ui/Button.astro'
 import Card from '../ui/Card.astro'
-import { odds } from '../../lib/wallet/lottery'
+import 'katex/dist/katex.min.css'
+import { odds, POSTERIOR_BASISES } from '../../lib/wallet/lottery'
+import { renderMath, renderMathInText } from '../../lib/math'
 import { createTranslator } from '../../i18n'
 
 const t = createTranslator(Astro.locals.locale)
@@ -28,7 +30,7 @@ const chances = odds()
 
   <div class="security-notice"><Icon name="lucide:triangle-alert" size={16} />{t('toolUi.tron-lottery.notice')}</div>
 
-  <Card class="tool-card">
+  <Card class="tool-card lottery-setup-card">
     <div class="field-heading">
       <label for="lottery-source">{t('toolUi.tron-lottery.sourceLabel')}</label>
       <span>{t('toolUi.tron-lottery.sourceHint')}</span>
@@ -45,21 +47,14 @@ const chances = odds()
       <strong>{t('toolUi.tron-lottery.oddsTitle')}</strong>
     </div>
     <div class="lottery-odds">
+      {/* Label first, and it carries the colon, so the row reads `label: value`. */}
       <div class="lottery-odds-row">
         <span>{t('toolUi.tron-lottery.oddsFraction')}</span>
-        <code>{chances.fraction}</code>
+        <code set:html={renderMath(chances.fraction)} />
       </div>
       <div class="lottery-odds-row">
-        <span>{t('toolUi.tron-lottery.oddsOneIn')}</span>
-        <code>1 / {chances.oneIn}</code>
-      </div>
-      <div class="lottery-odds-row">
-        <span>{t('toolUi.tron-lottery.oddsSpace')}</span>
-        <code>{chances.space}</code>
-      </div>
-      <div class="lottery-odds-decimal">
-        <span>{t('toolUi.tron-lottery.oddsDecimal')}</span>
-        <code>{chances.decimal}</code>
+        <span>{t('toolUi.tron-lottery.oddsPercent')}</span>
+        <code set:html={renderMath(chances.percent)} />
       </div>
     </div>
 
@@ -68,6 +63,48 @@ const chances = odds()
       <div><span>{t('toolUi.tron-lottery.statAddresses')}</span><strong id="lottery-stat-addresses">0</strong></div>
       <div><span>{t('toolUi.tron-lottery.statWins')}</span><strong id="lottery-stat-wins">0</strong></div>
       <div><span>{t('toolUi.tron-lottery.statChecks')}</span><strong id="lottery-stat-checks">0</strong></div>
+    </div>
+
+    <div class="lottery-posterior">
+      <div class="result-subheading">
+        <strong>{t('toolUi.tron-lottery.posteriorTitle')}</strong>
+        <details class="info-dot">
+          <summary title={t('toolUi.tron-lottery.posteriorInfoLabel')} aria-label={t('toolUi.tron-lottery.posteriorInfoLabel')}><Icon name="lucide:info" size={14} /></summary>
+          <div class="info-note">
+            <strong>{t('toolUi.tron-lottery.posteriorInfoTitle')}</strong>
+            <p set:html={renderMathInText(t('toolUi.tron-lottery.posteriorInfoFormula', { base: chances.percent }))} />
+            <ul>
+              <li set:html={renderMathInText(t('toolUi.tron-lottery.posteriorInfoDerivation'))} />
+              <li set:html={renderMathInText(t('toolUi.tron-lottery.posteriorInfoCeiling'))} />
+              <li set:html={renderMathInText(t('toolUi.tron-lottery.posteriorInfoOdds'))} />
+            </ul>
+          </div>
+        </details>
+      </div>
+      <div class="posterior-basis" role="tablist" aria-label={t('toolUi.tron-lottery.posteriorBasisLabel')}>
+        {POSTERIOR_BASISES.map((basis) => (
+          <button
+            class:list={['mode-button', { active: basis === 'checks' }]}
+            type="button"
+            role="tab"
+            aria-selected={basis === 'checks' ? 'true' : 'false'}
+            data-basis={basis}
+          >
+            {t(`toolUi.tron-lottery.posteriorBasis.${basis}`)}
+          </button>
+        ))}
+      </div>
+      <div class="lottery-posterior-grid">
+        <div>
+          <span id="lottery-posterior-value-label">{t('toolUi.tron-lottery.posteriorValue.checks')}</span>
+          <strong id="lottery-posterior">—</strong>
+        </div>
+        <div>
+          <span id="lottery-posterior-streak-label">{t('toolUi.tron-lottery.posteriorStreak.checks')}</span>
+          <strong id="lottery-posterior-streak">0</strong>
+        </div>
+      </div>
+      <p class="lottery-posterior-formula" id="lottery-posterior-formula"></p>
     </div>
   </Card>
 

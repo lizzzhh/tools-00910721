@@ -23,7 +23,7 @@ const jaLatinAllow = new Set([
   'EIP', 'Check', 'BTC', 'LTC', 'DOGE', 'ETH', 'BNB', 'TRX', 'TRON', 'Zen', 'zen', 'Keccak', 'Bech32', 'secp256k1',
   'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
   'BigInt', 'base', 'kebab', 'camel', 'snake', 'pascal', 'train', 'dot', 'path', 'alternating',
-  'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8',, 'encodeURIComponent', 'encodeURI', 'Person', 'Group', 'Org', 'DCE', 'MD', 'SHA', 'www', 'user', 'example', 'com', 'undefined', 'NaN', 'null',
+  'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8', 'encodeURIComponent', 'encodeURI', 'Person', 'Group', 'Org', 'DCE', 'MD', 'SHA', 'www', 'user', 'example', 'com', 'undefined', 'NaN', 'null',
   'RAW', 'UTC', 'GMT', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
 ])
 
@@ -78,7 +78,10 @@ for (const [tag, table] of Object.entries(tables)) {
       const hasJapanese = /[\u3040-\u30ff\u4e00-\u9fff]/.test(value)
       if (!key.endsWith('.eyebrow') && hasJapanese) {
         if (isSample) continue
-        const stray = (value.replace(/\{\w+\}/g, '').match(/[A-Za-z]{2,}/g) ?? []).find((run) => !jaLatinAllow.has(run))
+        // `$...$` holds TeX for KaTeX, not prose. Its command names are Latin by
+        // definition and must not be read as untranslated leftovers.
+        const prose = value.replace(/\$[^$]*\$/g, '').replace(/\{\w+\}/g, '')
+        const stray = (prose.match(/[A-Za-z]{2,}/g) ?? []).find((run) => !jaLatinAllow.has(run))
         if (stray) problems.push(`${tag}.${key}: STRAY LATIN "${stray}" -> ${value}`)
       }
     }

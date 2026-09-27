@@ -6,13 +6,18 @@ import {
   claimCountsAsWin,
   WIN_THRESHOLD,
   drawFromSource,
+  formatPercent,
   formatRandomSource,
   newRandomSource,
   odds,
   parseRandomSource,
+  posteriorHitProbability,
+  posteriorStreak,
+  POSTERIOR_BASISES,
   randomDigits,
   trimHistory,
-  tronscanUrl
+  tronscanUrl,
+  winProbability
 } from '../src/lib/wallet/lottery.ts'
 import { loadWordlist, validateMnemonic } from '../src/lib/wallet/bip39.ts'
 import { base58checkDecode } from '../src/lib/wallet/address.ts'
@@ -24,29 +29,9 @@ test('the advertised odds are exactly the implemented odds', () => {
   // below that threshold, so the two must be the same number by construction.
   assert.equal(WIN_THRESHOLD, 406041315n)
   const summary = odds()
-  assert.equal(summary.fraction, '406,041,315 / 2²⁵⁶')
-  assert.equal(summary.oneIn, '285,173,170,708,789,068,480,804,681,190,355,981,024,418,622,685,330,836,443,226,433,763,059')
-  assert.equal(summary.space, '115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457,584,007,913,129,639,936')
-  // 69 significant digits: the sample space is the largest figure shown.
-  assert.equal(summary.oneIn.length - summary.oneIn.split(',').length + 1, 69)
+  assert.equal(summary.fraction, '\\frac{406{,}041{,}315}{2^{256}}')
 })
 
-test('the full decimal is printed exactly, not rounded or truncated', () => {
-  const { decimal } = odds()
-  // 1/2**256 terminates after exactly 256 decimal places, so the expansion is
-  // finite and can be printed in full instead of as a rounded exponent.
-  assert.ok(decimal.startsWith('0.'), decimal)
-  const digits = decimal.slice(2)
-  assert.equal(digits.length, 256)
-  // 68 leading zeros, then the significant digits of 3.5066412366721982...e-69.
-  assert.equal(digits.length - digits.replace(/^0+/, '').length, 68)
-  assert.equal(digits.replace(/^0+/, '').slice(0, 40), '3506641236672198244886556693424173824381')
-  // Independently confirm the printed digits are the threshold: reading them
-  // back as a fraction must reproduce WIN_THRESHOLD / 2**256 exactly.
-  assert.equal(BigInt(digits) * (1n << 256n), WIN_THRESHOLD * 10n ** 256n)
-  // No ellipsis and no exponent marker anywhere in the printed value.
-  assert.equal(/[eE\u2026]/.test(decimal), false)
-})
 
 test('a random source round-trips through text', () => {
   const parsed = parseRandomSource(SOURCE)
@@ -248,4 +233,164 @@ test('each distinct draw can be claimed once', () => {
   // Second pass: every row now carries a claim, so nothing counts again.
   for (const r of rows) r.claim = { index: 0, amount: '1 TRX' }
   assert.equal(rows.filter((r) => claimCountsAsWin(r)).length, 0)
+})
+
+// ------------------------------------------------------------ percentages
+
+test('percentages read as plain numbers while they stay legible', () => {
+  assert.equal(formatPercent(0.5), '50\\%')
+  assert.equal(formatPercent(1), '100\\%')
+  assert.equal(formatPercent(0), '0\\%')
+  assert.equal(formatPercent(0.5 / 3), '16.6667\\%')
+  // Trailing zeros are dropped rather than padded out.
+  assert.equal(formatPercent(0.25), '25\\%')
+})
+
+test('an absurdly small probability falls back to exponent notation', () => {
+  // 3.5e-69 as a percentage is 66 zeros followed by digits, so a fixed expansion
+  // would be unreadable; the exponent keeps the significant figures visible.
+  assert.equal(formatPercent(3.5066412366721982e-69), '3.507\\times 10^{-67}\\,\\%')
+  assert.equal(formatPercent(1e-5), '0.001\\%')
+  assert.equal(formatPercent(9.999e-5), '0.01\\%')
+})
+
+test('the odds are shown as a percentage that matches the threshold', () => {
+  // The advertised odds are 406,041,315 / 2^256 = 3.5066...e-69, so as a
+  // percentage they are 3.5066...e-67 %.
+  assert.equal(odds().percent, '3.507\\times 10^{-67}\\,\\%')
+})
+
+
+// --------------------------------------------------------------- posterior
+
+test('the prior agrees with the published odds, so one trial reads as the odds', () => {
+  const p = winProbability()
+  // Beta(1, 1/p - 1) has mean exactly p, so a single upcoming trial must come out
+  // at the published rate and not at some comfortable round number.
+  assert.equal(formatPercent(posteriorHitProbability(p, 0, 1)), '3.507\\times 10^{-67}\\,\\%')
+  // A uniform Beta(1, 1) prior would have claimed ~50% here. That was the bug.
+  assert.ok(posteriorHitProbability(p, 0, 1) < 1e-60)
+})
+
+test('no horizon means no claim', () => {
+  const p = winProbability()
+  assert.equal(posteriorHitProbability(p, 0, 0), 0)
+  assert.equal(posteriorHitProbability(p, 500, 0), 0)
+  assert.equal(formatPercent(posteriorHitProbability(p, 0, 0)), '0\\%')
+})
+
+test('the closed form is the exact Beta predictive for any prior strength', () => {
+  // At the real odds the posterior is a spike at zero and cannot be integrated
+  // numerically, so verify the algebra where it is computable: Beta(1, 1/p - 1)
+  // updated by n misses, then the chance the next m all miss.
+  // m / (1/p + n + m), which is the b + 1 that a naive derivation drops.
+  assert.equal(posteriorHitProbability(0.05, 0, 1), 1 / 21)
+  for (const p of [0.05, 0.2, 0.5]) {
+    const b = 1 / p - 1
+    for (const [n, m] of [[0, 1], [1, 1], [10, 10], [7, 30], [100, 5]]) {
+      const density = (theta) => (b + n + 1) * (1 - theta) ** (b + n)
+      let allMiss = 0
+      const steps = 2000000
+      for (let i = 0; i < steps; i += 1) {
+        const theta = (i + 0.5) / steps
+        allMiss += density(theta) * (1 - theta) ** m * (1 / steps)
+      }
+      assert.ok(Math.abs(1 - allMiss - posteriorHitProbability(p, n, m)) < 1e-9,
+        `p=${p} n=${n} m=${m}: ${1 - allMiss} vs ${posteriorHitProbability(p, n, m)}`)
+    }
+  }
+})
+
+test('at the real odds the streak is uninformative, to the last bit', () => {
+  // 1/p is about 2.85e68, so a few hundred extra misses move the denominator by
+  // less than one part in 1e66. The loss streak carries no information at all,
+  // which is the whole reason the figure cannot climb on its own.
+  const p = winProbability()
+  const reference = posteriorHitProbability(p, 1, 1000)
+  for (const n of [1, 100, 10 ** 4, 10 ** 9, 10 ** 18]) {
+    const value = posteriorHitProbability(p, n, 1000)
+    assert.ok(Math.abs(value - reference) / reference < 1e-15, `n=${n} moved it: ${value}`)
+  }
+  // The horizon, by contrast, scales it linearly.
+  assert.ok(Math.abs(posteriorHitProbability(p, 0, 2000) / posteriorHitProbability(p, 0, 1000) - 2) < 1e-9)
+})
+
+test('it rises with the horizon but stays vanishingly small', () => {
+  const p = winProbability()
+  let previous = -1
+  for (const n of [0, 1, 10, 100, 1000, 10 ** 5, 10 ** 6]) {
+    const value = posteriorHitProbability(p, n, n)
+    assert.ok(value > previous, `not rising at n=${n}`)
+    // The whole point of the odds-matched prior: nowhere near even 1%.
+    assert.ok(value < 1e-50, `implausibly high at n=${n}: ${value}`)
+    previous = value
+  }
+  // One decade of the exponent per decade of the streak, i.e. it scales linearly.
+  assert.equal(formatPercent(posteriorHitProbability(p, 1, 1)), '3.507\\times 10^{-67}\\,\\%')
+  assert.equal(formatPercent(posteriorHitProbability(p, 10, 10)), '3.507\\times 10^{-66}\\,\\%')
+  assert.equal(formatPercent(posteriorHitProbability(p, 100, 100)), '3.507\\times 10^{-65}\\,\\%')
+  assert.equal(formatPercent(posteriorHitProbability(p, 1000, 1000)), '3.507\\times 10^{-64}\\,\\%')
+})
+
+test('a longer horizon lifts it, and it stays a vanishing probability', () => {
+  const p = winProbability()
+  const base = 100
+  assert.ok(posteriorHitProbability(p, base, 200) > posteriorHitProbability(p, base, 100))
+  // A billion further losses still cannot make a single check likely.
+  assert.ok(posteriorHitProbability(p, 10 ** 9, 1) < 1e-60)
+  // And no reachable horizon gets anywhere near 1.
+  for (const m of [1, 10 ** 3, 10 ** 9, 10 ** 30]) {
+    assert.ok(posteriorHitProbability(p, 0, m) < 1e-30, `m=${m}`)
+  }
+})
+
+test('reaching even one half would take on the order of 1/p trials', () => {
+  const p = winProbability()
+  const attempts = Math.round(1 / p)
+  // m = 1/p puts the predictive right at the halfway point of 0.5.
+  assert.ok(Math.abs(posteriorHitProbability(p, 0, attempts) - 0.5) < 1e-6)
+  assert.ok(attempts > 1e68, `1/p is only ${attempts}`)
+  // A thousandth of that is nowhere near.
+  assert.ok(posteriorHitProbability(p, 0, Math.round(attempts / 1000)) < 1e-3)
+})
+
+test('the streak is the counted total minus wins, floored at zero', () => {
+  assert.equal(posteriorStreak(0, 0), 0)
+  assert.equal(posteriorStreak(12, 0), 12)
+  assert.equal(posteriorStreak(12, 3), 9)
+  // Wins are claimed as well as computed, so they can outrun the tally.
+  assert.equal(posteriorStreak(1, 5), 0)
+  assert.equal(posteriorStreak(0, 1), 0)
+})
+
+test('both bases are offered and differ by the address count', () => {
+  assert.deepEqual([...POSTERIOR_BASISES], ['checks', 'addresses'])
+  const p = winProbability()
+  // One check hands out ADDRESS_COUNT addresses, so the address basis counts ~10x
+  // more trials and the figure is correspondingly ~10x higher.
+  const checks = 1000
+  const byChecks = posteriorHitProbability(p, posteriorStreak(checks, 0), posteriorStreak(checks, 0))
+  const addresses = checks * ADDRESS_COUNT
+  const byAddresses = posteriorHitProbability(p, posteriorStreak(addresses, 0), posteriorStreak(addresses, 0))
+  assert.ok(byAddresses > byChecks)
+  const ratio = byAddresses / byChecks
+  assert.ok(Math.abs(ratio - ADDRESS_COUNT) < 0.01, `ratio was ${ratio}`)
+})
+
+test('a win pulls the streak down and the estimate back with it', () => {
+  const p = winProbability()
+  const misses = (n) => posteriorHitProbability(p, posteriorStreak(n, 0), posteriorStreak(n, 0))
+  const withWin = (n) => posteriorHitProbability(p, posteriorStreak(n, 1), posteriorStreak(n, 1))
+  assert.ok(withWin(10) < misses(10))
+  assert.equal(withWin(10), misses(9))
+})
+
+test('negative input cannot produce a nonsense probability', () => {
+  const p = winProbability()
+  for (const bad of [-1, -100]) {
+    const value = posteriorHitProbability(p, bad, 1)
+    assert.ok(value >= 0 && value < 1, `${bad} -> ${value}`)
+    assert.equal(value, p)
+  }
+  assert.equal(posteriorHitProbability(p, 0, -5), 0)
 })

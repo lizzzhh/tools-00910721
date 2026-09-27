@@ -214,14 +214,42 @@ const zhTW: Dictionary = {
       replayButton: '重現',
       drawHint: '抽獎會產生新的隨機源；填入既有隨機源後點重現，可得到與首次完全一致的十個位址',
       oddsTitle: '中獎機率',
-      oddsFraction: '中獎機率（精確分數）',
-      oddsOneIn: '中獎機率（約略）',
-      oddsSpace: '抽樣空間 2²⁵⁶',
-      oddsDecimal: '中獎機率（完整小數，精確值）',
+      oddsFraction: '中獎機率（精確分數）：',
       statDraws: '抽獎次數',
       statAddresses: '產生位址',
       statWins: '中獎次數',
       statChecks: '開獎次數',
+      oddsPercent: '中獎概率（百分比）：',
+
+
+
+
+
+
+
+
+
+      posteriorTitle: '下一次開獎',
+      posteriorBasisLabel: '後機率統計口徑',
+      posteriorBasis: {
+        checks: '按開獎次數',
+        addresses: '按生成地址數'
+      },
+      posteriorValue: {
+        checks: '未來若干次開獎內至少中獎',
+        addresses: '未來若干個地址內至少中獎'
+      },
+      posteriorStreak: {
+        checks: '連續未中獎次數',
+        addresses: '連續未中獎地址數'
+      },
+      posteriorFormula: '$P = \\frac{m}{1/p+n+m}$，$n = {streak}$，$m = {horizon}$',
+      posteriorInfoLabel: '這個數字是怎麼算的',
+      posteriorInfoTitle: '這個數字是怎麼算的',
+      posteriorInfoFormula: '賠率 $p = {base}$。先驗取 $\\operatorname{Beta}(1, 1/p-1)$，均值正好等於 $p$，也就是先按設計方公布的賠率來看。',
+      posteriorInfoDerivation: '觀測到 $n$ 次未中獎後，後驗變成 $\\operatorname{Beta}(1, 1/p-1+n)$。未來 $m$ 次裡全不中的預測機率是 $\\frac{1/p+n}{1/p+n+m}$，所以至少中一次就是 $\\frac{m}{1/p+n+m}$。',
+      posteriorInfoCeiling: '關鍵在於：在此賠率下，連續未中獎本來就是幾乎必然的結果，所以 $n$ 次連敗幾乎不構成證據。數字上升只因為你展望的次數變多了，不代表變容易中。',
+      posteriorInfoOdds: '單次開獎的真實中獎機率不隨連敗上升，始終是每個地址 $\\frac{406{,}041{,}315}{2^{256}}$。要讓累計機率接近一半，需要約 $2.85\\times 10^{68}$ 次嘗試。',
       historyTitle: '抽獎記錄',
       clearHistory: '清除記錄',
       historyEmpty: '尚無記錄。',

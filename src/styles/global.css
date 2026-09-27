@@ -4364,36 +4364,105 @@ textarea:focus {
   border-radius: var(--radius-md);
 }
 
+/* Label leads and carries the colon, so the row reads `label: value`. The
+   value is rendered maths, hence the `>` on the code rule. */
 .lottery-odds-row > span {
-  flex: 0 0 100%;
+  flex: 0 0 auto;
   color: var(--content-meta);
-  font-size: 0.7rem;
+  font-size: 0.82rem;
 }
 
 .lottery-odds-row code {
-  font-size: 0.74rem;
-  overflow-wrap: anywhere;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.95rem;
 }
 
-.lottery-odds-decimal {
-  padding: var(--spacing-sm) var(--spacing-md);
+/* Posterior panel below the stat grid: the live estimate beside the streak that
+   drives it, with the formula underneath so the number can be recomputed. */
+/* This card hosts the posterior note, a popover that opens past the card's bottom
+   edge, so it opts out of the clipping the other cards use for their corners.
+   Nothing inside it relies on that clipping: the odds and posterior blocks are
+   separate rounded boxes. */
+.lottery-setup-card {
+  overflow: visible;
+}
+
+.lottery-posterior {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
   background: var(--input-bg);
   border: 1px solid var(--line-divider);
   border-radius: var(--radius-md);
 }
 
-.lottery-odds-decimal > span {
+.lottery-posterior-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+}
+
+.lottery-posterior-grid > div {
+  min-width: 0;
+}
+
+/* Scoped with `>` on purpose. KaTeX lays a formula out as nested <span>s, some
+   absolutely positioned, and a bare `span` rule here turns every one of its
+   atoms into a block box, which stacks a single number over half a dozen
+   lines. The same goes for the value, which is rendered markup rather than
+   text and must not be broken across lines either. */
+.lottery-posterior-grid > div > span {
   display: block;
-  margin-bottom: 0.15rem;
   color: var(--content-meta);
   font-size: 0.7rem;
 }
 
-.lottery-odds-decimal code {
+.lottery-posterior-grid > div > strong {
   display: block;
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.lottery-posterior-formula {
+  margin: var(--spacing-md) 0 0;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   line-height: 1.7;
-  overflow-wrap: anywhere;
+}
+
+/* Keeps rendered maths on one line inside the narrow cards above, and lets the
+   formula scroll rather than fragment if a translation runs long. */
+.lottery-posterior-grid .katex,
+.lottery-odds-row .katex,
+.lottery-posterior-formula .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+
+@media (max-width: 560px) {
+/* Which unit the streak is counted in. Reuses .mode-button so it matches the
+   other tool tablists, with its own wrapper because this one sits inside a card. */
+.posterior-basis {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, auto);
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  background: var(--field-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+}
+
+.lottery-posterior-grid {
+
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .lottery-history {
@@ -4530,19 +4599,12 @@ textarea:focus {
   }
 }
 
-/* A reported win: the history row and the matching entry card turn gold and are
-   exempt from the history cap, so they survive however long the list grows. */
-.lottery-history-row.is-winner,
-.lottery-entry.is-winner {
+/* A reported win: the history row turns gold and is exempt from the history cap, so
+   it survives however long the list grows. The current draw's entry cards are not
+   history and stay neutral, so gold means "permanently kept" and nothing else. */
+.lottery-history-row.is-winner {
   background: var(--lottery-gold-bg);
   border-color: var(--lottery-gold-border);
-}
-
-.lottery-history-row.is-winner {
-  box-shadow: inset 3px 0 0 var(--lottery-gold);
-}
-
-.lottery-entry.is-winner {
   box-shadow: inset 3px 0 0 var(--lottery-gold);
 }
 
@@ -4713,17 +4775,17 @@ html.zen-mode .zen-bar {
 }
 
 .zen-badge svg,
-.zen-info > summary svg {
+.info-dot > summary svg {
   flex: 0 0 auto;
 }
 
 /* Circled i. A real circle is deliberate here: the panel it opens is a
    reference note rather than part of the page chrome. */
-.zen-info {
+.info-dot {
   position: relative;
 }
 
-.zen-info > summary {
+.info-dot > summary {
   display: grid;
   width: 1.5rem;
   height: 1.5rem;
@@ -4736,18 +4798,18 @@ html.zen-mode .zen-bar {
   transition: color var(--duration-normal), border-color var(--duration-normal);
 }
 
-.zen-info > summary::-webkit-details-marker {
+.info-dot > summary::-webkit-details-marker {
   display: none;
 }
 
-.zen-info > summary:hover,
-.zen-info > summary:focus-visible,
-.zen-info[open] > summary {
+.info-dot > summary:hover,
+.info-dot > summary:focus-visible,
+.info-dot[open] > summary {
   color: var(--primary);
   border-color: var(--primary);
 }
 
-.zen-info-panel {
+.info-note {
   position: absolute;
   top: calc(100% + var(--spacing-xs));
   right: 0;
@@ -4765,23 +4827,37 @@ html.zen-mode .zen-bar {
   text-align: start;
 }
 
-.zen-info-panel strong {
+.info-note strong {
   display: block;
   margin-bottom: var(--spacing-xs);
   color: var(--deep-text);
   font-size: 0.8rem;
 }
 
-.zen-info-panel p {
+.info-note p {
   margin: 0;
 }
 
-.zen-info-panel ul {
+.info-note ul {
   display: grid;
   gap: var(--spacing-xs);
   margin: var(--spacing-sm) 0 0;
   padding: 0;
   list-style: none;
+}
+
+/* The posterior note is long enough that a popover near the bottom of a phone
+   screen runs off the edge, so on narrow screens it drops into the flow and makes
+   the card taller instead. Scoped to this note: the Zen one sits in a fixed bar
+   where pushing the layout open would be worse. */
+@media (max-width: 560px) {
+  .lottery-posterior .info-note {
+    position: static;
+    width: auto;
+    max-width: none;
+    margin-top: var(--spacing-sm);
+    box-shadow: none;
+  }
 }
 
 /* Zen mode introduction, below the existing About block. */
