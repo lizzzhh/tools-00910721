@@ -298,6 +298,14 @@ svg[data-icon='lucide:binary'] {
   color: var(--content-meta);
   font-size: 0.78rem;
   font-weight: 500;
+  /* CJK text can break between any two characters, so without this a squeezed
+     flex item folds mid-word ("本地 / 处理"). The badge must stay one line. */
+  white-space: nowrap;
+}
+
+.status-pill svg,
+.privacy-badge svg {
+  flex: 0 0 auto;
 }
 
 .status-pill {
@@ -634,6 +642,12 @@ kbd {
   margin-bottom: var(--spacing-3xl);
 }
 
+/* The title column is the flexible side, so `min-width: 0` lets it shrink and
+   wrap while the privacy badge next to it keeps its full width. */
+.workspace-header > :first-child {
+  min-width: 0;
+}
+
 .breadcrumb {
   display: flex;
   gap: var(--spacing-sm);
@@ -685,6 +699,9 @@ kbd {
 }
 
 .privacy-badge {
+  /* Never let a long tool title squeeze the badge narrower than its own text.
+     The title column gives up the space instead. */
+  flex: 0 0 auto;
   padding: 0.45rem 0.75rem;
   color: var(--primary-strong);
   background: var(--btn-regular-bg);
