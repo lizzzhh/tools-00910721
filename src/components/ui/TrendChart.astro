@@ -1,0 +1,44 @@
+---
+import type { MessageKey } from '../../i18n'
+
+interface Props {
+  /** Anchors the figure so the dashboard script can find it. */
+  id: string
+  /** Names the chart for assistive technology and for the axis caption. */
+  label: string
+  /** Shown until there is something to plot. */
+  empty: string
+  /** Message key for the peak readout, so the client can localise it too. */
+  peakKey: MessageKey
+  /** How many days the axis covers. */
+  days?: number
+  /**
+   * `zero` plots a day nobody used a tool as zero, which is a fact.
+   * `recorded` plots only the days that were written down and breaks the line
+   * across the ones that were not.
+   */
+  fill?: 'zero' | 'recorded'
+  /** Pins the top of the value axis, for a score that is out of a fixed range. */
+  max?: number
+}
+
+const { id, label, empty, peakKey, days = 14, fill = 'zero', max } = Astro.props
+---
+
+<figure
+  id={id}
+  class="trend-chart"
+  data-trend-chart
+  data-label={label}
+  data-window={days}
+  data-fill={fill}
+  data-max={max ?? ''}
+  data-peak-key={peakKey}
+>
+  <figcaption class="trend-chart-caption">
+    <span>{label}</span>
+    <b data-trend-peak hidden></b>
+  </figcaption>
+  <div class="trend-chart-plot" data-trend-plot hidden></div>
+  <p class="trend-chart-empty" data-trend-empty hidden>{empty}</p>
+</figure>

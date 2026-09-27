@@ -4,6 +4,7 @@ import { localizeTools, plannedTools, tools } from '../data/tools'
 import Button from './ui/Button.astro'
 import Card from './ui/Card.astro'
 import SectionHeading from './ui/SectionHeading.astro'
+import TrendChart from './ui/TrendChart.astro'
 import { createTranslator } from '../i18n'
 import { localePath } from '../i18n/config'
 
@@ -12,6 +13,8 @@ const t = createTranslator(locale)
 const localizedTools = localizeTools(tools, t)
 const localizedPlanned = localizeTools(plannedTools, t)
 const toolsHref = localePath(locale, '/tools/')
+/** How many days both trend charts show along their x axis. */
+const trendDays = 14
 ---
 
 <section class="dashboard-workspace" data-locale={locale}>
@@ -38,6 +41,15 @@ const toolsHref = localePath(locale, '/tools/')
         <p id="fortune-message">{t('home.fortune.idleMessage')}</p>
       </div>
       <Button id="draw-fortune" icon="lucide:sparkles">{t('home.fortune.draw')}</Button>
+      <TrendChart
+        id="fortune-trend"
+        label={t('home.fortune.trend.label', { count: trendDays })}
+        empty={t('home.fortune.trend.empty')}
+        peakKey="home.fortune.trend.peak"
+        days={trendDays}
+        fill="recorded"
+        max={100}
+      />
     </Card>
 
     <Card class="usage-card">
@@ -59,6 +71,14 @@ const toolsHref = localePath(locale, '/tools/')
         ))}
       </div>
       <div class="usage-empty" id="usage-empty"><Icon name="lucide:chart-no-axes-column" size={18} /><span>{t('home.usage.empty')}<br /><small>{t('home.usage.emptyHint')}</small></span></div>
+      <TrendChart
+        id="usage-trend"
+        label={t('home.usage.trend.label', { count: trendDays })}
+        empty={t('home.usage.trend.empty')}
+        peakKey="home.usage.trend.peak"
+        days={trendDays}
+        fill="zero"
+      />
     </Card>
   </div>
 

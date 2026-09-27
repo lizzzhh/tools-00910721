@@ -22,11 +22,20 @@
   --muted: oklch(0.93 0.015 var(--hue));
   --selection-bg: oklch(0.90 0.05 var(--hue));
   --codeblock-bg: oklch(0.17 0.015 var(--hue));
+  --code-fg: oklch(0.90 0.01 var(--hue));
+  --code-fg-muted: oklch(0.74 0.02 var(--hue));
+  --code-key: oklch(0.82 0.10 var(--hue));
+  --code-string: oklch(0.88 0.11 150);
+  --code-number: oklch(0.90 0.11 82);
+  --code-literal: oklch(0.82 0.13 300);
   --float-panel-bg: white;
   --input-bg: oklch(0.985 0.004 var(--hue));
   --field-bg: oklch(0.975 0.006 var(--hue));
   --sidebar-bg: oklch(0.985 0.005 var(--hue));
   --success: oklch(0.65 0.14 150);
+  --danger: oklch(0.60 0.16 25);
+  --danger-strong: oklch(0.53 0.18 25);
+  --danger-wash: oklch(0.65 0.18 25 / 10%);
   --lottery-gold: oklch(0.72 0.13 82);
   --lottery-gold-strong: oklch(0.58 0.12 78);
   --lottery-gold-bg: color-mix(in oklch, var(--lottery-gold) 15%, transparent);
@@ -74,6 +83,9 @@
 }
 
 :root.dark {
+  --danger: oklch(0.72 0.15 25);
+  --danger-strong: oklch(0.66 0.17 25);
+  --danger-wash: oklch(0.72 0.15 25 / 14%);
   --lottery-gold: oklch(0.83 0.13 86);
   --lottery-gold-strong: oklch(0.9 0.11 90);
   --lottery-gold-bg: color-mix(in oklch, var(--lottery-gold) 18%, transparent);
@@ -1713,6 +1725,20 @@ input[type='number']:focus::-webkit-outer-spin-button {
   padding: clamp(var(--spacing-lg), 3vw, var(--spacing-2xl));
 }
 
+/* The two cards carry a chart each, and the content above them is a different
+   height, so the figures are pinned to the bottom to share one baseline. */
+.fortune-card,
+.usage-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Stretching is right for the block children, not for the button, which keeps
+   the width of its own label. */
+.fortune-card > .secondary-button {
+  align-self: flex-start;
+}
+
 .dashboard-card-heading {
   display: flex;
   align-items: flex-start;
@@ -1905,6 +1931,54 @@ input[type='number']:focus::-webkit-outer-spin-button {
   transition: width var(--duration-medium);
 }
 
+.trend-chart {
+  /* One token for the plot box, so an empty card reserves the same height and
+     its figure still finishes on the baseline of the card next to it. */
+  --trend-plot-height: 148px;
+  /* Auto rather than a fixed gap: whatever the content above leaves over becomes
+     the space here, which is what puts the two plots on one line. */
+  margin: auto 0 0;
+  padding-top: var(--spacing-2xl);
+  border-top: 1px solid var(--line-divider);
+}
+
+.trend-chart-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.08em;
+}
+
+.trend-chart-caption b {
+  color: var(--primary-strong);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* ECharts measures this box, so the height has to be explicit. It also positions
+   the tooltip as an absolute child of this box in chart-local pixels, so the box
+   has to be the positioning context or the panel lands away from the chart. */
+.trend-chart-plot {
+  position: relative;
+  height: var(--trend-plot-height);
+  margin-top: var(--spacing-md);
+}
+
+.trend-chart-empty {
+  display: flex;
+  min-height: var(--trend-plot-height);
+  /* The plot's own offset above its box, so a hint and a chart are one height. */
+  margin: var(--spacing-md) 0 0;
+  align-items: center;
+  color: var(--content-meta);
+  font-size: 0.7rem;
+  line-height: 1.8;
+}
+
 .dashboard-card-heading > a {
   display: inline-flex;
   align-items: center;
@@ -2083,6 +2157,246 @@ input[type='number']:focus::-webkit-outer-spin-button {
 .simple-page .primary-button {
   margin: 0 auto;
 }
+
+/*
+ * A single centred button on another page is given `margin: 0 auto`, and an auto
+ * margin inside a flex row is not ignored: it eats all the free space and shoves
+ * that item to the far end. The rows here place their own children.
+ */
+.simple-page .data-actions > *,
+.simple-page .data-danger > *,
+.simple-page .data-confirm-choices > * {
+  margin: 0;
+}
+
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--spacing-md);
+}
+
+.data-button-danger {
+  color: var(--danger);
+  background: transparent;
+  border-color: color-mix(in oklch, var(--danger) 42%, transparent);
+  box-shadow: none;
+}
+
+.data-button-danger:hover {
+  color: white;
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+}
+
+.data-button-danger:focus-visible {
+  outline-color: var(--danger);
+}
+
+/*
+ * The destructive action stands on its own line, and the question that follows
+ * takes the button's place instead of pushing the page down, so the pointer that
+ * asked the question is still over the answer.
+ */
+.data-danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin: 0 auto var(--spacing-lg);
+}
+
+.data-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm) var(--spacing-lg);
+  margin: 0;
+  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) var(--spacing-lg);
+  background: var(--card-bg);
+  border: 1px solid color-mix(in oklch, var(--danger) 45%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.data-confirm[hidden] {
+  display: none;
+}
+
+.data-confirm-text {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  color: var(--content-meta);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.data-confirm-text svg {
+  flex: none;
+  color: var(--danger);
+}
+
+.data-confirm-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.data-status {
+  margin: 0 auto var(--spacing-lg);
+  color: var(--content-meta);
+  font-size: 0.92rem;
+}
+
+.data-status[data-kind='error'] {
+  color: var(--danger);
+}
+
+/*
+ * The data page is wider than the other simple pages: a key, a name and a
+ * stored value on one line need the room, and a value that is printed JSON is
+ * unreadable in a narrow column.
+ */
+.simple-page.is-wide {
+  max-width: 68rem;
+}
+
+.data-table {
+  display: grid;
+  gap: var(--spacing-lg);
+  width: 100%;
+  margin: 0 auto var(--spacing-2xl);
+  padding: clamp(var(--spacing-lg), 3vw, var(--spacing-2xl));
+  background: var(--input-bg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-lg);
+  text-align: left;
+}
+
+.data-table-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.data-rows {
+  display: grid;
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.data-row {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  border: 1px solid var(--line-divider);
+}
+
+.data-row[hidden] {
+  display: none;
+}
+
+.data-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-xs) var(--spacing-md);
+}
+
+.data-row-name {
+  font-weight: 600;
+}
+
+.data-row-key {
+  flex: 1 1 18rem;
+  min-width: 0;
+  color: var(--content-meta);
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.data-row-size {
+  color: var(--content-meta);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+ * The stored value, shown as it is. A pre is not a control: there is nothing to
+ * focus and type into, so the page cannot be used to edit what the tools read.
+ * It borrows the colour a code block already has on this site, so the two read
+ * as the same kind of thing.
+ */
+.data-row-value {
+  max-height: 18rem;
+  margin: 0;
+  padding: var(--spacing-md);
+  overflow: auto;
+  color: var(--code-fg);
+  background: var(--codeblock-bg);
+  border: 1px solid color-mix(in oklch, var(--primary) 18%, transparent);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-user-modify: read-only;
+  user-select: text;
+}
+
+.data-tok-key {
+  color: var(--code-key);
+}
+
+.data-tok-string {
+  color: var(--code-string);
+}
+
+.data-tok-number {
+  color: var(--code-number);
+}
+
+.data-tok-boolean {
+  color: var(--code-literal);
+}
+
+.data-tok-null {
+  color: var(--code-fg-muted);
+}
+
+.data-tok-punctuation {
+  color: var(--code-fg-muted);
+}
+
+.data-total {
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-empty {
+  margin: 0;
+  color: var(--content-meta);
+  text-align: center;
+}
+
+.data-footnote {
+  margin: 0 auto;
+  color: var(--content-meta);
+  font-size: 0.92rem;
+}
+
 
 .not-found {
   padding: 8rem 0;
