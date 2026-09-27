@@ -4292,6 +4292,16 @@ textarea:focus {
   letter-spacing: 0.01em;
 }
 
+.bip39-suggest-check {
+  /* Pushed to the right edge, so the tick lines up down the column rather than
+     following the word. Its own colour, because the selected state repaints the
+     whole option in the accent and the tick has to stay green. */
+  margin-left: auto;
+  padding-left: var(--spacing-sm);
+  color: oklch(0.56 0.15 152);
+  font-size: 0.9em;
+}
+
 .bip39-suggest-hint {
   margin: var(--spacing-xs) 0 0;
   padding-inline: var(--spacing-sm);

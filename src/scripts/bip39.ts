@@ -1,5 +1,6 @@
 import {
   bip39LanguageLabels,
+  completionOptions,
   bip39Languages,
   bip39Separators,
   bip39Strengths,
@@ -119,6 +120,8 @@ function init() {
   const caretRuler = el<HTMLElement>(root, '#bip39-caret-ruler')
   const suggest = el<HTMLElement>(root, '#bip39-suggest')
   const suggestList = el<HTMLElement>(root, '#bip39-candidates')
+  const suggestLabel = el<HTMLElement>(root, '#bip39-suggest-label')
+  const suggestHint = el<HTMLElement>(root, '#bip39-suggest-hint')
   const errorBox = el<HTMLElement>(root, '#bip39-error')
   const wordCount = el<HTMLElement>(root, '#bip39-word-count')
 
@@ -156,6 +159,10 @@ function init() {
 
   /** True while an IME composition is in flight; the marks and popup wait for it. */
   let composing = false
+  // True while the open list is checksum completions rather than spelling
+  // candidates, which changes what applying one does: there is no word under the
+  // caret to replace, so the word is appended instead.
+  let completionMode = false
   /** Candidate words currently offered, and which one the keyboard has reached. */
   let suggestOptions: string[] = []
   let optionIndex = -1
@@ -257,6 +264,7 @@ function init() {
   }
 
   function closeSuggest() {
+    completionMode = false
     suggestOptions = []
     optionIndex = -1
     suggestList?.replaceChildren()
@@ -333,12 +341,47 @@ function init() {
     suggest.style.top = flip ? `${top - height}px` : `${below}px`
   }
 
+  /**
+   * The candidates that would leave the mnemonic valid if applied.
+   *
+   * While the last word is being typed the ordinary candidates are spelling
+   * matches, and most of them leave the checksum wrong — so a tick next to the
+   * few that do finish it is the difference between a spelling aid and an answer.
+   *
+   * Empty unless the word under the caret is the last one, and unless the
+   * candidates come from the same wordlist as the rest of the mnemonic: a tick on
+   * a word from another list would promise a valid mnemonic that does not exist.
+   */
+  function checksumTicking(options: string[], active: MnemonicWordSpan, language: Bip39Language): string[] {
+    if (!input) return []
+    const spans = tokenizeMnemonic(input.value)
+    if (active.index !== spans.length - 1) return []
+    const wordlists = bip39Languages.flatMap((entry) => {
+      const found = wordIndexes.get(entry)
+      return found ? [{ language: entry, words: found.words }] : []
+    })
+    const prefix = `${spans
+      .slice(0, active.index)
+      .map((span) => span.text)
+      .join(' ')} `
+    const found = completionOptions(prefix, prefix.length, wordlists, language)
+    if (!found || found.language !== language) return []
+    return options.filter((word) => found.options.includes(word))
+  }
+
   function renderSuggest(active: MnemonicWordSpan | null) {
-    if (!active || composing || !input) {
+    if (composing || !input) {
       closeSuggest()
       return
     }
-    const index = wordIndexes.get(candidateList(active.text, selectedLanguage()))
+    // No word under the caret is the gap after the last separator, which is
+    // where a checksum completion is offered.
+    if (!active) {
+      renderCompletion()
+      return
+    }
+    const language = candidateList(active.text, selectedLanguage())
+    const index = wordIndexes.get(language)
     if (!index) {
       closeSuggest()
       return
@@ -350,6 +393,10 @@ function init() {
       closeSuggest()
       return
     }
+    // Which of these would finish the mnemonic, if any. Only the last word can:
+    // a candidate in any earlier position leaves the wrong number of words, so
+    // nothing completes and there is nothing to mark.
+    const completing = new Set(checksumTicking(options, active, language))
     const fragment = document.createDocumentFragment()
     // A candidate reached by typing Latin is only useful if the user can see why
     // it was offered, so the reading it matched is spelled out beside it. Han
@@ -363,6 +410,7 @@ function init() {
         gloss.dir = 'ltr'
         item.append(gloss)
       }
+      if (completing.has(word)) item.append(make('span', 'bip39-suggest-check', '\u2713'))
       item.id = `bip39-candidate-${position}`
       item.setAttribute('role', 'option')
       item.setAttribute('aria-selected', 'false')
@@ -370,10 +418,64 @@ function init() {
     })
     suggestList?.replaceChildren(fragment)
     suggestOptions = options
+    // The completion list rewrites these, so they have to be put back. The hint
+    // only mentions the tick once there is a tick to explain.
+    setText(suggestLabel, t('toolUi.bip39.suggestLabel'))
+    setText(suggestHint, t(completing.size > 0 ? 'toolUi.bip39.suggestTickHint' : 'toolUi.bip39.suggestHint'))
     // The first candidate starts highlighted, so Enter accepts it straight away
     // without a preliminary arrow press. The list only opens while the word under
     // the caret is *not* yet a valid one, so there is always something to accept
     // and the default is the closest match by construction.
+    setSelectedOption(0)
+    toggleHidden(suggest, false)
+    input.setAttribute('aria-expanded', 'true')
+    placeSuggest()
+  }
+
+  /**
+   * The list shown when the caret is parked in the gap after the last separator,
+   * one word short of a valid length.
+   *
+   * Every word in it completes the mnemonic so the checksum matches, so this is
+   * a shortcut to a valid mnemonic rather than a spelling aid. Typing at all
+   * makes the caret land inside a word, which routes back to the ordinary
+   * candidates — that is what "ignore the checksum and keep typing" amounts to
+   * here, and it needs no state of its own to notice.
+   */
+  function renderCompletion() {
+    completionMode = false
+    if (!input || !everyListReady) return
+    // The decision lives in the lib so it can be tested: this is the branch that
+    // decides whether a popup appears at all, and getting it wrong either hides a
+    // completion or interrupts ordinary typing with one.
+    const found = completionOptions(
+      input.value,
+      input.selectionStart ?? input.value.length,
+      bip39Languages.flatMap((language) => {
+        const index = wordIndexes.get(language)
+        return index ? [{ language, words: index.words }] : []
+      }),
+      selectedLanguage()
+    )
+    if (!found) return
+    const options = found.options
+    const fragment = document.createDocumentFragment()
+    options.forEach((word, position) => {
+      const item = make('li', 'bip39-suggest-option', word)
+      // A tick, because a word from this list is valid the moment it lands where
+      // the caret is. The hint under the list says the same in words, so the tick
+      // itself says nothing extra to a screen reader and is hidden from one.
+      item.append(make('span', 'bip39-suggest-check', '✓'))
+      item.id = `bip39-candidate-${position}`
+      item.setAttribute('role', 'option')
+      item.setAttribute('aria-selected', 'false')
+      fragment.append(item)
+    })
+    suggestList?.replaceChildren(fragment)
+    suggestOptions = options
+    completionMode = true
+    setText(suggestLabel, t('toolUi.bip39.suggestCompleteLabel'))
+    setText(suggestHint, t('toolUi.bip39.suggestCompleteHint'))
     setSelectedOption(0)
     toggleHidden(suggest, false)
     input.setAttribute('aria-expanded', 'true')
@@ -433,10 +535,20 @@ function init() {
     renderSuggest(active)
   }
 
-  /** Replaces the word under the caret with a candidate. */
+  /** Replaces the word under the caret with a candidate, or appends a completion. */
   function applyCandidate(position = optionIndex) {
     const word = suggestOptions[position]
     if (!word || !input) return
+    if (completionMode) {
+      // There is no word under the caret to replace — the caret is parked in the
+      // gap — so the word goes in at the caret with a separator after it, which
+      // leaves the mnemonic complete and ready for the next one.
+      const caret = input.selectionStart ?? input.value.length
+      input.setRangeText(`${word} `, caret, caret, 'end')
+      closeSuggest()
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      return
+    }
     const spans = tokenizeMnemonic(input.value)
     const active = activeSpan(spans, input.selectionStart ?? input.value.length)
     if (!active) return
@@ -845,9 +957,11 @@ function init() {
       case 'Enter':
       case 'Tab':
         // The first candidate is highlighted from the moment the list opens, so
-        // either key applies it without an arrow press first. The list is only
-        // open while the word under the caret is not a valid one, so there is
-        // always a correction on offer and never a valid word to overwrite.
+        // either key applies it without an arrow press first. Over a word, the
+        // list is only open while that word is not a valid one, so there is
+        // always a correction on offer and never a valid word to overwrite. The
+        // checksum-completion list is open with no word under the caret at all,
+        // and appends rather than replaces.
         if (optionIndex < 0) return
         event.preventDefault()
         applyCandidate()

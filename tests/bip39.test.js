@@ -8,6 +8,8 @@ import {
   bip39Separators,
   bip39Strengths,
   bip39WordCounts,
+  checksumCompletions,
+  completionOptions,
   convertMnemonic,
   createWordlistIndex,
   detectLanguage,
@@ -479,8 +481,14 @@ test('the first candidate is preselected, so Enter applies it directly', () => {
   const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
   // Opening the list must land on index 0, not on "nothing highlighted" — the
   // point of the list is that Enter fixes the word without a preliminary arrow.
-  const open = script.slice(script.indexOf('suggestList?.replaceChildren(fragment)'))
-  assert.match(open.slice(0, 400), /setSelectedOption\(0\)/, 'the first candidate is not preselected')
+  // Scoped to the ordinary-candidate path, between the two list builders, so
+  // this cannot drift into a neighbouring function or depend on how much comment
+  // happens to sit between the statements.
+  const open = script.slice(
+    script.indexOf('function renderSuggest'),
+    script.indexOf('function renderCompletion')
+  )
+  assert.match(open, /setSelectedOption\(0\)/, 'the first candidate is not preselected')
   // ...and the keydown handler must not require a selection to have been moved.
   const keydown = script.slice(script.indexOf("case 'Enter':"), script.indexOf("case 'Escape':"))
   assert.match(keydown, /applyCandidate\(\)/, 'Enter no longer applies the candidate')
@@ -762,6 +770,198 @@ test('a wrong single character is not answered with the first words of the list'
   // 的 一 是 在 不 了 — which has nothing to do with the input. Returning nothing is
   // more honest than returning the beginning of the list.
   assert.deepEqual(findWordCandidates('猫', index), [])
+})
+
+test('the completing words are exactly the ones that validate', async () => {
+  const english = await loadWordlist('english')
+  for (const [count, bytes] of [
+    [12, 16],
+    [15, 20],
+    [18, 24],
+    [21, 28],
+    [24, 32]
+  ]) {
+    const entropy = new Uint8Array(bytes)
+    for (let index = 0; index < bytes; index += 1) entropy[index] = index + 1
+    const full = entropyToMnemonic(entropy, english, ' ').split(' ')
+    assert.equal(full.length, count)
+    const prefix = full.slice(0, count - 1)
+    const options = checksumCompletions(prefix, english)
+
+    // Not one word but many: the head of the last word is entropy the prefix
+    // never pinned down, so what the checksum fixes is only its tail. Eleven
+    // words into a twelve-word mnemonic leaves seven free bits.
+    const free = 11 - count / 3
+    assert.equal(options.length, 2 ** free, `${count} words should have 2^${free} completions`)
+    // No duplicates, and in list order, so the list reads tidily.
+    assert.equal(new Set(options).size, options.length)
+    assert.deepEqual(
+      options,
+      [...options].sort((a, b) => english.indexOf(a) - english.indexOf(b))
+    )
+    // The claim the whole feature rests on: every one of them really validates,
+    // and nothing outside the list does.
+    for (const word of options) {
+      assert.ok(
+        validateMnemonic([...prefix, word].join(' '), english).valid,
+        `${word} was offered but does not validate`
+      )
+    }
+    // The word the prefix was actually cut from is one of them.
+    assert.ok(options.includes(full[count - 1]))
+  }
+})
+
+test('a prefix that cannot be completed offers nothing', async () => {
+  const english = await loadWordlist('english')
+  const entropy = new Uint8Array(16).fill(7)
+  const full = entropyToMnemonic(entropy, english, ' ').split(' ')
+  // A prefix whose length is not one below a valid count, and a prefix that is
+  // not one below one at all: neither has a completing word to offer.
+  assert.deepEqual(checksumCompletions(full, english), [], 'a complete mnemonic has no next word')
+  assert.deepEqual(checksumCompletions(full.slice(0, 5), english), [])
+  // A word the list does not contain means the prefix is already wrong, and
+  // completing it would be completing something that cannot be saved.
+  assert.deepEqual(checksumCompletions([...full.slice(0, 11), 'zzzzz'], english), [])
+  assert.deepEqual(checksumCompletions([], english), [])
+  // The checksum covers the whole mnemonic, so a completion belongs to its own
+  // prefix: the same eleven words in the opposite order complete to a different
+  // set, and those words are not answers for the first order.
+  const reversed = [...full.slice(0, 11)].reverse()
+  const other = checksumCompletions(reversed, english)
+  assert.equal(other.length, 128)
+  for (const word of other) {
+    assert.ok(
+      validateMnemonic([...reversed, word].join(' '), english).valid,
+      `${word} does not complete the prefix it was offered for`
+    )
+  }
+  const alsoValid = other.filter((word) =>
+    validateMnemonic([...full.slice(0, 11), word].join(' '), english).valid
+  )
+  assert.ok(alsoValid.length < other.length, 'a completion for one order also completes the other')
+})
+
+test('a Chinese prefix completes against the Chinese list it belongs to', async () => {
+  // The two Chinese lists share characters, so the list a prefix belongs to is not
+  // obvious from any one word. The completion has to be computed against the list
+  // that actually holds every word, or it returns words from the wrong list that
+  // do not validate.
+  const lists = await Promise.all(bip39Languages.map((language) => loadWordlist(language)))
+  const simplified = lists[1]
+  const entropy = new Uint8Array(16)
+  for (let index = 0; index < 16; index += 1) entropy[index] = index + 3
+  const full = entropyToMnemonic(entropy, simplified, ' ').split(' ')
+  const prefix = full.slice(0, 11)
+  // Some of the prefix is also valid traditional, which is the ambiguity this has
+  // to survive; asserted so the test cannot quietly stop covering it.
+  const traditional = new Set(lists[2])
+  assert.ok(prefix.some((word) => traditional.has(word)), 'the prefix no longer overlaps the other list')
+
+  const options = checksumCompletions(prefix, simplified)
+  assert.equal(options.length, 128)
+  for (const word of options) {
+    assert.ok(
+      validateMnemonic([...prefix, word].join(' '), simplified).valid,
+      `${word} was offered but does not validate`
+    )
+    // And the word really is from this list, not borrowed from the other one.
+    assert.ok(simplified.includes(word))
+  }
+})
+
+test('the completion popup opens in exactly one situation', async () => {
+  const english = await loadWordlist('english')
+  const lists = [{ language: 'english', words: english }]
+  const full = entropyToMnemonic(new Uint8Array(16).fill(7), english, ' ').split(' ')
+  const prefix = full.slice(0, 11).join(' ')
+  const at = (value) => value.length
+
+  // The state being offered: every word but the last, a separator typed, caret
+  // after it, nothing after that.
+  const open = completionOptions(`${prefix} `, at(`${prefix} `), lists)
+  assert.ok(open, 'the popup did not open one word short of a valid mnemonic')
+  assert.equal(open.language, 'english')
+  assert.equal(open.options.length, 128)
+  for (const word of open.options) {
+    assert.ok(validateMnemonic(`${prefix} ${word}`, english).valid)
+  }
+
+  // No separator yet. The caret is at the end of a finished word, and the user may
+  // still be extending it; appending a different word answers nothing.
+  assert.equal(completionOptions(prefix, at(prefix), lists), null)
+  // The separator is there but the caret is before it, still inside the gap but
+  // not past it: not "after the space".
+  assert.equal(completionOptions(`${prefix} `, at(prefix), lists), null)
+  // Caret in the gap with words already typed after it.
+  assert.equal(completionOptions(`${prefix} zoo `, at(`${prefix} `), lists), null)
+  // Nothing typed at all.
+  assert.equal(completionOptions('', 0, lists), null)
+  assert.equal(completionOptions(' ', 1, lists), null)
+  // Already a complete mnemonic: there is no next word to complete.
+  assert.equal(completionOptions(`${full.join(' ')} `, at(`${full.join(' ')} `), lists), null)
+  // Two short, and far too short: only one-below-a-valid-count can complete.
+  const ten = `${full.slice(0, 10).join(' ')} `
+  assert.equal(completionOptions(ten, at(ten), lists), null)
+  const three = `${full.slice(0, 3).join(' ')} `
+  assert.equal(completionOptions(three, at(three), lists), null)
+  // A word in no list at all: the prefix is already wrong, and completing it
+  // would be completing something that cannot be rescued.
+  assert.equal(completionOptions(`${full.slice(0, 10).join(' ')} zzzzz `, at(`${full.slice(0, 10).join(' ')} zzzzz `), lists), null)
+  // Twenty-three words complete to a twenty-four word mnemonic, with fewer
+  // choices, because a longer mnemonic pins down more of the last word.
+  const long = entropyToMnemonic(new Uint8Array(32).fill(3), english, ' ').split(' ')
+  const longOpen = completionOptions(`${long.slice(0, 23).join(' ')} `, at(`${long.slice(0, 23).join(' ')} `), lists)
+  assert.equal(longOpen.options.length, 8)
+})
+
+test('the completion list follows the wordlist the prefix is really in', async () => {
+  // The Chinese lists overlap, so the list a prefix belongs to is not settled by
+  // any single word. Getting this wrong offers words from a list the prefix is not
+  // in, and those do not validate against it.
+  const lists = await Promise.all(bip39Languages.map((language) => loadWordlist(language)))
+  const byLanguage = bip39Languages.map((language, index) => ({ language, words: lists[index] }))
+  const simplified = lists[1]
+  const entropy = new Uint8Array(16)
+  for (let index = 0; index < 16; index += 1) entropy[index] = index + 5
+  const full = entropyToMnemonic(entropy, simplified, ' ').split(' ')
+  const value = `${full.slice(0, 11).join(' ')} `
+  const found = completionOptions(value, value.length, byLanguage)
+  assert.ok(found, 'no completion for a Chinese prefix')
+  // Whichever list it settles on, every word offered has to validate against that
+  // same list — the check that matters, since the two are interchangeable only
+  // when the words happen to coincide.
+  const list = byLanguage.find((entry) => entry.language === found.language).words
+  for (const word of found.options) {
+    assert.ok(validateMnemonic(value + word, list).valid, `${word} does not validate against ${found.language}`)
+  }
+  // And the preference decides the tie, rather than the enumeration order.
+  const preferred = completionOptions(value, value.length, byLanguage, 'chinese-traditional')
+  if (preferred) assert.ok(['chinese-simplified', 'chinese-traditional'].includes(preferred.language))
+})
+
+test('a ticked spelling candidate really is an answer', async () => {
+  // The tick in the ordinary candidate list promises that applying the word leaves
+  // a valid mnemonic. That promise is only checkable by applying it, and it is
+  // the whole value of the tick: a green mark next to a near miss would be worse
+  // than no mark.
+  const english = await loadWordlist('english')
+  const index = await loadWordlistIndex('english')
+  const full = entropyToMnemonic(new Uint8Array(16).fill(7), english, ' ').split(' ')
+  const prefix = full.slice(0, 11)
+  const completions = new Set(checksumCompletions(prefix, english))
+  for (const typed of ['a', 'au', 'aut', 'autu']) {
+    const ticked = findWordCandidates(typed, index).filter((word) => completions.has(word))
+    for (const word of ticked) {
+      assert.ok(
+        validateMnemonic([...prefix, word].join(' '), english).valid,
+        `${word} was ticked but does not validate`
+      )
+    }
+    // Narrowing the last word should eventually leave exactly the answer, so the
+    // tick is not decoration: at three letters it has to mark something.
+    if (typed === 'aut' || typed === 'autu') assert.ok(ticked.length > 0, `nothing ticked for "${typed}"`)
+  }
 })
 
 // --- BIP32 ------------------------------------------------------------------

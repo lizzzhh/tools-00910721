@@ -602,6 +602,101 @@ export function validateMnemonic(mnemonic: string, words: string[]): MnemonicVal
 }
 
 /**
+ * The words that would finish a mnemonic to a valid checksum.
+ *
+ * Given every word but the last, this returns each word that makes the whole
+ * mnemonic validate. There is normally more than one: the leading bits of the
+ * last word are still unconstrained entropy, so eleven words into a twelve-word
+ * mnemonic leave seven bits — 128 words — that all validate. Only the trailing
+ * checksum bits are pinned down by what came before.
+ *
+ * Empty when the prefix cannot be completed at all: there is no valid word count
+ * one above it, or a word the list does not contain.
+ */
+export function checksumCompletions(parts: string[], words: string[]): string[] {
+  const strength = strengthFromWordCount(parts.length + 1)
+  if (strength === null) return []
+  const indices: number[] = []
+  for (const part of parts) {
+    const position = indexOfWord(words, part)
+    if (position < 0) return []
+    indices.push(position)
+  }
+  const checksumBits = strength / 4
+  // The last word is `11 - checksumBits` bits of entropy the prefix never
+  // determined, followed by the checksum over the completed entropy.
+  const freeBits = 11 - checksumBits
+  let known = ''
+  for (const position of indices) known += position.toString(2).padStart(11, '0')
+  const entropyLength = bip39StrengthBits[strength] / 8
+  const found: number[] = []
+  for (let free = 0; free < 1 << freeBits; free += 1) {
+    const suffix = free.toString(2).padStart(freeBits, '0')
+    const bits = known + suffix
+    const entropy = new Uint8Array(entropyLength)
+    for (let index = 0; index < entropyLength * 8; index += 1) {
+      entropy[index >> 3] |= parseInt(bits[index], 2) << (7 - (index & 7))
+    }
+    // The checksum covers the free bits too, so it has to be recomputed per
+    // candidate rather than once for the whole set.
+    const digest = sha256(entropy)
+    let checksum = ''
+    for (let index = 0; index < checksumBits; index += 1) {
+      checksum += ((digest[index >> 3] >> (7 - (index & 7))) & 1).toString()
+    }
+    found.push(parseInt(suffix + checksum, 2))
+  }
+  // A list shorter than 2048 cannot hold every index, so the tail can fall off
+  // the end; list order reads better than the enumeration order anyway.
+  return found
+    .filter((position) => position < words.length)
+    .sort((a, b) => a - b)
+    .map((position) => words[position])
+}
+
+/**
+ * The completing words for a value whose caret is parked in the gap after the
+ * last separator, one word short of a valid length.
+ *
+ * This is the whole decision behind the popup that opens when the user has typed
+ * every word but the last and stopped: which wordlist they are in, and which
+ * words finish the mnemonic. Null whenever the popup should stay closed — the
+ * caret is not in a gap, no separator has been typed yet, the value is not one
+ * word short, a word is in no list, or no single list holds all of them.
+ *
+ * `preferred` settles the case where more than one list holds the entire prefix,
+ * which the two Chinese wordlists can manage between them.
+ */
+export function completionOptions(
+  value: string,
+  caret: number,
+  wordlists: { language: string; words: string[] }[],
+  preferred = ''
+): { language: string; options: string[] } | null {
+  const spans = tokenizeMnemonic(value)
+  if (spans.length === 0) return null
+  const last = spans[spans.length - 1]
+  // The separator has to be there already. The state being described is "after
+  // the space", and a caret sitting at the end of a finished word is the state
+  // before it — there the user may still be extending that word, and offering to
+  // append a different one would be answering a question not asked.
+  if (!/^\s+$/.test(value.slice(last.end, caret))) return null
+  // Nothing typed after the caret either, or the value is not waiting for a word.
+  if (value.slice(caret).trim() !== '') return null
+
+  const words = spans.map((span) => span.text)
+  // One list has to hold every word typed so far, or there is nothing to complete
+  // against. `detectLanguage` cannot answer this: it accepts a list only when the
+  // mnemonic already validates, and by definition this prefix does not — that is
+  // the whole reason for being here.
+  const holders = wordlists.filter((entry) => words.every((word) => indexOfWord(entry.words, word) >= 0))
+  if (holders.length === 0) return null
+  const chosen = holders.find((entry) => entry.language === preferred) ?? holders[0]
+  const options = checksumCompletions(words, chosen.words)
+  return options.length > 0 ? { language: chosen.language, options } : null
+}
+
+/**
  * Re-encodes a mnemonic into another language. Both wordlists are indexed the
  * same way, so the conversion is a positional remap with no hashing involved —
  * which is why a converted mnemonic is bit-for-bit the same wallet.
