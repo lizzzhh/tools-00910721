@@ -1,11 +1,13 @@
 import { currentTranslator } from '../i18n/client'
+import { readValue, whenStorageReady, writeValue } from '../lib/storage'
+import { storageKeys } from '../lib/storage-schema'
 
-const storageKey = 'code-space-favorites'
+const storageKey = storageKeys.favorites
 const mountedCatalogs = new WeakSet<HTMLElement>()
 
 function getFavorites() {
   try {
-    const stored = JSON.parse(localStorage.getItem(storageKey) ?? '[]')
+    const stored = JSON.parse(readValue(storageKey) ?? '[]')
     return new Set(Array.isArray(stored) ? stored.filter((item): item is string => typeof item === 'string') : [])
   } catch {
     return new Set<string>()
@@ -13,9 +15,7 @@ function getFavorites() {
 }
 
 function saveFavorites(favorites: Set<string>) {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify([...favorites]))
-  } catch {}
+  writeValue(storageKey, JSON.stringify([...favorites]))
 }
 
 function initCatalog() {
@@ -31,7 +31,13 @@ function initCatalog() {
   const favoritesOnly = catalog.dataset.favoritesOnly === 'true'
   const availableCount = cards.filter((card) => !card.classList.contains('planned')).length
   const plannedCount = cards.length - availableCount
-  const favorites = getFavorites()
+  // The table takes a moment to open, so the stars are painted once it has.
+  let favorites = getFavorites()
+  whenStorageReady(() => {
+    favorites = getFavorites()
+    syncFavoriteState()
+    applyFilters()
+  })
 
   function syncFavoriteState() {
     cards.forEach((card) => {

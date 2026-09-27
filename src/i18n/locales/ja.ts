@@ -15,6 +15,7 @@ const ja: Dictionary = {
     home: 'ホーム',
     tools: 'ツール',
     favorites: 'お気に入り',
+    data: 'データ',
     about: 'このサイトについて',
     brandHome: '{site} のホーム',
     openMenu: 'ツールメニューを開く',
@@ -67,7 +68,12 @@ const ja: Dictionary = {
       draw: '今日の運勢を引く',
       drawn: '今日はもう引きました',
       idle: 'まだ引いていません',
-      idleMessage: '運勢は 1 日 1 回引けます。'
+      idleMessage: '運勢は 1 日 1 回引けます。',
+      trend: {
+        label: '1 日あたりの点数 · 直近 {count} 日間',
+        empty: '今日の運勢を引くと、その日の点数がこの曲線に加わります',
+        peak: '最大 {value}'
+      }
     },
     usage: {
       eyebrow: 'LOCAL ACTIVITY',
@@ -80,7 +86,12 @@ const ja: Dictionary = {
       times: '{count} 回',
       unit: '回',
       empty: '使用履歴はまだありません',
-      emptyHint: 'ツールを使うと上位 5 件がここに表示されます'
+      emptyHint: 'ツールを使うと上位 5 件がここに表示されます',
+      trend: {
+        label: '1 日あたりの使用回数 · 直近 {count} 日間',
+        empty: 'ツールを使うと、その日の使用回数がこの曲線に加わります',
+        peak: '最大 {value} 回'
+      }
     },
     quick: { eyebrow: 'QUICK ACCESS', title: 'クイックスタート' },
     activity: {
@@ -99,6 +110,34 @@ const ja: Dictionary = {
     inspired: { label: 'アイデアが湧く', message: 'TODO を片付けるのに適しています。一度のリファクタで半日分を短縮できるかも。' },
     focus: { label: '集中モード', message: '通知を切り、最も重要なタスクをいちばん前に置きましょう。' },
     smooth: { label: '快調', message: '今日の手応えも思路も調子がよく、古いコードの整理に向いています。' }
+  },
+  data: {
+    eyebrow: 'YOUR DATA',
+    title: 'データとバックアップ',
+    body: 'サイトの記憶はすべてこのブラウザーに保存され、サーバーには一切送られません。バックアップを書き出せば、端末やブラウザーを変えてもそのまま持ち運べます。',
+    tableTitle: '保存済みのデータ',
+    empty: 'まだ何も保存されていません',
+    size: '{count} 件 · {size}',
+    export: 'バックアップを書き出す',
+    import: 'バックアップを読み込む',
+    cancel: 'キャンセル',
+    confirmClear: 'すべて消去する',
+    clear: 'すべて消去',
+    clearConfirm: 'この端末に保存されたデータをすべて消去しますか？元に戻せません。',
+    imported: '{count} 件を読み込みました',
+    exported: 'バックアップをダウンロードしました',
+    cleared: 'ローカルデータを消去しました',
+    failed: 'このサイトのバックアップファイルではありません',
+    keyUsage: '利用回数',
+    keyFavorites: 'お気に入り',
+    keyScratchpad: 'スクラッチパッド',
+    keyFortune: '今日の運勢',
+    keyLotteryStats: '抽選の記録',
+    keyLotteryBasis: '推定方法',
+    keyTheme: 'ライトとダークのテーマ',
+    keyLocale: '表示言語',
+    open: 'データページを開く',
+    footer: '書き出したファイルにはすべてのキーが含まれます。大切に保管してください。'
   },
   about: {
     eyebrow: 'ABOUT TRANSPARENT TOOLBOX',

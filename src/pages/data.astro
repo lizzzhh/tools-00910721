@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import DataPage from '../components/DataPage.astro'
+import { createTranslator } from '../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+---
+
+<BaseLayout title={`${t('data.title')} · ${t('meta.siteName')}`} description={t('data.body')} activeNav="data">
+  <DataPage />
+</BaseLayout>

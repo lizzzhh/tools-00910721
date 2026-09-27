@@ -1,3 +1,5 @@
+import { readValue, whenStorageReady, writeValue } from '../lib/storage'
+import { storageKeys } from '../lib/storage-schema'
 import {
   claimCountsAsWin,
   drawFromSource,
@@ -30,23 +32,18 @@ const WARNING_KEYS: readonly MessageKey[] = [
 ]
 
 const mountedRoots = new WeakSet<HTMLElement>()
-const STORAGE_KEY = 'tron-lottery:stats'
-const BASIS_KEY = 'tron-lottery:posterior-basis'
+const STORAGE_KEY = storageKeys.lotteryStats
+const BASIS_KEY = storageKeys.lotteryBasis
 
 /** Whether the streak is counted in checks or in addresses. Survives reloads. */
 function loadBasis(): PosteriorBasis {
-  if (typeof localStorage === 'undefined') return 'checks'
-  const stored = localStorage.getItem(BASIS_KEY)
+  const stored = readValue(BASIS_KEY)
   return POSTERIOR_BASISES.find((basis) => basis === stored) ?? 'checks'
 }
 
 function saveBasis(basis: PosteriorBasis) {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(BASIS_KEY, basis)
-  } catch {
-    // A blocked storage must never stop the toggle from working for this session.
-  }
+  // A store that refuses the write must never stop the toggle from working.
+  writeValue(BASIS_KEY, basis)
 }
 
 type Stats = {
@@ -60,9 +57,8 @@ type Stats = {
 const emptyStats = (): Stats => ({ draws: 0, addresses: 0, wins: 0, checks: 0, history: [] })
 
 function loadStats(): Stats {
-  if (typeof localStorage === 'undefined') return emptyStats()
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Stats>
+    const stored = JSON.parse(readValue(STORAGE_KEY) ?? '{}') as Partial<Stats>
     const rows = Array.isArray(stored.history) ? stored.history : []
     return {
       draws: Number(stored.draws) || 0,
@@ -78,12 +74,8 @@ function loadStats(): Stats {
 }
 
 function saveStats(stats: Stats) {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stats))
-  } catch {
-    // A full or blocked storage must never break the draw itself.
-  }
+  // A store that refuses the write must never break the draw itself.
+  writeValue(STORAGE_KEY, JSON.stringify(stats))
 }
 
 function el<T extends Element>(root: ParentNode | null | undefined, selector: string): T | null {
@@ -139,8 +131,8 @@ function init() {
   const dialogAmount = el<HTMLElement>(root, '.lottery-dialog-step[data-step="amount"]')
   const amountInput = el<HTMLInputElement>(root, '#lottery-win-amount')
 
-  let stats = loadStats()
-  let basis = loadBasis()
+  let stats = emptyStats()
+  let basis: PosteriorBasis = 'checks'
   let entries: LotteryEntry[] = []
   let currentSource = ''
   let revealSecrets = false
@@ -429,10 +421,15 @@ function init() {
     })
   })
 
-  applyBasis()
-  renderStats()
-  renderHistory()
   renderWarnings()
+  // The table is still opening at this point, so the first paint waits for it.
+  whenStorageReady(() => {
+    stats = loadStats()
+    basis = loadBasis()
+    applyBasis()
+    renderStats()
+    renderHistory()
+  })
 }
 
 document.addEventListener('astro:page-load', init)

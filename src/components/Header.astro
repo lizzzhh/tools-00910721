@@ -4,7 +4,7 @@ import { localeMeta, localePath, locales } from '../i18n/config'
 import { createTranslator } from '../i18n'
 
 interface Props {
-  activeNav: 'home' | 'tools' | 'favorites' | 'about'
+  activeNav: 'home' | 'tools' | 'favorites' | 'data' | 'about'
 }
 
 const { activeNav } = Astro.props
@@ -14,6 +14,7 @@ const current = localeMeta[locale]
 const homeHref = localePath(locale, '/')
 const toolsHref = localePath(locale, '/tools/')
 const favoritesHref = localePath(locale, '/favorites/')
+const dataHref = localePath(locale, '/data/')
 const aboutHref = localePath(locale, '/about/')
 const localeOptions = locales.map((candidate) => ({
   id: candidate,
@@ -35,6 +36,7 @@ const localeOptions = locales.map((candidate) => ({
       <a class:list={{ active: activeNav === 'home' }} href={homeHref}><Icon name="lucide:layout-dashboard" size={17} /><span>{t('nav.home')}</span></a>
       <a class:list={{ active: activeNav === 'tools' }} href={toolsHref}><Icon name="lucide:layout-grid" size={17} /><span>{t('nav.tools')}</span></a>
       <a class:list={{ active: activeNav === 'favorites' }} href={favoritesHref}><Icon name="lucide:star" size={17} /><span>{t('nav.favorites')}</span></a>
+      <a class:list={{ active: activeNav === 'data' }} href={dataHref}><Icon name="lucide:database" size={17} /><span>{t('nav.data')}</span></a>
       <a class:list={{ active: activeNav === 'about' }} href={aboutHref}><Icon name="lucide:info" size={17} /><span>{t('nav.about')}</span></a>
     </nav>
     <div class="nav-actions">

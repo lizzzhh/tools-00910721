@@ -1,7 +1,8 @@
 import { currentTranslator } from '../i18n/client'
+import { readValue, whenStorageReady, writeValue } from '../lib/storage'
+import { storageKeys } from '../lib/storage-schema'
 
-const toolSwitchScrollKey = 'code-space-tool-switch-scroll'
-const themeStorageKey = 'code-space-theme'
+const themeStorageKey = storageKeys.theme
 let sidebar: HTMLElement | null = null
 let backdrop: HTMLElement | null = null
 let menuButton: HTMLButtonElement | null = null
@@ -23,9 +24,16 @@ export function showToast(message: string) {
   toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 1800)
 }
 
+/**
+ * Switching tools is a client-side swap, so the page is never really left: the
+ * scroll position is handed over in memory rather than written anywhere, which
+ * also means it cannot outlive the tab it belongs to.
+ */
+let pendingScroll: { y: number; sidebarTop: number } | null = null
+
 function saveScrollToStorage() {
   const scrollElement = document.querySelector<HTMLElement>('.sidebar-scroll')
-  sessionStorage.setItem(toolSwitchScrollKey, JSON.stringify({ y: window.scrollY, sidebarTop: scrollElement?.scrollTop ?? 0 }))
+  pendingScroll = { y: window.scrollY, sidebarTop: scrollElement?.scrollTop ?? 0 }
 }
 
 function saveToolSwitchScroll(event: MouseEvent) {
@@ -34,20 +42,12 @@ function saveToolSwitchScroll(event: MouseEvent) {
 }
 
 function restoreToolSwitchScroll() {
-  let raw: string | null = null
-  try {
-    raw = sessionStorage.getItem(toolSwitchScrollKey)
-  } catch {}
-  if (!raw) return
-  try {
-    sessionStorage.removeItem(toolSwitchScrollKey)
-    const saved = JSON.parse(raw) as { y?: number; sidebarTop?: number }
-    const y = Number(saved.y)
-    if (Number.isFinite(y) && y > 0) window.scrollTo(0, y)
-    const scrollElement = document.querySelector<HTMLElement>('.sidebar-scroll')
-    const top = Number(saved.sidebarTop)
-    if (scrollElement && Number.isFinite(top)) scrollElement.scrollTop = top
-  } catch {}
+  const saved = pendingScroll
+  pendingScroll = null
+  if (!saved) return
+  if (saved.y > 0) window.scrollTo(0, saved.y)
+  const scrollElement = document.querySelector<HTMLElement>('.sidebar-scroll')
+  if (scrollElement && Number.isFinite(saved.sidebarTop)) scrollElement.scrollTop = saved.sidebarTop
 }
 
 function revealActiveTool() {
@@ -93,9 +93,7 @@ function isDarkMode() {
 }
 
 function writeStoredTheme(isDark: boolean) {
-  try {
-    localStorage.setItem(themeStorageKey, isDark ? 'dark' : 'light')
-  } catch {}
+  writeValue(themeStorageKey, isDark ? 'dark' : 'light')
 }
 
 /**
@@ -159,6 +157,20 @@ function initPage() {
   themeButton?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark')
     writeStoredTheme(isDark)
+    const t = currentTranslator()
+    themeButton?.setAttribute('aria-label', isDark ? t('theme.toLight') : t('theme.toDark'))
+  })
+
+  // The cookie is what the first paint reads, so it is normally right already.
+  // On the one visit that carries a theme over from the old store the cookie is
+  // not written until the table opens, and the stored choice is applied here so
+  // the page still ends up the way it was left.
+  whenStorageReady(() => {
+    const saved = readValue(themeStorageKey)
+    if (saved !== 'dark' && saved !== 'light') return
+    const isDark = saved === 'dark'
+    if (isDarkMode() === isDark) return
+    document.documentElement.classList.toggle('dark', isDark)
     const t = currentTranslator()
     themeButton?.setAttribute('aria-label', isDark ? t('theme.toLight') : t('theme.toDark'))
   })

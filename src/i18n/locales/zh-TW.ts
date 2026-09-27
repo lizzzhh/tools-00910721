@@ -15,6 +15,7 @@ const zhTW: Dictionary = {
     home: '首頁',
     tools: '工具中心',
     favorites: '我的收藏',
+    data: '資料',
     about: '關於',
     brandHome: '{site}首頁',
     openMenu: '開啟工具選單',
@@ -67,7 +68,12 @@ const zhTW: Dictionary = {
       draw: '抽取今日運勢',
       drawn: '今日已解鎖',
       idle: '等待今日簽到',
-      idleMessage: '每天可以抽取一次今日運勢。'
+      idleMessage: '每天可以抽取一次今日運勢。',
+      trend: {
+        label: '每日得分 · 近 {count} 天',
+        empty: '抽取今日運勢後，這裡會畫出每天的得分曲線',
+        peak: '最高 {value}'
+      }
     },
     usage: {
       eyebrow: 'LOCAL ACTIVITY',
@@ -80,7 +86,12 @@ const zhTW: Dictionary = {
       times: '{count} 次',
       unit: '次',
       empty: '還沒有使用記錄',
-      emptyHint: '使用工具後這裡會按次數顯示前五名'
+      emptyHint: '使用工具後這裡會按次數顯示前五名',
+      trend: {
+        label: '每日使用次數 · 近 {count} 天',
+        empty: '使用任一工具後，這裡會畫出每天的使用次數',
+        peak: '最高 {value} 次'
+      }
     },
     quick: { eyebrow: 'QUICK ACCESS', title: '快速開始' },
     activity: {
@@ -99,6 +110,34 @@ const zhTW: Dictionary = {
     inspired: { label: '靈感充沛', message: '適合清理 TODO，也許一次重構就能省下半天。' },
     focus: { label: '專注模式', message: '關掉通知，把最重要的任務放在第一屏。' },
     smooth: { label: '超級順滑', message: '今天的手感和思路都很好，適合解決歷史遺留問題。' }
+  },
+  data: {
+    eyebrow: 'YOUR DATA',
+    title: '資料與備份',
+    body: '所有記憶都保存在這台裝置的瀏覽器裡，不會上傳伺服器。匯出一份備份，就能在換裝置或換瀏覽器時原樣帶過去。',
+    tableTitle: '已儲存的資料',
+    empty: '還沒有任何資料',
+    size: '{count} 項 · {size}',
+    export: '匯出備份',
+    import: '匯入備份',
+    cancel: '取消',
+    confirmClear: '確認清空',
+    clear: '清空全部',
+    clearConfirm: '確定要清空全部本機資料嗎？此操作無法復原。',
+    imported: '已匯入 {count} 項資料',
+    exported: '備份已下載',
+    cleared: '本機資料已清空',
+    failed: '這個檔案不是本站的備份',
+    keyUsage: '使用次數',
+    keyFavorites: '我的收藏',
+    keyScratchpad: '草稿紙',
+    keyFortune: '今日運勢',
+    keyLotteryStats: '抽獎統計',
+    keyLotteryBasis: '推斷方式',
+    keyTheme: '明暗主題',
+    keyLocale: '介面語言',
+    open: '開啟資料頁',
+    footer: '匯出的檔案包含全部鍵值，請妥善保管。'
   },
   about: {
     eyebrow: 'ABOUT TRANSPARENT TOOLBOX',

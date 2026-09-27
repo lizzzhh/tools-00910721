@@ -13,6 +13,7 @@ const zhCN = {
     home: '首页',
     tools: '工具中心',
     favorites: '我的收藏',
+    data: '数据',
     about: '关于',
     brandHome: '{site}首页',
     openMenu: '打开工具菜单',
@@ -65,7 +66,12 @@ const zhCN = {
       draw: '抽取今日运势',
       drawn: '今日已解锁',
       idle: '等待今日签到',
-      idleMessage: '每天可以抽取一次今日运势。'
+      idleMessage: '每天可以抽取一次今日运势。',
+      trend: {
+        label: '每日得分 · 近 {count} 天',
+        empty: '抽取今日运势后，这里会画出每天的得分曲线',
+        peak: '最高 {value}'
+      }
     },
     usage: {
       eyebrow: 'LOCAL ACTIVITY',
@@ -78,7 +84,12 @@ const zhCN = {
       times: '{count} 次',
       unit: '次',
       empty: '还没有使用记录',
-      emptyHint: '使用工具后这里会按次数显示前五名'
+      emptyHint: '使用工具后这里会按次数显示前五名',
+      trend: {
+        label: '每日使用次数 · 近 {count} 天',
+        empty: '使用任意工具后，这里会画出每天的使用次数',
+        peak: '最高 {value} 次'
+      }
     },
     quick: { eyebrow: 'QUICK ACCESS', title: '快速开始' },
     activity: {
@@ -97,6 +108,34 @@ const zhCN = {
     inspired: { label: '灵感在线', message: '适合清理 TODO，也许一次重构就能省下半天。' },
     focus: { label: '专注模式', message: '关掉通知，把最重要的任务放在第一屏。' },
     smooth: { label: '超级顺滑', message: '今天的手感和思路都很好，适合解决历史遗留问题。' }
+  },
+  data: {
+    eyebrow: 'YOUR DATA',
+    title: '数据与备份',
+    body: '所有记忆都保存在这台设备的浏览器里，不上传服务器。导出一份备份，就能在换设备或换浏览器时把它们原样带过去。',
+    tableTitle: '已保存的数据',
+    empty: '还没有任何数据',
+    size: '{count} 项 · {size}',
+    export: '导出备份',
+    import: '导入备份',
+    cancel: '取消',
+    confirmClear: '确认清空',
+    clear: '清空全部',
+    clearConfirm: '确定要清空全部本地数据吗？此操作无法撤销。',
+    imported: '已导入 {count} 项数据',
+    exported: '备份已下载',
+    cleared: '本地数据已清空',
+    failed: '这个文件不是本站的备份',
+    keyUsage: '使用次数',
+    keyFavorites: '我的收藏',
+    keyScratchpad: '草稿纸',
+    keyFortune: '今日运势',
+    keyLotteryStats: '抽奖统计',
+    keyLotteryBasis: '推断方式',
+    keyTheme: '明暗主题',
+    keyLocale: '界面语言',
+    open: '打开数据页',
+    footer: '导出的文件包含全部键值，请妥善保管。'
   },
   about: {
     eyebrow: 'ABOUT TRANSPARENT TOOLBOX',

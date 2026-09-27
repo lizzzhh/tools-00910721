@@ -1,4 +1,5 @@
 import { translateNow } from '../i18n/client'
+import { readValue, storage, viewStorageKey, whenStorageReady, writeValue } from '../lib/storage'
 import {
   clampBox,
   clampDragBox,
@@ -13,7 +14,6 @@ import {
   scratchpadDockReserve,
   scratchpadMaxNotes,
   scratchpadStorageKey,
-  scratchpadViewKey,
   serializeScratchpadState,
   serializeScratchpadView,
   viewOf,
@@ -111,39 +111,22 @@ function nextId(): string {
   return `note-${Date.now().toString(36)}-${noteSeq.toString(36)}`
 }
 
-function readRaw(): string | null {
-  if (typeof localStorage === 'undefined') return null
-  try {
-    return localStorage.getItem(scratchpadStorageKey)
-  } catch {
-    return null
-  }
+/** The words, which every tab shares. */
+function readShared(): string | undefined {
+  return readValue(scratchpadStorageKey)
 }
 
 /**
- * Where this tab left its sheets. Session storage keeps it to this window: a
- * second tab gets the words without inheriting the first one's arrangement.
+ * Where this tab left its sheets. The record is keyed by the tab, so a second
+ * tab gets the words without inheriting the first one's arrangement.
  */
 function readViews() {
-  if (typeof sessionStorage === 'undefined') return {}
-  try {
-    return parseScratchpadView(sessionStorage.getItem(scratchpadViewKey))
-  } catch {
-    return {}
-  }
+  return parseScratchpadView(readValue(viewStorageKey()))
 }
 
 function writeState() {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(scratchpadStorageKey, serializeScratchpadState({ notes: contentOf(notes) }))
-    }
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(scratchpadViewKey, serializeScratchpadView({ views: viewOf(notes) }))
-    }
-  } catch {
-    // A blocked or full store must never interrupt the notes themselves.
-  }
+  writeValue(scratchpadStorageKey, serializeScratchpadState({ notes: contentOf(notes) }))
+  writeValue(viewStorageKey(), serializeScratchpadView({ views: viewOf(notes) }))
 }
 
 function scheduleSave() {
@@ -700,7 +683,7 @@ function onKeyDown(event: KeyboardEvent) {
 /* ------------------------------------------------------------------ storage */
 
 function restore() {
-  const content = parseScratchpadState(readRaw())?.notes ?? []
+  const content = parseScratchpadState(readShared())?.notes ?? []
   notes = joinStores(content, readViews(), viewport(), dockTop())
   stateLoaded = true
   stackSignature = ''
@@ -715,7 +698,7 @@ function restore() {
  * while this tab is the one editing it, caret kept in place, so a sheet another
  * tab threw away does not come back to life from the next autosave here.
  */
-function adoptStorage(raw: string | null) {
+function adoptStorage(raw: string | null | undefined) {
   const stored = parseScratchpadState(raw)
   if (!stored) return
   const active = document.activeElement
@@ -794,13 +777,18 @@ function mount() {
     })
     document.addEventListener('astro:before-swap', onSwap)
     document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('storage', (event) => {
-      if (event.key === scratchpadStorageKey) adoptStorage(event.newValue)
+    // Another tab wrote the shared words; only those are adopted.
+    storage().subscribe((key) => {
+      if (key === scratchpadStorageKey) adoptStorage(readValue(scratchpadStorageKey))
     })
   }
 
-  if (stateLoaded) syncPanels(true)
-  else restore()
+  // Opening the table takes a moment; restoring before it has read the database
+  // would start from an empty drawer and then have to be corrected.
+  whenStorageReady(() => {
+    if (stateLoaded) syncPanels(true)
+    else restore()
+  })
 }
 
 document.addEventListener('astro:page-load', mount)

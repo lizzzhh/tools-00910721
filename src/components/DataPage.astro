@@ -1,0 +1,103 @@
+---
+import { Icon } from 'astro-icon/components'
+import { createTranslator } from '../i18n'
+import type { MessageKey } from '../i18n'
+import { storageKeys } from '../lib/storage-schema'
+
+// The names a row shows are the only part that has to exist at build time; the
+// values themselves are read from the table in the browser, because that is the
+// only place they live.
+const rows: { key: string; label: MessageKey }[] = [
+  { key: storageKeys.usage, label: 'data.keyUsage' },
+  { key: storageKeys.favorites, label: 'data.keyFavorites' },
+  { key: storageKeys.scratchpad, label: 'data.keyScratchpad' },
+  { key: storageKeys.fortune, label: 'data.keyFortune' },
+  { key: storageKeys.lotteryStats, label: 'data.keyLotteryStats' },
+  { key: storageKeys.lotteryBasis, label: 'data.keyLotteryBasis' },
+  { key: storageKeys.theme, label: 'data.keyTheme' },
+  { key: storageKeys.locale, label: 'data.keyLocale' }
+]
+
+const t = createTranslator(Astro.locals.locale)
+---
+
+<section class="simple-page card-base is-wide" id="data-page" data-data-page>
+  <span class="eyebrow">{t('data.eyebrow')}</span>
+  <div class="simple-page-icon"><Icon name="lucide:database" size={30} /></div>
+  <h1>{t('data.title')}</h1>
+  <p>{t('data.body')}</p>
+
+  <!--
+    Two rows rather than one line of three: the two safe actions belong
+    together, and the one that cannot be undone gets a row of its own so it is
+    never a click away from the others.
+  -->
+  <div class="data-actions">
+    <button class="primary-button" type="button" data-data-action="export">
+      <Icon name="lucide:download" size={18} />{t('data.export')}
+    </button>
+    <button class="secondary-button" type="button" data-data-action="import">
+      <Icon name="lucide:upload" size={18} />{t('data.import')}
+    </button>
+    <input type="file" accept="application/json,.json" data-data-file hidden />
+  </div>
+
+  <div class="data-danger">
+    <button class="secondary-button data-button-danger" type="button" data-data-action="clear">
+      <Icon name="lucide:trash-2" size={18} />{t('data.clear')}
+    </button>
+    <!--
+      The question takes the place of the button rather than appearing below it,
+      so the page does not move under the pointer that is about to answer it.
+    -->
+    <div class="data-confirm" data-data-confirm role="group" aria-label={t('data.clear')} hidden>
+      <span class="data-confirm-text"><Icon name="lucide:triangle-alert" size={16} />{t('data.clearConfirm')}</span>
+      <span class="data-confirm-choices">
+        <button class="secondary-button data-button-danger" type="button" data-data-confirm-yes>
+          {t('data.confirmClear')}
+        </button>
+        <button class="secondary-button" type="button" data-data-confirm-no>{t('data.cancel')}</button>
+      </span>
+    </div>
+  </div>
+  <p class="data-status" data-data-status role="status" aria-live="polite" hidden></p>
+
+  <div class="data-table">
+    <h2 class="data-table-title">{t('data.tableTitle')}</h2>
+    <p class="data-total" data-data-total></p>
+    <ul class="data-rows">
+      {rows.map((row) => (
+        <li class="data-row" data-data-key={row.key} hidden>
+          <div class="data-row-head">
+            <span class="data-row-name">{t(row.label)}</span>
+            <code class="data-row-key">{row.key}</code>
+            <span class="data-row-size" data-data-size></span>
+          </div>
+          <pre class="data-row-value" data-data-value tabindex="0"></pre>
+        </li>
+      ))}
+    </ul>
+    <p class="data-empty" data-data-empty>{t('data.empty')}</p>
+  </div>
+  <p class="data-footnote">{t('data.footer')}</p>
+
+  <!--
+    A key the build did not know about, such as a per-tab layout record, is
+    cloned from here. The value is written as text, so nothing inside the table
+    can become markup, and nothing in a row is editable.
+  -->
+  <template data-data-row-template>
+    <li class="data-row" hidden>
+      <div class="data-row-head">
+        <span class="data-row-name"></span>
+        <code class="data-row-key"></code>
+        <span class="data-row-size" data-data-size></span>
+      </div>
+      <pre class="data-row-value" data-data-value tabindex="0"></pre>
+    </li>
+  </template>
+</section>
+
+<script>
+  import '../scripts/data-page'
+</script>

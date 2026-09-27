@@ -7,14 +7,13 @@
  *
  * What is written is split in two. What a sheet says travels between tabs, so
  * the same note follows you from one page to the next. Where it sits and whether
- * it is folded belong to the window looking at it, so those stay in session
- * storage and a second tab opens the same notes folded in the corner.
+ * it is folded belong to the window looking at it, so those are keyed by tab and
+ * a second tab opens the same notes folded in the corner.
  */
 
-export const scratchpadStorageKey = 'code-space-scratchpad'
+import { storageKeys } from './storage-schema.ts'
 
-/** Per-tab companion to the shared store; session storage, never local. */
-export const scratchpadViewKey = 'code-space-scratchpad-view'
+export const scratchpadStorageKey = storageKeys.scratchpad
 
 /** Distance kept between the note and the viewport edges that must stay usable. */
 export const scratchpadViewportMargin = 12

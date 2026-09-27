@@ -13,7 +13,7 @@ interface Props {
   title: string
   description: string
   activeTool?: string
-  activeNav?: 'home' | 'tools' | 'favorites' | 'about'
+  activeNav?: 'home' | 'tools' | 'favorites' | 'data' | 'about'
 }
 
 const { title, description, activeTool = '', activeNav = 'tools' } = Astro.props
@@ -57,6 +57,28 @@ const isDefaultLocale = locale === defaultLocale
     {alternates.map((alternate) => <link rel="alternate" hreflang={alternate.hreflang} href={alternate.href} />)}
     <link rel="alternate" hreflang="x-default" href={alternates.find((item) => item.locale === 'zh-CN')?.href ?? canonical} />
     <title>{title}</title>
+    <script is:inline>
+      // The theme and the language are read from a cookie rather than from
+      // IndexedDB: an async store cannot answer before the first paint, and a
+      // wrong guess here is a visible flash. The cookie is a mirror, never the
+      // source of truth — the storage table rewrites it on boot. Defined once
+      // and read by both scripts that follow.
+      window.readMirror = function (key) {
+        var name = 'cs-' + key + '='
+        var parts = document.cookie ? document.cookie.split(';') : []
+        for (var i = 0; i < parts.length; i += 1) {
+          var part = parts[i].trim()
+          if (part.indexOf(name) === 0) {
+            try {
+              return decodeURIComponent(part.slice(name.length))
+            } catch (e) {
+              return part.slice(name.length)
+            }
+          }
+        }
+        return null
+      }
+    </script>
     <script is:inline define:vars={{ locale, alternates, isDefaultLocale }}>
       // Runs before paint so a first-time visitor with a non-Chinese browser
       // language never sees a flash of the wrong language. An explicit choice in
@@ -76,7 +98,7 @@ const isDefaultLocale = locale === defaultLocale
               return null
             }
           }
-          var stored = localStorage.getItem('code-space-locale')
+          var stored = readMirror('code-space-locale')
           if (stored) {
             if (stored !== locale) {
               var target = alternates.filter(function (a) { return a.locale === stored })[0]
@@ -125,8 +147,12 @@ const isDefaultLocale = locale === defaultLocale
       } catch (e) {}
     </script>
     <script is:inline>
+      // The theme and the language are read from a cookie rather than from
+      // IndexedDB: an async store cannot answer before the first paint, and a
+      // wrong guess here is a visible flash. The cookie is a mirror, never the
+      // source of truth — the storage table rewrites it on boot.
       try {
-        const saved = localStorage.getItem('code-space-theme')
+        const saved = readMirror('code-space-theme')
         const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
         document.documentElement.classList.toggle('dark', dark)
       } catch {}

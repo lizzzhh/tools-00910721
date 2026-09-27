@@ -1,3 +1,5 @@
+import { storageKeys } from '../lib/storage-schema.ts'
+
 export const locales = ['zh-CN', 'en', 'ja', 'zh-TW'] as const
 
 export type Locale = (typeof locales)[number]
@@ -20,7 +22,7 @@ export const localeMeta: Record<Locale, LocaleMeta> = {
   'zh-TW': { label: '繁體中文', htmlLang: 'zh-Hant', prefix: 'zh-tw' }
 }
 
-export const localeStorageKey = 'code-space-locale'
+export const localeStorageKey = storageKeys.locale
 
 /** Locales that get a URL prefix; the default locale stays unprefixed at the root. */
 export const prefixedLocales: Locale[] = locales.filter((locale) => localeMeta[locale].prefix !== '')

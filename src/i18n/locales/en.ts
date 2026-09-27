@@ -15,6 +15,7 @@ const en: Dictionary = {
     home: 'Home',
     tools: 'Tools',
     favorites: 'Favorites',
+    data: 'Data',
     about: 'About',
     brandHome: '{site} home',
     openMenu: 'Open tools menu',
@@ -67,7 +68,12 @@ const en: Dictionary = {
       draw: "Draw today's fortune",
       drawn: "Drawn for today",
       idle: 'Not drawn yet',
-      idleMessage: 'You can draw your fortune once a day.'
+      idleMessage: 'You can draw your fortune once a day.',
+      trend: {
+        label: 'Score per day, last {count} days',
+        empty: "Draw today's fortune and every day's score lands on the line here",
+        peak: 'Peak {value}'
+      }
     },
     usage: {
       eyebrow: 'LOCAL ACTIVITY',
@@ -80,7 +86,12 @@ const en: Dictionary = {
       times: '{count} runs',
       unit: 'runs',
       empty: 'No usage yet',
-      emptyHint: 'Your five most used tools will show up here'
+      emptyHint: 'Your five most used tools will show up here',
+      trend: {
+        label: 'Runs per day, last {count} days',
+        empty: 'Use any tool and the runs of each day are drawn here',
+        peak: 'Peak {value} runs'
+      }
     },
     quick: { eyebrow: 'QUICK ACCESS', title: 'Quick start' },
     activity: {
@@ -99,6 +110,34 @@ const en: Dictionary = {
     inspired: { label: 'Inspired', message: 'Great time to clear your TODOs. One refactor might save you half a day.' },
     focus: { label: 'Focus mode', message: 'Mute the notifications and put the most important task front and center.' },
     smooth: { label: 'Super smooth', message: 'Your hands and your head are both in sync today. Perfect for legacy code.' }
+  },
+  data: {
+    eyebrow: 'YOUR DATA',
+    title: 'Data and backup',
+    body: 'Everything the site remembers lives in this browser and never reaches the server. Export a backup and it follows you to another device or browser, unchanged.',
+    tableTitle: 'Saved data',
+    empty: 'Nothing saved yet',
+    size: '{count} items · {size}',
+    export: 'Export backup',
+    import: 'Import backup',
+    cancel: 'Cancel',
+    confirmClear: 'Clear everything',
+    clear: 'Clear all',
+    clearConfirm: 'Clear everything stored on this device? This cannot be undone.',
+    imported: 'Imported {count} items',
+    exported: 'Backup downloaded',
+    cleared: 'Local data cleared',
+    failed: 'That file is not a backup from this site',
+    keyUsage: 'Times used',
+    keyFavorites: 'Favorites',
+    keyScratchpad: 'Scratchpad',
+    keyFortune: "Today's fortune",
+    keyLotteryStats: 'Lottery results',
+    keyLotteryBasis: 'Inference method',
+    keyTheme: 'Light and dark theme',
+    keyLocale: 'Interface language',
+    open: 'Open the data page',
+    footer: 'The export contains every key, so keep the file somewhere safe.'
   },
   about: {
     eyebrow: 'ABOUT TRANSPARENT TOOLBOX',

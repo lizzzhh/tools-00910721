@@ -1,4 +1,5 @@
 import { localeStorageKey } from '../i18n/config'
+import { writeValue } from '../lib/storage'
 
 const mounted = new WeakSet<HTMLElement>()
 
@@ -31,9 +32,7 @@ function initLocaleSwitcher() {
       if (next) {
         // Persist before navigating so the inline detector in <head> keeps the
         // choice instead of second-guessing it from Accept-Language.
-        try {
-          localStorage.setItem(localeStorageKey, next)
-        } catch {}
+        writeValue(localeStorageKey, next)
         document.documentElement.lang = option.getAttribute('lang') ?? document.documentElement.lang
         document.documentElement.dataset.locale = next
       }

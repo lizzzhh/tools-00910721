@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import DataPage from '../../components/DataPage.astro'
+import { localeMeta, prefixedLocales } from '../../i18n/config'
+import { createTranslator } from '../../i18n'
+
+export function getStaticPaths() {
+  // the route param is the URL prefix (e.g. zh-tw), not the locale id
+  return prefixedLocales.map((locale) => ({ params: { locale: localeMeta[locale].prefix } }))
+}
+
+const t = createTranslator(Astro.locals.locale)
+---
+
+<BaseLayout title={`${t('data.title')} · ${t('meta.siteName')}`} description={t('data.body')} activeNav="data">
+  <DataPage />
+</BaseLayout>
