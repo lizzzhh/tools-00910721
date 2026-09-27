@@ -348,7 +348,7 @@ const ja: Dictionary = {
         'tabLocked': '別のタブですでにシミュレーションを開いています。1 つの口座を同時に操作できるのは 1 タブだけなので、そのタブを閉じてこのページを再読み込みしてください。',
         'wireTransferTitle': '送金での入金',
         'ok': '閉じる',
-        'wireTransfer': '入金するには {amount} を USDT で {address} へ送金してください',
+        'wireTransfer': '入金するには {amount} を USDT で {address} へ送金してください（冗談半分です）',
         'refused.stopLossPassed': 'その損切りは現在の価格以上なので、市場はすでにその価格を通り過ぎています。現在値より下を指定してください。',
         'refused.takeProfitPassed': 'その利確りは現在の価格以下なので、市場はすでにその価格を通り過ぎています。現在値より上を指定してください。',
         'refused.stopLossSide': '損切りは、建値より下（買い）、上（売り）に置いてください。',

@@ -347,7 +347,7 @@ const zhCN = {
         'refused.position': '该持仓已经不存在。',
         'wireTransferTitle': '转账充值',
         'ok': '好的',
-        'wireTransfer': '请将您想充值的 {amount} USD 使用 USDT 转至 {address}',
+        'wireTransfer': '请将您想充值的 {amount} USD 使用 USDT 转至 {address}（开玩笑的）',
         'tabLocked': '模拟交易已经在另一个标签页打开。一个账户同一时间只能由一个标签页操作，请关掉那个标签页后刷新本页。',
         'refused.stopLossPassed': '止损价不低于现价，市场已经走过了，请改到现价之下。',
         'refused.takeProfitPassed': '止盈价不高于现价，市场已经走过了，请改到现价之上。',

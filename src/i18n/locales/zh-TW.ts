@@ -349,7 +349,7 @@ const zhTW: Dictionary = {
         'refused.position': '該持倉已經不存在。',
         'wireTransferTitle': '轉帳充值',
         'ok': '好的',
-        'wireTransfer': '請將您想充值的 {amount} USD 使用 USDT 轉至 {address}',
+        'wireTransfer': '請將您想充值的 {amount} USD 使用 USDT 轉至 {address}（開玩笑的）',
         'tabLocked': '模擬交易已經在另一個分頁開啟。一個帳戶同一時間只能由一個分頁操作，請關掉那個分頁後重新整理本頁。',
         'refused.stopLossPassed': '停損價不高於現價，市場已經走過了，請改到現價之下。',
         'refused.takeProfitPassed': '停利價不高於現價，市場已經走過了，請改到現價之上。',
