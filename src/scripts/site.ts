@@ -1,6 +1,7 @@
 import { currentTranslator } from '../i18n/client'
 
 const toolSwitchScrollKey = 'code-space-tool-switch-scroll'
+const themeStorageKey = 'code-space-theme'
 let sidebar: HTMLElement | null = null
 let backdrop: HTMLElement | null = null
 let menuButton: HTMLButtonElement | null = null
@@ -87,6 +88,27 @@ function filterTools(value: string) {
   if (emptySearch) emptySearch.hidden = visibleCount > 0 || !keyword
 }
 
+function isDarkMode() {
+  return document.documentElement.classList.contains('dark')
+}
+
+function writeStoredTheme(isDark: boolean) {
+  try {
+    localStorage.setItem(themeStorageKey, isDark ? 'dark' : 'light')
+  } catch {}
+}
+
+/**
+ * Astro 的默认交换会用新文档的 `<html>` 属性整体覆盖当前属性，`<head>` 里的
+ * 主题初始化脚本又只执行一次，因此必须在交换前把 `dark` 标记到新文档上，
+ * 否则切换工具或语言后夜间模式会退回浅色。
+ */
+function carryThemeIntoSwap(event: Event) {
+  const newDocument = (event as Event & { newDocument?: Document }).newDocument
+  if (!newDocument) return
+  newDocument.documentElement.classList.toggle('dark', isDarkMode())
+}
+
 function attachPersistentListeners() {
   if (persistentAttached) return
   persistentAttached = true
@@ -105,6 +127,7 @@ function attachPersistentListeners() {
     navigatedViaSwap = true
     saveScrollToStorage()
   })
+  document.addEventListener('astro:before-swap', carryThemeIntoSwap)
   document.addEventListener('astro:after-swap', restoreToolSwitchScroll)
 }
 
@@ -135,7 +158,7 @@ function initPage() {
   })
   themeButton?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark')
-    localStorage.setItem('code-space-theme', isDark ? 'dark' : 'light')
+    writeStoredTheme(isDark)
     const t = currentTranslator()
     themeButton?.setAttribute('aria-label', isDark ? t('theme.toLight') : t('theme.toDark'))
   })
