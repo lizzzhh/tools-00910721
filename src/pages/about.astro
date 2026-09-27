@@ -6,6 +6,8 @@ import { localePath } from '../i18n/config'
 
 const t = createTranslator(Astro.locals.locale)
 const hashHref = localePath(Astro.locals.locale, '/tools/hash/')
+/** The same page with Zen mode switched on, so the example is self-demonstrating. */
+const zenHref = `${Astro.url.pathname}?zen`
 ---
 
 <BaseLayout title={`${t('about.title', { site: t('meta.siteName') })}`} description={t('meta.description')} activeNav="about">
@@ -15,5 +17,18 @@ const hashHref = localePath(Astro.locals.locale, '/tools/hash/')
     <h1>{t('about.title', { site: t('meta.siteName') })}</h1>
     <p>{t('about.body')}</p>
     <a class="primary-button" href={hashHref}>{t('about.cta')}<Icon name="lucide:arrow-right" size={18} /></a>
+  </section>
+
+  <section class="simple-page card-base about-zen">
+    <span class="eyebrow">{t('zen.eyebrow')}</span>
+    <div class="simple-page-icon"><Icon name="lucide:coffee" size={30} /></div>
+    <h2>{t('zen.title')}</h2>
+    <p>{t('zen.intro')}</p>
+    <ul class="about-zen-list">
+      <li><Icon name="lucide:check" size={15} />{t('zen.pointEnable')}</li>
+      <li><Icon name="lucide:check" size={15} />{t('zen.pointHide')}</li>
+      <li><Icon name="lucide:check" size={15} />{t('zen.pointExit')}</li>
+    </ul>
+    <a class="primary-button" href={zenHref}>{t('zen.cta')}<Icon name="lucide:arrow-right" size={18} /></a>
   </section>
 </BaseLayout>

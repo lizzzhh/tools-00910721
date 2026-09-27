@@ -2,6 +2,7 @@
 import Header from '../components/Header.astro'
 import Sidebar from '../components/Sidebar.astro'
 import Footer from '../components/Footer.astro'
+import { Icon } from 'astro-icon/components'
 import { ClientRouter } from 'astro:transitions'
 import { localeMeta, localePath, locales } from '../i18n/config'
 import { createTranslator } from '../i18n'
@@ -24,6 +25,12 @@ const siteName = t('meta.siteName')
  * page in that language. Search engines need the reciprocal links to treat the
  * variants as translations of one document rather than duplicates.
  */
+/**
+ * Zen mode is chosen by the query string, but every page here is prerendered, so
+ * `Astro.url` cannot see it at runtime. The pathname is still known at build
+ * time, which is what the exit link needs: the same page without the parameter.
+ */
+const exitHref = Astro.url.pathname
 const canonicalPath = Astro.url.pathname
 const canonical = new URL(canonicalPath, Astro.site ?? Astro.url.origin).href
 const alternates = locales.map((candidate) => ({
@@ -80,6 +87,18 @@ const alternates = locales.map((candidate) => ({
         } catch (e) {}
       })()
     </script>
+    <script is:inline data-astro-rerun>
+      // Applied before the first paint so a Zen page never flashes the toolbox
+      // on its way to hiding it. `data-astro-rerun` is required because the
+      // client router swaps pages without re-running inline scripts, which
+      // would leave both entering and leaving Zen mode broken. Toggling rather
+      // than adding is what makes the exit link work: it navigates with the
+      // parameter removed, and that navigation is a swap too.
+      try {
+        var zen = new URLSearchParams(location.search).has('zen')
+        document.documentElement.classList.toggle('zen-mode', zen)
+      } catch (e) {}
+    </script>
     <script is:inline>
       try {
         const saved = localStorage.getItem('code-space-theme')
@@ -90,6 +109,25 @@ const alternates = locales.map((candidate) => ({
     <ClientRouter />
   </head>
   <body>
+    <div class="zen-bar" id="zen-bar">
+      <a class="zen-exit" id="zen-exit" href={exitHref} title={t('zen.exitLabel')}>
+        <span class="brand-mark"><Icon name="lucide:command" size={15} /></span>
+        <span class="zen-exit-name">{siteName}</span>
+      </a>
+      <span class="zen-badge"><Icon name="lucide:coffee" size={13} />{t('zen.badge')}</span>
+      <details class="zen-info">
+        <summary title={t('zen.infoLabel')} aria-label={t('zen.infoLabel')}><Icon name="lucide:info" size={14} /></summary>
+        <div class="zen-info-panel">
+          <strong>{t('zen.title')}</strong>
+          <p>{t('zen.summary')}</p>
+          <ul>
+            <li>{t('zen.pointEnable')}</li>
+            <li>{t('zen.pointHide')}</li>
+            <li>{t('zen.pointExit')}</li>
+          </ul>
+        </div>
+      </details>
+    </div>
     <Header activeNav={activeNav} />
     <div class="mobile-backdrop" id="mobile-backdrop"></div>
     <div class="app-shell">
