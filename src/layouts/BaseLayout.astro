@@ -2,6 +2,7 @@
 import Header from '../components/Header.astro'
 import Sidebar from '../components/Sidebar.astro'
 import Footer from '../components/Footer.astro'
+import Scratchpad from '../components/Scratchpad.astro'
 import { Icon } from 'astro-icon/components'
 import { ClientRouter } from 'astro:transitions'
 import { defaultLocale, localeMeta, localePath, locales } from '../i18n/config'
@@ -168,8 +169,9 @@ const isDefaultLocale = locale === defaultLocale
     <svg class="svg-sprite" aria-hidden="true">
       <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
       <symbol id="icon-hash" viewBox="0 0 24 24"><path d="M10 3 8 21M16 3l-2 18M4 9h16M3 15h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></symbol>
-      <symbol id="icon-trash-2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+      <symbol id="icon-trash-2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></symbol>
     </svg>
+    <Scratchpad />
     <script>
       import '../scripts/site'
     </script>

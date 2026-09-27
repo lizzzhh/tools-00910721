@@ -69,6 +69,7 @@
   --z-modal-backdrop: 1040;
   --z-popover: 1060;
   --z-toast: 1080;
+  --z-scratchpad: 1100;
   color-scheme: light;
 }
 
@@ -4027,7 +4028,8 @@ textarea:focus {
   .page-footer,
   .toast,
   .tool-card,
-  .info-grid {
+  .info-grid,
+  .scratchpad-layer {
     display: none !important;
   }
 
@@ -5080,4 +5082,395 @@ html.zen-mode .zen-bar {
   flex: 0 0 auto;
   margin-top: 0.3rem;
   color: var(--primary);
+}
+
+/* Scratchpad: translucent notes that live above every other layer. They are
+   pulled out of a tab in the lower-right corner, float over the toolbox while you
+   work, fold back into a stack above that tab, and are thrown away by dragging
+   one onto the band along the right edge. The layer spans the viewport but
+   ignores pointer events, so a note never blocks the page it sits on. */
+.scratchpad-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scratchpad);
+  pointer-events: none;
+}
+
+/* Every box in the layer is a flex container, and a class selector would beat the
+   `display: none` that the `hidden` attribute ships with. Without this a folded
+   sheet keeps swallowing clicks over the rectangle it used to occupy. */
+.scratchpad-layer [hidden] {
+  display: none;
+}
+
+.scratchpad {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  color: var(--deep-text);
+  background: var(--card-bg-transparent);
+  border: 1px solid var(--line-color);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(10px) saturate(120%);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translate3d(1.75rem, 0.5rem, 0) scale(0.97);
+  transition: opacity var(--duration-medium) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), border-color var(--duration-normal);
+}
+
+.scratchpad.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* Restoring a note, or placing it again after a view transition, must not read
+   as an animation: it is the same note, not a new one. */
+.scratchpad-layer.is-instant .scratchpad,
+.scratchpad.is-dragging,
+.scratchpad.is-resizing {
+  transition: border-color var(--duration-normal);
+}
+
+.scratchpad-head {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  height: 2.4rem;
+  padding: 0 var(--spacing-xs) 0 var(--spacing-md);
+  color: var(--content-meta);
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+  border-bottom: 1px solid var(--line-color);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.scratchpad.is-dragging .scratchpad-head {
+  cursor: grabbing;
+}
+
+.scratchpad-grip {
+  display: flex;
+  color: var(--meta-divider);
+}
+
+/* The title is an input so a sheet can be renamed where it sits. The shared
+   field treatment is undone here; only the weight of the old heading is kept. */
+.scratchpad-title {
+  width: 7.5rem;
+  max-width: 45%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.15rem 0.25rem;
+  color: var(--deep-text);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: text;
+  user-select: text;
+  transition: background-color var(--duration-normal), box-shadow var(--duration-normal);
+}
+
+.scratchpad-title:hover {
+  background: var(--btn-plain-bg-hover);
+}
+
+.scratchpad-title:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent);
+}
+
+.scratchpad-title::placeholder {
+  color: color-mix(in oklch, var(--content-meta) 60%, transparent);
+  font-weight: 400;
+}
+
+/* A drag in progress must not leave a text selection behind the note. */
+.scratchpad.is-dragging .scratchpad-title {
+  user-select: none;
+}
+
+.scratchpad-count {
+  display: flex;
+  gap: 0.15rem;
+  align-items: baseline;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+.scratchpad-action {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  place-items: center;
+  transition: color var(--duration-normal), background-color var(--duration-normal);
+}
+
+.scratchpad-action:hover {
+  color: var(--deep-text);
+  background: var(--btn-plain-bg-hover);
+}
+
+/* The font toggle only reads as on or off through its own state. */
+.scratchpad-action.is-on {
+  color: var(--primary);
+  background: var(--btn-plain-bg-hover);
+}
+
+/* The bin asks for a second click before it does anything, so the first one
+   lights it up instead of throwing the sheet away. */
+.scratchpad-action-danger:hover {
+  color: var(--warning);
+}
+
+.scratchpad-action-danger.is-primed {
+  color: var(--warning);
+  background: color-mix(in oklch, var(--warning) 16%, transparent);
+}
+
+.scratchpad-text {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: var(--spacing-md);
+  resize: none;
+  background: transparent;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.scratchpad:not(.is-mono) .scratchpad-text {
+  font-family: var(--font-sans);
+}
+
+.scratchpad-text:hover {
+  border-color: transparent;
+}
+
+.scratchpad-text:focus {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 40%, transparent);
+}
+
+.scratchpad-foot {
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
+
+.scratchpad-hint {
+  color: color-mix(in oklch, var(--content-meta) 70%, transparent);
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+
+/* Grab strips all round the note. They stay invisible, so the note keeps its
+   bare rectangle and the corners are no dots to look at. */
+.scratchpad-resize {
+  position: absolute;
+  touch-action: none;
+}
+
+/* The grab strips are invisible, so they can be wider than the visible corner
+   marks without changing the look: half of each one sits outside the note. */
+.scratchpad-resize[data-resize='n'],
+.scratchpad-resize[data-resize='s'] {
+  left: 0.7rem;
+  right: 0.7rem;
+  height: 0.625rem;
+  cursor: ns-resize;
+}
+
+.scratchpad-resize[data-resize='n'] {
+  top: -0.3125rem;
+}
+
+.scratchpad-resize[data-resize='s'] {
+  bottom: -0.3125rem;
+}
+
+.scratchpad-resize[data-resize='w'],
+.scratchpad-resize[data-resize='e'] {
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 0.625rem;
+  cursor: ew-resize;
+}
+
+.scratchpad-resize[data-resize='w'] {
+  left: -0.3125rem;
+}
+
+.scratchpad-resize[data-resize='e'] {
+  right: -0.3125rem;
+}
+
+.scratchpad-resize[data-resize='nw'],
+.scratchpad-resize[data-resize='ne'],
+.scratchpad-resize[data-resize='se'],
+.scratchpad-resize[data-resize='sw'] {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.scratchpad-resize[data-resize='nw'] {
+  top: -0.3rem;
+  left: -0.3rem;
+  cursor: nwse-resize;
+}
+
+.scratchpad-resize[data-resize='ne'] {
+  top: -0.3rem;
+  right: -0.3rem;
+  cursor: nesw-resize;
+}
+
+.scratchpad-resize[data-resize='se'] {
+  right: -0.3rem;
+  bottom: -0.3rem;
+  cursor: nwse-resize;
+}
+
+.scratchpad-resize[data-resize='sw'] {
+  bottom: -0.3rem;
+  left: -0.3rem;
+  cursor: nesw-resize;
+}
+
+/* A sheet on its way to the bin: it goes out of the way it came in, just
+   quicker. */
+.scratchpad.is-discarding {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+/* The pull tab. It sits clear of the toast corner so a confirmation never lands
+   on top of it, and a new note comes to rest 12px above it on the same edge.
+   Folded sheets stack upwards from here, newest first. */
+.scratchpad-dock {
+  position: absolute;
+  right: var(--spacing-md);
+  bottom: 5.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.scratchpad-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: flex-end;
+  max-height: min(50vh, 20rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-color) transparent;
+}
+
+.scratchpad-tab {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  max-width: 11rem;
+  height: 1.75rem;
+  padding: 0 var(--spacing-sm);
+  color: var(--content-meta);
+  background: var(--card-bg-transparent);
+  border: 1px solid var(--line-color);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  backdrop-filter: blur(10px) saturate(120%);
+  font-size: 0.7rem;
+  transition: color var(--duration-normal), border-color var(--duration-normal), transform var(--duration-normal);
+}
+
+.scratchpad-tab:hover {
+  color: var(--deep-text);
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--line-color));
+}
+
+.scratchpad-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scratchpad-tab-count {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+}
+
+.scratchpad-dock-button {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  height: 2.125rem;
+  padding: 0 var(--spacing-md);
+  color: var(--content-meta);
+  background: var(--card-bg-transparent);
+  border: 1px solid var(--line-color);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  backdrop-filter: blur(10px) saturate(120%);
+  font-size: 0.72rem;
+  transition: color var(--duration-normal), border-color var(--duration-normal), opacity var(--duration-medium);
+}
+
+.scratchpad-dock-button:hover {
+  color: var(--deep-text);
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--line-color));
+}
+
+.scratchpad-dock-button:disabled {
+  color: color-mix(in oklch, var(--content-meta) 60%, transparent);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .scratchpad-dock-text {
+    display: none;
+  }
+
+  .scratchpad-tab {
+    max-width: 8.5rem;
+  }
+
+  /* Fingers need a wider strip than a cursor does. */
+  .scratchpad-resize[data-resize='n'],
+  .scratchpad-resize[data-resize='s'] {
+    height: 0.875rem;
+  }
+
+  .scratchpad-resize[data-resize='n'] {
+    top: -0.4375rem;
+  }
+
+  .scratchpad-resize[data-resize='s'] {
+    bottom: -0.4375rem;
+  }
+
+  .scratchpad-resize[data-resize='w'],
+  .scratchpad-resize[data-resize='e'] {
+    width: 0.875rem;
+  }
+
+  .scratchpad-resize[data-resize='w'] {
+    left: -0.4375rem;
+  }
+
+  .scratchpad-resize[data-resize='e'] {
+    right: -0.4375rem;
+  }
 }

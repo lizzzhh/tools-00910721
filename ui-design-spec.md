@@ -360,6 +360,7 @@ All colors defined in **OKLCH** color space for perceptual uniformity.
   --z-popover: 1060;
   --z-tooltip: 1070;
   --z-toast: 1080;
+  --z-scratchpad: 1100;
 
   --z-navbar: 20;
   --z-banner: 10;

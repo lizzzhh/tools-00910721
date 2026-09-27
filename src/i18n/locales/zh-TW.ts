@@ -295,6 +295,23 @@ const zhTW: Dictionary = {
     'uuid-generator': { caseLabel: '大小寫', caseLower: '小寫', caseUpper: '大寫', countLabel: '產生數量', domainHeading: 'DCE 本機網域', domainLabel: '網域編號', formatBraces: '以大括號包覆', formatCompact: '無連字號', formatLabel: '輸出格式', formatStandard: '標準 8-4-4-4-12', idleStatus: '等待產生', listAria: '產生的 UUID 清單', listHint: '每行一個', listTitle: 'UUID 清單', nameLabel: '名稱', namePlaceholder: '例如 www.example.com', namespaceHeading: '命名空間與名稱', namespaceLabel: '命名空間', namespaceValueHint: '32 位十六進位字元', namespaceValueLabel: '命名空間值', noticeLead: 'v1、v2、v6、v7、v8 帶時間戳，v3、v5 由命名空間與名稱衍生，v4 完全隨機。若要查看某個 UUID 的版本與欄位，請前往', noticeLink: 'UUID 解析', noticeTail: '。', prefixLabel: '自訂前綴', prefixPlaceholder: '選填，例如 user_', resultLabel: '產生結果', runButton: '產生 UUID', statCount: '產生數量', statKind: '類型', statLength: '總字元', statVersion: '版本', subtitle: '批次產生 v1 至 v8 全部版本的唯一識別碼', versionLabel: '版本', versionsHint: '時間、名稱與隨機來源的差異', versionsTitle: '版本說明', status: { doneStatus: '已產生 {count} 個', waitingStatus: '等待產生' } },
     'json-format': { downloadButton: '下載 JSON', formatButton: '格式化', indent2: '2 個空格', indent4: '4 個空格', indentLabel: '縮排', indentTab: 'Tab', inputLabel: '輸入 JSON', minifyButton: '壓縮', notice: '所有解析與格式化均在本機瀏覽器完成，內容不會上傳到伺服器。', optArrayLineBreaks: '陣列逐項換行', optComments: '允許註解', optEscapeUnicode: '轉義 Unicode', optMissingColons: '允許缺少冒號', optMissingCommas: '允許缺少逗號', optRelaxed: '寬鬆解析', optSingleQuotes: '允許單引號', optSortKeys: '排序物件的鍵', optTrailingCommasIn: '允許輸入尾逗號', optTrailingCommasOut: '輸出尾逗號', optUndefined: '允許 undefined/NaN', optUnquotedKeys: '允許無引號的鍵', outputAria: '格式化後的 JSON 輸出', outputHeading: '輸出選項', outputTitle: '輸出 JSON', parseHeading: '解析容錯', quoteDouble: '雙引號', quoteLabel: '字串引號', quoteSingle: '單引號', runtime: { autoFixed: '已自動處理', autoFixedNotes: '已自動處理：{notes}', commentsRemoved: '移除了 {count} 筆註解', copied: '已複製 JSON 結果', copyUnsupported: '目前環境不支援自動複製，請手動選取內容', downloaded: 'JSON 檔案已準備下載', position: '第 {line} 行，第 {column} 欄：{message}', separator: '；', valid: 'JSON 有效', waiting: '等待處理' }, statArrays: '陣列', statDepth: '深度', statKeys: '物件的鍵', statSize: '大小', statType: '型別', statValues: '值的數量', subtitle: '格式化、壓縮與校驗 JSON 資料', errors: { arrayBadClosing: '陣列中出現錯誤的關閉符號', arrayHoleNotAllowed: '陣列中不允許空項目', arrayMissingBracket: '陣列缺少右方括號', arrayMissingComma: '陣列元素之間缺少逗號', arrayTrailingComma: '陣列不允許尾逗號', arrayUnrecoverable: '陣列結構無法還原', arrayValueMissing: '陣列元素缺少值', commentsNotAllowed: '嚴格 JSON 不允許註解', emptyInput: '請輸入 JSON 內容', incompleteContent: 'JSON 內容不完整', invalidEscapeCharacter: '字串包含無效的轉義字元', invalidNumber: '數字格式無效', invalidUnicodeEscape: '字串中的 Unicode 轉義無效', newlineInString: '字串不能直接包含換行', objectBadClosing: '物件中出現錯誤的關閉符號', objectKeyEquals: '物件的鍵使用等號，但未啟用修復', objectKeyMissingColon: '物件的鍵後缺少冒號', objectKeyMustBeString: '物件的鍵必須是字串', objectMissingBrace: '物件缺少右大括號', objectMissingComma: '物件屬性之間缺少逗號', objectTrailingComma: '物件不允許尾逗號', objectUnrecoverable: '物件結構無法還原', objectValueMissing: '物件屬性缺少值', parseFailed: 'JSON 解析失敗', singleQuotesNotAllowed: '嚴格 JSON 不允許單引號', trailingContent: 'JSON 根值後存在多餘內容', unescapedControlCharacter: '字串包含未轉義的控制字元', unrecognizedCharacter: '無法辨識的字元 {char}', unrecognizedValue: '無法辨識的值 {value}', unterminatedBlockComment: '區塊註解缺少結束標記', unterminatedString: '字串缺少結束引號' }, repairs: { arrayBracketAdded: '為陣列補上了右方括號', arrayCommaAdded: '為陣列元素補上了逗號', arrayHoleToNull: '將陣列空項目轉換為 null', closedBlockComment: '為未關閉的區塊註解補上了結束標記', closedString: '為未關閉的字串補上了結束引號', duplicateKey: '物件中的重複鍵 {key} 只保留最後一個值', finiteToNull: '將非有限數字轉換為 null', fixedUnicodeEscape: '修正了無效的 Unicode 轉義', ignoredCharacter: '略過無法辨識的字元', ignoredClosing: '略過多餘的關閉符號', ignoredObjectComma: '略過物件中的多餘逗號', ignoredObjectKey: '略過物件中無法辨識的鍵', ignoredRootComma: '略過根值後的多餘逗號', ignoredRootContent: '略過根值後的多餘內容', missingValueToNull: '將缺少的值轉換為 null', newlineToSpace: '將字串中的換行取代為空白', objectBraceAdded: '為物件補上了右大括號', objectColonAdded: '為物件的鍵補上了冒號', objectCommaAdded: '為物件屬性補上了逗號', objectMissingValueToNull: '將物件中缺少的值轉換為 null', removedArrayTrailingComma: '移除了陣列的尾逗號', removedEscapeCharacter: '移除了無法辨識的轉義字元', removedObjectTrailingComma: '移除了物件的尾逗號', replacedControlCharacter: '取代了字串中未轉義的控制字元', unrecognizedValueToNull: '將無法辨識的值 {value} 轉換為 null', valueToNull: '將 {value} 轉換為 null' }, placeholder: '{\\n  "name": "碼間",\\n  "enabled": true\\n}' },
   },
+  scratchpad: {
+    title: '草稿紙',
+    dock: '新草稿紙',
+    dockLabel: '拉出一張新草稿紙',
+    collapseLabel: '收進草稿紙堆',
+    clearLabel: '清空草稿紙',
+    monoLabel: '等寬字體',
+    titleAria: '草稿紙標題',
+    textAria: '草稿紙內容',
+    textPlaceholder: '隨手記點什麼…',
+    countUnit: '字',
+    hint: '拖動標題列移動，拖動邊緣可調整大小',
+    destroyLabel: '雙擊銷毀草稿紙',
+    discarded: '草稿紙已銷毀',
+    cleared: '草稿紙已清空',
+    limitLabel: '最多保留 {n} 張草稿紙'
+  },
   zen: {
     exitLabel: '結束 Zen 模式，返回一般模式',
     badge: 'Zen',

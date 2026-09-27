@@ -131,6 +131,7 @@ src/
 - hover 只允许改变颜色、背景、边框或透明度等轻量状态。
 - 动效必须服务于状态反馈，并遵守 `prefers-reduced-motion`。
 - 弹层、下拉列表和 Toast 使用 `--z-popover`、`--z-toast` 等层级变量。
+- 全局浮层（如草稿纸）使用 `--z-scratchpad`，它高于 Toast，切换页面后必须由 `astro:before-swap` 迁移到新文档，不能留下重复节点。
 - 任何 `hidden` 元素都必须使用全局 `[hidden] { display: none !important; }` 规则，避免被组件的 `display` 样式覆盖。
 - 进度条、加载条必须显式设置 `display`、`width` 和 `height`，不能依赖内容撑开尺寸。
 - 新增响应式规则时注意媒体查询作用域，避免基础样式误放进移动端媒体查询。
@@ -145,6 +146,8 @@ src/
 | `code-space-usage` | 工具使用统计 |
 | `code-space-daily-fortune` | 每日运势结果 |
 | `code-space-favorites` | 收藏工具列表 |
+| `code-space-scratchpad` | 草稿纸的标题、正文与字体（`localStorage`，跨标签页共享） |
+| `code-space-scratchpad-view` | 草稿纸的位置与折叠状态（`sessionStorage`，仅当前标签页） |
 
 读写 `localStorage` 时必须进行异常处理，存储不可用时不能阻塞页面功能。
 

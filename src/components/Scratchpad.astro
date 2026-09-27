@@ -1,0 +1,103 @@
+---
+import { Icon } from 'astro-icon/components'
+import { resizeHandles } from '../lib/scratchpad'
+import { createTranslator } from '../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+---
+
+<div class="scratchpad-layer" id="scratchpad-layer">
+  <div class="scratchpad-notes" data-scratchpad="notes"></div>
+
+  <div class="scratchpad-dock">
+    <div class="scratchpad-stack" data-scratchpad="stack" hidden></div>
+    <button
+      class="scratchpad-dock-button"
+      id="scratchpad-dock-button"
+      type="button"
+      title={t('scratchpad.dockLabel')}
+      aria-label={t('scratchpad.dockLabel')}
+    >
+      <Icon name="lucide:notebook-pen" size={15} />
+      <span class="scratchpad-dock-text">{t('scratchpad.dock')}</span>
+    </button>
+  </div>
+
+  <!--
+    One sheet of the stack, cloned per note by the script. Everything that
+    differs between notes is written by that script through data-scratchpad
+    hooks, so this markup only has to carry the strings and the shape.
+  -->
+  <template id="scratchpad-template">
+    <section class="scratchpad" data-scratchpad="panel" tabindex="-1" hidden>
+      <header class="scratchpad-head" data-scratchpad="head">
+        <span class="scratchpad-grip" aria-hidden="true"><Icon name="lucide:grip-vertical" size={14} /></span>
+        <input
+          class="scratchpad-title"
+          data-scratchpad="title"
+          type="text"
+          maxlength="60"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder={t('scratchpad.title')}
+          aria-label={t('scratchpad.titleAria')}
+        />
+        <span class="scratchpad-count"><b data-scratchpad="count">0</b>{t('scratchpad.countUnit')}</span>
+        <button
+          class="scratchpad-action"
+          data-scratchpad="mono"
+          type="button"
+          title={t('scratchpad.monoLabel')}
+          aria-label={t('scratchpad.monoLabel')}
+          aria-pressed="true"
+        >
+          <Icon name="lucide:type" size={14} />
+        </button>
+    <button
+      class="scratchpad-action"
+      data-scratchpad="clear"
+      type="button"
+      title={t('scratchpad.clearLabel')}
+      aria-label={t('scratchpad.clearLabel')}
+    >
+      <Icon name="lucide:eraser" size={14} />
+    </button>
+    <button
+      class="scratchpad-action scratchpad-action-danger"
+      data-scratchpad="destroy"
+      type="button"
+      title={t('scratchpad.destroyLabel')}
+      aria-label={t('scratchpad.destroyLabel')}
+    >
+      <Icon name="lucide:trash-2" size={14} />
+    </button>
+    <button
+      class="scratchpad-action"
+      data-scratchpad="fold"
+      type="button"
+      title={t('scratchpad.collapseLabel')}
+      aria-label={t('scratchpad.collapseLabel')}
+      aria-expanded="true"
+    >
+      <Icon name="lucide:chevrons-right" size={14} />
+    </button>
+      </header>
+      <textarea
+        class="scratchpad-text"
+        data-scratchpad="text"
+        spellcheck="false"
+        autocomplete="off"
+        aria-label={t('scratchpad.textAria')}
+        placeholder={t('scratchpad.textPlaceholder')}
+      ></textarea>
+      <footer class="scratchpad-foot">
+        <span class="scratchpad-hint">{t('scratchpad.hint')}</span>
+      </footer>
+      {resizeHandles.map((handle) => <span class="scratchpad-resize" data-resize={handle} aria-hidden="true"></span>)}
+    </section>
+  </template>
+</div>
+
+<script>
+  import '../scripts/scratchpad'
+</script>
