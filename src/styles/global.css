@@ -3577,12 +3577,15 @@ textarea:focus {
     height: 100vh;
     padding: var(--spacing-lg);
     border-right-color: var(--line-color);
-    box-shadow: var(--shadow-2xl);
+    /* 抽屉收起时只是被移到屏幕外，阴影仍会溢出到页面左缘露出一道灰边，
+       所以只在展开状态下投射阴影。 */
+    box-shadow: none;
     transform: translateX(-102%);
-    transition: transform var(--duration-slow) var(--ease-standard);
+    transition: transform var(--duration-slow) var(--ease-standard), box-shadow var(--duration-normal);
   }
 
   .sidebar.is-open {
+    box-shadow: var(--shadow-2xl);
     transform: translateX(0);
   }
 
