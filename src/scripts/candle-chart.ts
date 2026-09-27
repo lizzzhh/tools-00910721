@@ -20,6 +20,8 @@ import {
 import { CanvasRenderer } from 'echarts/renderers'
 import type { ComposeOption } from 'echarts/core'
 import { candleIndexAt, generateCandles, timeframeSeconds, type Candle, type Timeframe } from '../lib/candles'
+import { readValue, whenStorageReady, writeValue } from '../lib/storage'
+import { marketKeys } from '../lib/storage-schema'
 import { priceUnit, tradedAsset } from '../lib/units.ts'
 import { currentIntlLocale } from '../i18n/client'
 
@@ -59,7 +61,18 @@ type Zoom = { start: number; end: number }
  * because a position is a commitment — the entry and the liquidation price are
  * thresholds the reader watches, not numbers they go looking for.
  */
-export type ChartLevel = { value: number; label: string; kind: 'entry' | 'liquidation' | 'open' }
+/**
+ * One horizontal threshold on the chart.
+ *
+ * The label is deliberately short — a two or three letter mark rather than a word —
+ * because they sit in a chip on the chart itself, where a word would cover the
+ * bars the line is there to explain.
+ */
+export type ChartLevel = {
+  value: number
+  label: string
+  kind: 'entry' | 'liquidation' | 'open' | 'stopLoss' | 'takeProfit'
+}
 
 /**
  * A fill the reader made, placed on the bar it happened in. A record of trades is
@@ -204,13 +217,14 @@ function currentZoom(chart: echarts.ECharts | undefined, count: number): Zoom {
  * price tick cannot disturb a zoom or a drag.
  */
 /**
- * Room for the widest level label on the left. The y axis keeps the right margin,
- * so the thresholds a position carries are written in the left one, clear of the
- * candles: a label across a bar hides the one thing the line is there to explain.
+ * The strip the x axis labels keep on the left.
+ *
+ * There is no second margin for the level labels. One was kept for them, and it
+ * left a band of empty canvas down the left of every chart — a wide hole for three
+ * letters, in a panel that is already narrow. The labels are anchored just inside
+ * the plot instead, so they sit over the oldest bars rather than beside nothing.
  */
-function levelMarginFor(bars: Candle[]): number {
-  return priceMarginFor(bars) + 26
-}
+const leftMargin = 6
 
 /**
  * Which token means a gain on this chart. The panel can be set either way round,
@@ -225,7 +239,7 @@ function upDownFor(root: CandleRoot): { up: string; down: string } {
   }
 }
 
-function buildShell(root: CandleRoot, zoom: Zoom, priceMargin: number, levelMargin: number): CandleOption {
+function buildShell(root: CandleRoot, zoom: Zoom, priceMargin: number): CandleOption {
   const { up, down } = upDownFor(root)
   // `--content-text` is never defined by the theme, so it came back empty and the
   // chart fell back to ECharts' own dark grey for its axis pointer, tooltip and
@@ -263,8 +277,8 @@ function buildShell(root: CandleRoot, zoom: Zoom, priceMargin: number, levelMarg
     // percentage heights cannot know how tall that bar will be, so the grids are
     // given a floor in pixels instead and never reach down into it.
     grid: [
-      { left: levelMargin, right: priceMargin, top: 8, bottom: '36%', containLabel: false },
-      { left: levelMargin, right: priceMargin, top: '72%', bottom: zoomBar, containLabel: false }
+      { left: leftMargin, right: priceMargin, top: 8, bottom: '36%', containLabel: false },
+      { left: leftMargin, right: priceMargin, top: '72%', bottom: zoomBar, containLabel: false }
     ],
     xAxis: [
       { type: 'category', gridIndex: 0, boundaryGap: true, axisLine: { lineStyle: { color: divider } }, axisTick: { show: false }, axisLabel: { ...axisLabel, hideOverlap: true }, splitLine: { show: false } },
@@ -352,6 +366,7 @@ function buildLevels(bars: Candle[], levels: ChartLevels): MarkLineComponentOpti
   // shell does: an empty colour string draws no line at all.
   const text = tokenOr('--deep-text', '#1f2430')
   const warn = tokenOr('--warning', '#e2a03f')
+  const accent = tokenOr('--accent', '#3b6fd4')
   const last = bars[bars.length - 1]
   const data: Record<string, unknown>[] = []
 
@@ -387,16 +402,30 @@ function buildLevels(bars: Candle[], levels: ChartLevels): MarkLineComponentOpti
   for (const level of levels.levels) {
     if (!Number.isFinite(level.value)) continue
     const danger = level.kind === 'liquidation'
-    const colour = danger ? warn : level.kind === 'open' ? up : down
+    // A stop and a target are the two prices the reader chose, so they take the
+    // accent rather than a gain-or-loss colour: which of them is up and which is
+    // down depends on the side, and the label already says which is which.
+    const chosen = level.kind === 'stopLoss' || level.kind === 'takeProfit'
+    const colour = chosen ? accent : danger ? warn : level.kind === 'open' ? up : down
     data.push({
       yAxis: level.value,
-      lineStyle: { color: colour, width: 1, type: danger ? 'dashed' : 'dotted', opacity: danger ? 0.95 : 0.7 },
+      lineStyle: {
+        color: colour,
+        width: 1,
+        // Solid for the levels the reader set, dashed for the one the market set.
+        // They are told apart by weight rather than by colour, which is the cue
+        // that survives both a monochrome print and a colour-blind reader.
+        type: chosen ? 'solid' : danger ? 'dashed' : 'dotted',
+        opacity: danger ? 0.95 : 0.7
+      },
       label: {
         show: true,
-        // Left of the plot: the price axis keeps the right margin, so a position's
-        // thresholds are read down the free side rather than over the newest bars.
+        // Inside the left edge of the plot rather than beside it. The right margin
+        // belongs to the price axis, and the oldest bars are the ones a reader is
+        // least likely to be reading, so the chip overlaps them and nothing else.
         position: 'start',
-        distance: 5,
+        distance: 2,
+        align: 'left',
         verticalAlign: 'middle',
         formatter: `${level.label} ${numberFormat(currentIntlLocale(), { maximumFractionDigits: 2 }).format(level.value)}`,
         color: colour,
@@ -557,7 +586,7 @@ function paintAll(root: CandleRoot, plot: HTMLElement, mount: CandleMount) {
   const chart = chartIn(mount, plot)
   chart.resize()
   const zoom = currentZoom(mount.chart, mount.bars.length)
-  chart.setOption(buildShell(root, zoom, priceMarginFor(mount.bars), levelMarginFor(mount.bars)), {
+  chart.setOption(buildShell(root, zoom, priceMarginFor(mount.bars)), {
     notMerge: true
   })
   chart.setOption(buildData(root, mount.bars, mount.timeframe, mount.levels))
@@ -732,6 +761,20 @@ export function initCandleCharts(scope: ParentNode = document) {
     const element = root as CandleRoot
     const timeframe = (element.dataset.timeframe || '1d') as Timeframe
     if (!(timeframe in timeframeSeconds)) continue
+    // The period is a setting and is remembered; where in the chart the reader is
+    // looking is not, because that is a place they left rather than a choice they
+    // made. So the remembered period is read once the table is ready, and a chart
+    // that has not been chosen yet is drawn at the page's own default meanwhile.
+    whenStorageReady(() => {
+      const remembered = readValue(marketKeys.timeframe)
+      if (!remembered || remembered === element.dataset.timeframe) return
+      if (!(remembered in timeframeSeconds)) return
+      element.dataset.timeframe = remembered
+      for (const button of element.querySelectorAll('[data-candle-timeframe]')) {
+        button.setAttribute('aria-pressed', String(button.getAttribute('data-candle-timeframe') === remembered))
+      }
+      render(element, remembered as Timeframe)
+    })
     render(element, timeframe)
 
     // The account asks for the levels to be drawn, and for a moment to be shown.
@@ -767,6 +810,7 @@ export function initCandleCharts(scope: ParentNode = document) {
           other.setAttribute('aria-pressed', String(other === button))
         }
         element.dataset.timeframe = requested
+        writeValue(marketKeys.timeframe, requested)
         render(element, requested)
       })
     }

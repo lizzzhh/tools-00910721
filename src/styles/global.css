@@ -2351,9 +2351,83 @@ input[type='number']:focus::-webkit-outer-spin-button {
   font-size: 0.84rem;
 }
 
-.trade-field input[type='range'] {
+/* Sliders, wherever they appear.
+   The native control is a bare line with a small dot, and in a panel of square
+   fields it reads as an afterthought. So the track is a flat groove, the filled
+   part is the accent, and the thumb is a square block that grows a ring when it
+   is focused: every one of these is a keyboard-reachable control, and the ring is
+   the only thing that says so. */
+input[type='range'] {
   width: 100%;
+  margin: 0;
+  height: 1.1rem;
+  background: transparent;
   accent-color: var(--primary-strong);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 0;
+  background: var(--line-divider);
+}
+
+input[type='range']::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 0;
+  background: var(--line-divider);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  width: 0.7rem;
+  height: 0.9rem;
+  margin-top: -0.32rem;
+  border: 1px solid var(--primary-strong);
+  border-radius: 0;
+  background: var(--card-bg);
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 0.7rem;
+  height: 0.9rem;
+  border: 1px solid var(--primary-strong);
+  border-radius: 0;
+  background: var(--card-bg);
+  box-shadow: none;
+}
+
+input[type='range']:hover::-webkit-slider-thumb {
+  background: var(--primary-strong);
+}
+
+input[type='range']:hover::-moz-range-thumb {
+  background: var(--primary-strong);
+}
+
+/* The focus ring is drawn as an outline around the thumb's box rather than a
+   glow, so it is visible on the panel's own background and on the raised one. */
+input[type='range']:focus-visible {
+  outline: none;
+}
+
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+input[type='range']:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+input[type='range']:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .trade-leverage-value {
@@ -2429,6 +2503,9 @@ input[type='number']:focus::-webkit-outer-spin-button {
 .trade-chip,
 .trade-link {
   padding: 0.2rem var(--spacing-sm);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
   border: 1px solid var(--line-divider);
   border-radius: 999px;
   background: transparent;
@@ -2650,6 +2727,14 @@ input[type='number']:focus::-webkit-outer-spin-button {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
 }
 
+/* An order is one line of the book and it has more to say than a position does:
+   what it is for, what it will cost, and what it would leave behind. So each one
+   takes a row of its own rather than being squeezed into a column, which is also
+   what makes the numbers line up between orders. */
+.trade-table-rows {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .trade-card {
   display: flex;
   flex-direction: column;
@@ -2717,8 +2802,65 @@ input[type='number']:focus::-webkit-outer-spin-button {
   color: var(--warning);
 }
 
+/* What an order would leave behind, coloured by whether it is a gain, so the
+   number is read before the sign next to it is. */
+.trade-card-grid > div.is-up dd {
+  color: var(--success);
+}
+
+.trade-card-grid > div.is-down dd {
+  color: var(--danger);
+}
+
+/* The return an order is waiting for, written under the price it waits at, so the
+   two are read as one figure and its answer. It is the reason the order is there. */
+.trade-card-return {
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-style: normal;
+}
+
+/* An order with no target has no return to expect, and saying so is better than a
+   blank that reads as a number that failed to arrive. */
+.trade-card-return.is-dim {
+  color: var(--content-meta);
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+}
+
 .trade-card-time {
   font-size: 0.62rem !important;
+}
+
+/* The levels of a position, shown rather than typed: the button opens the same
+   dialog the ticket uses, so a stop is entered in one place only. */
+.trade-card-protection {
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  cursor: pointer;
+}
+
+.trade-card-protection:hover {
+  color: var(--deep-text);
+}
+
+.trade-card-protection b {
+  font-weight: 500;
+}
+
+/* A dialog with something to throw away as well as something to keep puts the
+   throw-away on the left, away from the button that commits the rest. */
+.trade-dialog-foot {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: space-between;
 }
 
 .trade-card-foot {
@@ -3796,7 +3938,6 @@ textarea:focus {
 .password-length-control input[type='range'] {
   min-width: 0;
   flex: 1;
-  accent-color: var(--primary);
 }
 
 .security-number-input {
@@ -6695,4 +6836,16 @@ html.zen-mode .zen-bar {
   .scratchpad-resize[data-resize='e'] {
     right: -0.4375rem;
   }
+}
+
+/* A tab that does not hold the lock draws nothing to trade and says why, rather than
+   drawing a ticket that would write an account another tab is also holding. */
+.trade-locked {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  color: var(--content-meta);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  margin: 0;
+  padding: 1.1rem 1.2rem;
 }

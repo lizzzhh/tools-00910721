@@ -15,6 +15,7 @@
  * it, so any row can be reproduced rather than merely believed.
  */
 import { defaultSeed, defaultStartPrice, generateCandles, marketEpoch, minuteExtremesBetween } from './candles.ts'
+import { marketKeys } from './storage-schema.ts'
 
 export type Liquidity = 'maker' | 'taker'
 
@@ -40,8 +41,15 @@ export const slippageRate = 0.0005
 export const slippedPrice = (price: number, side: Side): number =>
   price * (side === 'buy' ? 1 + slippageRate : 1 - slippageRate)
 export const maxLeverage = 400
-/** Smallest position the market will take, in units of the asset. */
-export const sizeStep = 0.001
+/**
+ * Smallest position the market will take, in units of the asset.
+ *
+ * A hundred-millionth of TMZB. This is the floor under the panel's size boxes, so
+ * it is set where they are rather than above them: a smaller step here would let
+ * a size through that the boxes could not express, and a larger one would reject
+ * a position the reader can plainly see themselves holding.
+ */
+export const sizeStep = 0.0000001
 /**
  * Maintenance margin, tiered by leverage: the share of a position's notional that
  * has to be left behind as equity for the position to survive.
@@ -75,6 +83,9 @@ export type MarginMode = 'cross' | 'isolated'
 /** `open` adds exposure, `close` takes it away again. */
 export type OrderPurpose = 'open' | 'close'
 
+/** What closed a position, when the market closed it rather than the reader. */
+export type ProtectionTrigger = 'stopLoss' | 'takeProfit' | 'liquidation'
+
 export type Position = {
   id: string
   side: Side
@@ -92,6 +103,10 @@ export type Position = {
   openedAt: number
   /** Fee paid to get in, kept on the position so closing can report the round trip. */
   fee: number
+  /** Price that closes this position out against the reader, or null for none. */
+  stopLoss: number | null
+  /** Price that banks the move, or null for none. */
+  takeProfit: number | null
 }
 
 export type Order = {
@@ -107,6 +122,9 @@ export type Order = {
   leverage: number
   marginMode: MarginMode
   placedAt: number
+  /** Protection asked for with the order, handed to the position it opens. */
+  stopLoss?: number | null
+  takeProfit?: number | null
 }
 
 /**
@@ -140,6 +158,8 @@ export type Trade = {
   balance: number
   /** Set when the fill was a forced close rather than a request. */
   liquidated?: boolean
+  /** Set when the market closed the position rather than the reader. */
+  trigger?: ProtectionTrigger
 }
 
 export type Deposit = {
@@ -221,12 +241,14 @@ export type OrderRequest = {
   price?: number
   leverage?: number
   marginMode?: MarginMode
+  stopLoss?: number | null
+  takeProfit?: number | null
 }
 
 export type Quote = {
   ok: boolean
   /** An i18n key when the order cannot be sent, which the panel turns into words. */
-  reason?: 'size' | 'price' | 'margin' | 'position'
+  reason?: 'size' | 'price' | 'margin' | 'position' | 'stopLossSide' | 'takeProfitSide'
   size: number
   price: number
   notional: number
@@ -424,17 +446,35 @@ export function maintenanceFor(size: number, price: number, rate: number): numbe
  * hedging one position with another pushes the other's liquidation price further
  * away rather than cancelling it out.
  */
+/**
+ * Where a position is liquidated when its own margin is all that stands behind it.
+ *
+ * This is the same arithmetic for any five numbers, so it is kept apart from the
+ * cross case, which has to look at the whole account. That separation is what lets
+ * a resting isolated order be shown the level it would be liquidated at, even
+ * though the position it would open does not exist yet.
+ */
+export function isolatedLiquidationFor(
+  size: number,
+  entry: number,
+  side: Side,
+  margin: number,
+  maintenance = maintenanceRateFor(10)
+): number | null {
+  if (!(size > 0)) return null
+  const price =
+    sideSign(side) > 0
+      ? (entry * size - margin) / (size * (1 - maintenance))
+      : (entry * size + margin) / (size * (1 + maintenance))
+  return price > 0 ? quote(price, 2) : null
+}
+
 export function liquidationPriceFor(position: Position, account: Account): number | null {
   const size = position.size
   if (position.marginMode === 'isolated') {
     const own = position.maintenanceRate ?? maintenanceRateFor(position.leverage)
     const margin = position.margin > 0 ? position.margin : marginFor(size, position.entry, position.leverage)
-    const direction = sideSign(position.side)
-    const price =
-      direction > 0
-        ? (position.entry * size - margin) / (size * (1 - own))
-        : (position.entry * size + margin) / (size * (1 + own))
-    return price > 0 ? quote(price, 2) : null
+    return isolatedLiquidationFor(size, position.entry, position.side, margin, own)
   }
 
   const cross = account.positions.filter((held) => held.marginMode === 'cross')
@@ -586,7 +626,12 @@ export function quoteOrder(account: Account, request: OrderRequest, price: numbe
     liquidation: null,
     liquidity: liquidityFor(request, price),
   }
-  if (!Number.isFinite(size) || size < sizeStep) return { ...empty, reason: 'size' }
+  // The floor is on opening, not on closing. A position is allowed to be as small
+  // as the smallest order, and a reader who holds one of those has to be able to
+  // halve it: refusing a close below the floor would leave them holding something
+  // they can neither add to nor take half of.
+  if (!Number.isFinite(size) || size <= 0) return { ...empty, reason: 'size' }
+  if (purpose === 'open' && size < sizeStep) return { ...empty, reason: 'size' }
   if (request.kind === 'limit' && (!Number.isFinite(request.price) || (request.price ?? 0) <= 0)) {
     return { ...empty, reason: 'price' }
   }
@@ -601,8 +646,8 @@ export function quoteOrder(account: Account, request: OrderRequest, price: numbe
     if (!position) return { ...empty, reason: 'position' }
     const closed = Math.min(size, position.size)
     return {
-      ok: closed >= sizeStep,
-      reason: closed >= sizeStep ? undefined : 'size',
+      ok: closed > 0,
+      reason: closed > 0 ? undefined : 'size',
       size: closed,
       price: entry,
       notional: closed * entry,
@@ -615,6 +660,18 @@ export function quoteOrder(account: Account, request: OrderRequest, price: numbe
   }
 
   const margin = marginFor(size, entry, leverage)
+  // Protection asked for on the way in is checked against the price it will be
+  // opened at, on the same rule as a level set later: a stop on the wrong side of
+  // the entry is one that has already been reached.
+  const wantedLoss = normaliseLevel(request.stopLoss ?? null)
+  const wantedProfit = normaliseLevel(request.takeProfit ?? null)
+  const opening = { side: request.side, entry } as Position
+  if (wantedLoss !== null && !isBeyond(opening, wantedLoss, 'stopLoss')) {
+    return { ...empty, reason: 'stopLossSide' }
+  }
+  if (wantedProfit !== null && !isBeyond(opening, wantedProfit, 'takeProfit')) {
+    return { ...empty, reason: 'takeProfitSide' }
+  }
   const view = viewAccount(account, price, at)
   const position: Position = {
     id: 'quote',
@@ -627,6 +684,8 @@ export function quoteOrder(account: Account, request: OrderRequest, price: numbe
     maintenanceRate: maintenanceRateFor(leverage),
     openedAt: at,
     fee: 0,
+    stopLoss: null,
+    takeProfit: null,
   }
   const probe: Account = { ...account, positions: [...account.positions, position] }
   const enough =
@@ -664,8 +723,9 @@ function applyFill(
   at: number,
   liquidity: Liquidity,
   mark: number = fillPrice,
-  forced = false,
+  trigger?: ProtectionTrigger,
 ): Account {
+  const forced = trigger !== undefined
   const closing = order.purpose === 'close' ? account.positions.find((held) => held.id === order.positionId) : undefined
   // A liquidation is not a close, and the two margin modes are not the same case
   // here. Isolated margin left the wallet when the position opened, so it is
@@ -692,8 +752,13 @@ function applyFill(
   if (order.purpose === 'close' && order.positionId) {
     const position = closing
     if (position) {
-      const left = position.size - order.size
-      positions = left > sizeStep / 2 ? [{ ...position, size: quote(left, 6) }] : []
+      // What is left is floored to a whole tick, and a floor is the safe direction
+      // to round in here: rounding up would hand the reader a sliver they never
+      // held, and a sliver under one tick is not a position the market could keep
+      // anyway. So it is closed out and the margin given back, rather than carried
+      // as something the reader can see but not act on.
+      const left = Math.floor((position.size - order.size) / sizeStep + 1e-9) * sizeStep
+      positions = left >= sizeStep ? [{ ...position, size: quote(left, 7) }] : []
       // An isolated position hands its unused margin back with the profit — unless
       // it was liquidated, in which case the margin is what was lost.
       if (position.marginMode === 'isolated' && positions.length === 0 && !isolatedLiquidation) {
@@ -714,6 +779,10 @@ function applyFill(
       maintenanceRate: maintenanceRateFor(order.leverage),
       openedAt: at,
       fee,
+      // Asked for on the order, and kept on the position so the level survives
+      // being written to storage and read back long after the order is gone.
+      stopLoss: order.stopLoss ?? null,
+      takeProfit: order.takeProfit ?? null,
     }
     positions = [...positions, opened]
     // Opening an isolated position takes its margin out of the wallet, which is
@@ -747,7 +816,11 @@ function applyFill(
     realized,
     liquidation: subject ? liquidationPriceFor(subject, next) : null,
     balance: next.balance,
-    ...(forced ? { liquidated: true } : {}),
+    // Only a liquidation is a liquidation. A stop and a target are the reader's
+    // own exit, and filing them under the same word would say the market took
+    // the position when it did not.
+    ...(trigger === 'liquidation' ? { liquidated: true } : {}),
+    ...(trigger ? { trigger } : {})
   }
   return { ...next, trades: [...next.trades, trade] }
 }
@@ -772,6 +845,8 @@ export function placeOrder(account: Account, request: OrderRequest, at: number, 
     leverage: clamp(Math.trunc(request.leverage ?? account.leverage), 1, maxLeverage),
     marginMode: request.marginMode ?? account.marginMode,
     placedAt: at,
+    stopLoss: normaliseLevel(request.stopLoss ?? null),
+    takeProfit: normaliseLevel(request.takeProfit ?? null),
   }
   const stamped = { ...counted, savedAt: Math.max(counted.savedAt, at) }
   if (quote.liquidity === 'taker') {
@@ -786,6 +861,70 @@ export function cancelOrder(account: Account, id: string, at: number = Date.now(
     orders: account.orders.filter((order) => order.id !== id),
     savedAt: Math.max(account.savedAt, at),
   }
+}
+
+/**
+ * Puts protection on a position that is already open, or takes it off again.
+ *
+ * The side is checked against the entry, because a stop on the wrong side of the
+ * price is not a stop that waits: it is one that has already happened. A reader who
+ * types a stop above a long's entry has made a mistake, not a request, so it is
+ * refused rather than filled on the spot.
+ */
+export function setProtection(
+  account: Account,
+  positionId: string,
+  patch: { stopLoss?: number | null; takeProfit?: number | null },
+  at: number = Date.now(),
+  mark?: number
+): { account: Account; reason?: 'position' | 'stopLossSide' | 'takeProfitSide' | 'stopLossPassed' | 'takeProfitPassed' } {
+  const position = account.positions.find((held) => held.id === positionId)
+  if (!position) return { account, reason: 'position' }
+
+  const wantsLoss = patch.stopLoss !== undefined
+  const wantsProfit = patch.takeProfit !== undefined
+  const stopLoss = wantsLoss ? normaliseLevel(patch.stopLoss ?? null) : position.stopLoss
+  const takeProfit = wantsProfit ? normaliseLevel(patch.takeProfit ?? null) : position.takeProfit
+
+  // A long is stopped out below its entry and banked above it; a short is the
+  // other way round.
+  if (wantsLoss && stopLoss !== null && !isBeyond(position, stopLoss, 'stopLoss')) {
+    return { account, reason: 'stopLossSide' }
+  }
+  if (wantsProfit && takeProfit !== null && !isBeyond(position, takeProfit, 'takeProfit')) {
+    return { account, reason: 'takeProfitSide' }
+  }
+
+  // Being on the right side of the entry is not enough once the market has moved.
+  // A stop set at or above the mark of a long, or a target set at or below it, is a
+  // price the market has already been through: the level is saved, the order is
+  // never triggered, and the reader is left believing a stop is standing when none
+  // is. So the level has to be somewhere the market can still reach, which is the
+  // side of the price it is at now.
+  if (mark !== undefined && Number.isFinite(mark) && mark > 0) {
+    const reference = { ...position, entry: mark, stopLoss: null, takeProfit: null } as Position
+    if (wantsLoss && stopLoss !== null && !isBeyond(reference, stopLoss, 'stopLoss')) {
+      return { account, reason: 'stopLossPassed' }
+    }
+    if (wantsProfit && takeProfit !== null && !isBeyond(reference, takeProfit, 'takeProfit')) {
+      return { account, reason: 'takeProfitPassed' }
+    }
+  }
+
+  const positions = account.positions.map((held) =>
+    held.id === positionId ? { ...held, stopLoss, takeProfit } : held
+  )
+  return { account: { ...account, positions, savedAt: Math.max(account.savedAt, at) } }
+}
+
+function normaliseLevel(value: number | null): number | null {
+  if (value === null || !Number.isFinite(value) || value <= 0) return null
+  return quote(value, 2)
+}
+
+function isBeyond(position: Position, level: number, kind: 'stopLoss' | 'takeProfit'): boolean {
+  if (position.side === 'buy') return kind === 'stopLoss' ? level < position.entry : level > position.entry
+  return kind === 'stopLoss' ? level > position.entry : level < position.entry
 }
 
 /**
@@ -807,7 +946,15 @@ export function advanceTo(account: Account, now: number, market: Market): Accoun
   let next = account
   const floor = account.savedAt
 
-  type Event = { at: number; orderId: string } | { at: number; positionId: string }
+  type Event =
+    | { at: number; orderId: string }
+    | {
+        at: number
+        positionId: string
+        trigger: ProtectionTrigger
+        /** Where the market actually got to, which is where the fill happens. */
+        fill: number
+      }
   const events: Event[] = []
 
   // One range per distinct starting point, since every order and every position
@@ -833,46 +980,93 @@ export function advanceTo(account: Account, now: number, market: Market): Accoun
     events.push({ at: Math.min(Math.max(at, order.placedAt), now), orderId: order.id })
   }
 
-  for (const position of account.positions) {
-    const price = liquidationPriceFor(position, next)
-    if (price === null) continue
-    const extremes = rangeFrom(position.openedAt)
-    const reached = position.side === 'buy' ? extremes.low <= price : extremes.high >= price
-    if (!reached) continue
-    const at = position.side === 'buy' ? extremes.lowAt : extremes.highAt
-    events.push({ at: Math.min(Math.max(at, position.openedAt), now), positionId: position.id })
+  /**
+   * What a position's own levels did over the stretch that began at `from`.
+   *
+   * A level is reached from a side, and the side says which extreme reached it.
+   * The fill is then that extreme rather than the level itself: a market that
+   * gapped through a stop never traded at the stop, and reading the fill off the
+   * level would quietly hand back a better price than the market gave. The engine
+   * only knows the extremes of the gap, not the path through it, so the extreme is
+   * the closest honest answer — and it is the one that shows up on the fill as
+   * slippage rather than hiding inside the level.
+   */
+  const protectionEvents = (
+    position: Position,
+    from: number,
+    current: Account
+  ): { at: number; positionId: string; trigger: ProtectionTrigger; fill: number }[] => {
+    const extremes = rangeFrom(from)
+    const candidates: { level: number; trigger: ProtectionTrigger; lowSide: boolean }[] = [
+      { level: position.stopLoss ?? Number.NaN, trigger: 'stopLoss', lowSide: position.side === 'buy' },
+      { level: position.takeProfit ?? Number.NaN, trigger: 'takeProfit', lowSide: position.side === 'sell' },
+      {
+        level: liquidationPriceFor(position, current) ?? Number.NaN,
+        trigger: 'liquidation',
+        lowSide: position.side === 'buy'
+      }
+    ]
+    const found: { at: number; positionId: string; trigger: ProtectionTrigger; fill: number }[] = []
+    for (const candidate of candidates) {
+      if (!Number.isFinite(candidate.level)) continue
+      const reached = candidate.lowSide ? extremes.low <= candidate.level : extremes.high >= candidate.level
+      if (!reached) continue
+      const at = candidate.lowSide ? extremes.lowAt : extremes.highAt
+      found.push({
+        at: Math.min(Math.max(at, position.openedAt), now),
+        positionId: position.id,
+        trigger: candidate.trigger,
+        fill: candidate.lowSide ? extremes.low : extremes.high
+      })
+    }
+    return found
   }
 
+  for (const position of account.positions) {
+    for (const event of protectionEvents(position, position.openedAt, next)) events.push(event)
+  }
+
+  // Whatever happened first in the gap happened first, so a stop that ran before a
+  // take-profit is banked as a stop even though the same extremes crossed both.
   events.sort((left, right) => left.at - right.at)
-  for (const event of events) {
+  // The queue grows as it is worked. A resting order that fills part way through
+  // the window brings a position with it, and the levels that came in on that
+  // order have to be watched over what is left of the window rather than from the
+  // next tick onwards — the market that took the entry may well carry on and take
+  // the target in the same breath.
+  for (let index = 0; index < events.length; index += 1) {
+    const event = events[index]
     if ('orderId' in event) {
       const order = next.orders.find((held) => held.id === event.orderId)
       if (!order || order.price === undefined) continue
       next = { ...next, orders: next.orders.filter((held) => held.id !== order.id) }
+      const before = next.positions.length
       next = applyFill(next, order, order.price, event.at, 'maker', market.priceAt(event.at))
-    } else {
-      const position = next.positions.find((held) => held.id === event.positionId)
-      if (!position) continue
-      // Repriced against the account as it stood at this moment, not as it was
-      // when the snapshot was written.
-      const price = liquidationPriceFor(position, next)
-      if (price === null) continue
-      const [id, counted] = nextId(next, 'o')
-      next = counted
-      const order: Order = {
-        id,
-        side: position.side === 'buy' ? 'sell' : 'buy',
-        kind: 'market',
-        purpose: 'close',
-        positionId: position.id,
-        size: position.size,
-        leverage: position.leverage,
-        marginMode: position.marginMode,
-        placedAt: event.at,
-      }
-      next = applyFill(next, order, price, event.at, 'taker', price, true)
-      next = { ...next, liquidations: next.liquidations + 1 }
+      const opened = next.positions.length > before ? next.positions[next.positions.length - 1] : undefined
+      if (opened) events.splice(index + 1, 0, ...protectionEvents(opened, event.at, next))
+      continue
     }
+    const position = next.positions.find((held) => held.id === event.positionId)
+    if (!position) continue
+    // A liquidation is repriced against the account as it stood at this moment,
+    // not as it was when the snapshot was written, so a position the account can
+    // no longer carry is not closed at all.
+    if (event.trigger === 'liquidation' && liquidationPriceFor(position, next) === null) continue
+    const [id, counted] = nextId(next, 'o')
+    next = counted
+    const order: Order = {
+      id,
+      side: position.side === 'buy' ? 'sell' : 'buy',
+      kind: 'market',
+      purpose: 'close',
+      positionId: position.id,
+      size: position.size,
+      leverage: position.leverage,
+      marginMode: position.marginMode,
+      placedAt: event.at
+    }
+    next = applyFill(next, order, event.fill, event.at, 'taker', event.fill, event.trigger)
+    if (event.trigger === 'liquidation') next = { ...next, liquidations: next.liquidations + 1 }
   }
   return { ...next, savedAt: now }
 }
@@ -903,8 +1097,10 @@ export type History = {
   deposits: Deposit[]
 }
 
-export const accountStorageKey = 'market-account-v1'
-export const historyStorageKey = 'market-history-v1'
+// The keys live with the rest of the site's storage map, so the table owns them
+// and a backup carries an account with it.
+export const accountStorageKey = marketKeys.account
+export const historyStorageKey = marketKeys.history
 
 /** The account without its log: small, and the part that has to always be saved. */
 export function saveAccount(account: Account, at: number = Date.now()): string {
@@ -955,9 +1151,16 @@ export function loadAccount(stored: string | null): Account | null {
     return {
       ...createAccount(),
       ...account,
-      positions: account.positions.filter(
-        (position) => position && Number.isFinite(position.size) && position.size > 0,
-      ),
+      positions: account.positions
+        .filter((position) => position && Number.isFinite(position.size) && position.size > 0)
+        // A position written before protection existed carries no level at all, so
+        // the two fields are filled in as none rather than left undefined and read
+        // as a level of zero by everything downstream.
+        .map((position) => ({
+          ...position,
+          stopLoss: normaliseLevel(position.stopLoss ?? null),
+          takeProfit: normaliseLevel(position.takeProfit ?? null)
+        })),
       orders: (Array.isArray(account.orders) ? account.orders : []).filter(
         (order) => order && (order.kind === 'market' || Number.isFinite(order.price)),
       ),

@@ -78,23 +78,23 @@ test('the box says which unit is in it, and how finely it can be typed', () => {
   assert.equal(sizeTicker('tmzb'), 'TMZB')
   assert.equal(sizeTicker('value'), 'USD')
   assert.equal(sizeTicker('cost'), 'USD')
-  assert.equal(sizeStepFor('tmzb'), '0.001')
-  assert.equal(sizeStepFor('value'), '1')
-  assert.equal(sizeStepFor('cost'), '1')
-  assert.equal(sizePlacesFor('tmzb'), 3)
-  assert.equal(sizePlacesFor('value'), 2)
+  assert.equal(sizeStepFor('tmzb'), '0.0000001')
+  assert.equal(sizeStepFor('value'), '0.0001')
+  assert.equal(sizeStepFor('cost'), '0.0001')
+  assert.equal(sizePlacesFor('tmzb'), 7)
+  assert.equal(sizePlacesFor('value'), 4)
 })
 
 test('rounding a size down to a step does not quietly lose one', () => {
-  // 0.0003 / 0.001 is 2.9999999999999996 in binary floating point, and a plain
-  // floor of that drops a step the reader never asked to lose.
+  // 0.0000003 / 0.0000001 is 2.9999999999999996 in binary floating point, and a
+  // plain floor of that drops a step the reader never asked to lose.
   const step = Number(sizeStepFor('tmzb'))
   const places = sizePlacesFor('tmzb')
   const floorToStep = (shown) => (Math.floor(shown / step + 1e-9) * step).toFixed(places)
-  assert.equal(floorToStep(0.003), '0.003')
-  assert.equal(floorToStep(0.035), '0.035')
+  assert.equal(floorToStep(0.0000003), '0.0000003')
+  assert.equal(floorToStep(0.035), '0.0350000')
   // And it still rounds down rather than up, which is the safe direction to be
   // wrong in when the number is an order size.
-  assert.equal(floorToStep(0.0039), '0.003')
-  assert.equal(floorToStep(0.0034), '0.003')
+  assert.equal(floorToStep(0.00000039), '0.0000003')
+  assert.equal(floorToStep(0.00000034), '0.0000003')
 })

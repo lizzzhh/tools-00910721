@@ -44,11 +44,22 @@ const unitFor = (unit: SizeUnit) => sizeUnits.find((found) => found.id === unit)
 /** What the box counts in, which only the asset is named after. */
 export const sizeTicker = (unit: SizeUnit): string => (unit === 'tmzb' ? tradedAsset : marginAsset)
 
-/** How many steps the box moves by. */
-export const sizeStepFor = (unit: SizeUnit): string => (unit === 'tmzb' ? '0.001' : '1')
+/**
+ * The smallest piece of a size, which is what the box steps by and what it is
+ * rounded to.
+ *
+ * A position can be almost nothing and still be a position, so the step is well
+ * below anything a reader would pick on purpose: a hundred-millionth of the
+ * asset, and a ten-thousandth of a dollar. The point is not that these are useful
+ * sizes but that the control never has to snap a size the reader asked for up to
+ * the next step, and that what the box shows is exactly what the market is asked
+ * for. Anything finer than this is beyond what a float carries cleanly at these
+ * magnitudes, so this is the floor rather than a chosen convenience.
+ */
+export const sizeStepFor = (unit: SizeUnit): string => (unit === 'tmzb' ? '0.0000001' : '0.0001')
 
 /** The decimals a size needs, so a box never shows a digit it cannot send. */
-export const sizePlacesFor = (unit: SizeUnit): number => (unit === 'tmzb' ? 3 : 2)
+export const sizePlacesFor = (unit: SizeUnit): number => (unit === 'tmzb' ? 7 : 4)
 
 /**
  * A number in the reader's unit, as TMZB, which is the only unit the market

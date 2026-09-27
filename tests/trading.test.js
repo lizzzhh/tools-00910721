@@ -16,6 +16,7 @@ import {
   quoteOrder,
   saveAccount,
   saveHistory,
+  setProtection,
   seededMarket,
   takerFeeRate,
   viewAccount,
@@ -229,25 +230,52 @@ test('cross margin is lent from the whole wallet, so a thicker one holds longer'
   assert.equal(liquidationPriceFor(over.positions[0], over), null)
 })
 
-test('a position the market liquidated while the tab was shut is closed at that price', () => {
+test('a position the market liquidated while the tab was shut is closed where the market got to', () => {
+  // The market falls through the liquidation price without pausing at it, so the
+  // fill is at the bottom of the move and not at the price that triggered it: a
+  // stop that cannot be filled at its own price is filled at the next one.
   const account = placeOrder(
     funded(),
     { side: 'buy', kind: 'market', size: 0.1, leverage: 20, marginMode: 'isolated' },
     T0,
     flat,
   )
-  const price = liquidationPriceFor(account.positions[0], account)
+  const posted = account.positions[0].margin
+  const trigger = liquidationPriceFor(account.positions[0], account)
   const away = advanceTo(account, T0 + HOUR, ramp(FLAT, 50_000))
 
   assert.equal(away.positions.length, 0, 'the position did not survive the drop')
   assert.equal(away.liquidations, 1)
   const exit = away.trades[away.trades.length - 1]
-  assert.equal(exit.price, price, 'closed at the liquidation price, not at the bottom')
+  assert.ok(trigger > 50_000, `the market has to fall past the trigger, not to it: ${trigger}`)
+  assert.equal(exit.price, 50_000, 'closed where the market got to, not at the trigger')
   assert.equal(exit.liquidity, 'taker')
   assert.equal(exit.liquidated, true)
-  // The loss and both fees are all that came out of it: the posted margin went back.
-  assert.ok(Math.abs(away.balance - (100_000 + away.realized - away.feesPaid)) < 0.01)
-  assert.ok(away.realized < 0)
+  assert.equal(exit.trigger, 'liquidation')
+  // An isolated liquidation books no realized profit or loss: what is lost is the
+  // margin that was posted for it, which is the whole of what the reader stands to
+  // lose, and the entry fee is charged on top of that.
+  assert.equal(away.realized, 0, 'the loss is the margin, not a realized number')
+  assert.ok(Math.abs(away.balance - (100_000 - posted - away.feesPaid)) < 0.01,
+    `balance ${away.balance} against ${100_000 - posted - away.feesPaid}`)
+})
+
+test('a liquidation the market reached exactly is filled at the trigger', () => {
+  // The other side of the same rule: when the market does arrive at the price, the
+  // fill is at that price, so the rule is about gaps and not about rounding.
+  const probe = placeOrder(
+    funded(),
+    { side: 'buy', kind: 'market', size: 0.1, leverage: 20, marginMode: 'isolated' },
+    T0,
+    flat,
+  )
+  const trigger = liquidationPriceFor(probe.positions[0], probe)
+  const away = advanceTo(probe, T0 + HOUR, ramp(FLAT, trigger))
+
+  assert.equal(away.positions.length, 0)
+  const exit = away.trades[away.trades.length - 1]
+  assert.equal(exit.price, Math.round(trigger * 100) / 100, 'filled at the price the market reached')
+  assert.equal(exit.liquidated, true)
 })
 
 test('a position that survived the time away is still open, and marked to now', () => {
@@ -477,16 +505,28 @@ test('a position left open over a weekend is either standing or closed out', () 
   const price = liquidationPriceFor(account.positions[0], account)
   assert.ok(price !== null && price < entry)
 
+  const posted = account.positions[0].margin
   const away = advanceTo(account, from + 3 * 86_400_000, market)
-  assert.ok(Math.abs(away.balance - (20_000 + away.realized - away.feesPaid)) < 0.01)
   if (away.positions.length === 0) {
     assert.equal(away.liquidations, 1)
     const exit = away.trades.at(-1)
     assert.equal(exit.liquidated, true)
-    // The exit price is the liquidation price, which cannot have moved: an isolated
-    // position's depends only on what it was opened at.
-    assert.equal(exit.price, price)
-    assert.ok(away.realized < 0, 'and it was a loss')
+    // An isolated liquidation books the loss as the margin that was posted for it,
+    // so the balance is the deposit less that margin and less the fees, and there
+    // is no realized number to add.
+    assert.equal(away.realized, 0)
+    assert.ok(
+      Math.abs(away.balance - (20_000 - posted - away.feesPaid)) < 0.01,
+      `balance ${away.balance} against ${20_000 - posted - away.feesPaid}`
+    )
+    // The fill is where the market got to, which is at or below the trigger: the
+    // trigger is the price that set the clock off, not a price that was waited for.
+    assert.ok(exit.price <= price + 0.01, `filled at ${exit.price} against a trigger of ${price}`)
+  } else {
+    assert.equal(away.liquidations, 0)
+    // A position that survived is still there, still marked, and has cost only the
+    // fee it was opened with.
+    assert.ok(Math.abs(away.balance - (20_000 - posted - away.feesPaid)) < 0.01)
   }
 })
 
@@ -654,4 +694,365 @@ test('free margin is a money figure, so it never reads as a negative zero', () =
     assert.equal(Object.is(free, -0), false, `${leverage}x must not be negative zero`)
     assert.equal(free, 0, `${leverage}x should land on exactly zero, got ${free}`)
   }
+})
+
+/* ------------------------------------------------------------ protection -- */
+
+const open = (market, extra = {}) =>
+  placeOrder(funded(), { side: 'buy', kind: 'market', size: 0.1, leverage: 10, ...extra }, T0, market)
+
+test('a stop on a long closes the position when the market comes down to it', () => {
+  const falling = ramp(100_000, 80_000)
+  const account = open(falling, { stopLoss: 95_000 })
+  assert.equal(account.positions[0].stopLoss, 95_000)
+
+  const after = advanceTo(account, T0 + HOUR, falling)
+  assert.equal(after.positions.length, 0, 'the position should be gone')
+  const trade = after.trades.at(-1)
+  assert.equal(trade.purpose, 'close')
+  assert.equal(trade.side, 'sell', 'a long is stopped out by selling')
+  assert.equal(trade.trigger, 'stopLoss')
+  assert.equal(trade.liquidity, 'taker', 'a stop pays the taker fee')
+})
+
+test('a stop that the market never reaches leaves the position standing', () => {
+  const account = open(flat, { stopLoss: 90_000 })
+  const after = advanceTo(account, T0 + HOUR, flat)
+  assert.equal(after.positions.length, 1)
+  assert.equal(after.trades.length, 1, 'only the opening fill')
+})
+
+test('a target on a long closes the position when the market comes up to it', () => {
+  const market = hump
+  const account = open(market, { takeProfit: 105_000 })
+  const after = advanceTo(account, T0 + HOUR, market)
+  assert.equal(after.positions.length, 0)
+  const trade = after.trades.at(-1)
+  assert.equal(trade.trigger, 'takeProfit')
+  // The hump peaks at 120_000, so the target is in reach.
+  assert.ok(trade.price >= 105_000)
+})
+
+test('a short is stopped out by a move up and banked by a move down', () => {
+  const market = hump
+  const account = placeOrder(
+    funded(),
+    { side: 'sell', kind: 'market', size: 0.1, leverage: 10, stopLoss: 120_000 },
+    T0,
+    market
+  )
+  const after = advanceTo(account, T0 + HOUR, market)
+  assert.equal(after.positions.length, 0)
+  const trade = after.trades.at(-1)
+  assert.equal(trade.side, 'buy', 'a short is stopped out by buying')
+  assert.equal(trade.trigger, 'stopLoss')
+})
+
+test('a market that gaps through a stop fills at the gap, not at the stop', () => {
+  // A stop at 95_000 on a long, and a market that falls straight past it to 80_000
+  // without ever trading at 95_000. Filling at the stop would hand back 15_000 the
+  // market never paid.
+  const gapped = ramp(100_000, 80_000)
+  const account = open(gapped, { stopLoss: 95_000 })
+  const after = advanceTo(account, T0 + HOUR, gapped)
+  const trade = after.trades.at(-1)
+  assert.equal(trade.trigger, 'stopLoss')
+  assert.ok(
+    trade.price < 95_000,
+    `a gapped stop should fill below the level, filled at ${trade.price}`
+  )
+})
+
+test('a liquidation is filled at the gap too, on the same rule as a stop', () => {
+  const crashed = ramp(100_000, 1_000)
+  // Big enough against the wallet to be liquidatable at all: a 10,000 notional can
+  // never lose the 100,000 standing behind it, whatever the price does.
+  const account = placeOrder(
+    funded(),
+    { side: 'buy', kind: 'market', size: 2, leverage: 10 },
+    T0,
+    crashed
+  )
+  const level = liquidationPriceFor(account.positions[0], account)
+  assert.notEqual(level, null, 'this position should be liquidatable')
+  const after = advanceTo(account, T0 + HOUR, crashed)
+  const trade = after.trades.at(-1)
+  assert.equal(trade.trigger, 'liquidation')
+  assert.equal(trade.liquidated, true)
+  assert.ok(
+    trade.price < level,
+    `a gapped liquidation should fill below the level ${level}, filled at ${trade.price}`
+  )
+})
+
+test('a stop and a target in the same gap resolve in the order the market reached them', () => {
+  // Down through the stop first, up through the target afterwards. Both extremes
+  // are crossed inside the same hour, so only the ordering can say which happened.
+  const dipThenRun = stub((at) => {
+    const hour = (at - T0) / HOUR
+    return FLAT - 20_000 * Math.sin(hour * Math.PI) + 40_000 * Math.max(0, hour - 0.5)
+  })
+  const account = open(dipThenRun, { stopLoss: 90_000, takeProfit: 130_000 })
+  const after = advanceTo(account, T0 + HOUR, dipThenRun)
+  assert.equal(after.positions.length, 0)
+  const trade = after.trades.at(-1)
+  assert.equal(trade.trigger, 'stopLoss', 'the trough came before the run')
+})
+
+test('a stop or a target on the wrong side of the entry is refused', () => {
+  const account = open(flat)
+  const id = account.positions[0].id
+  // A long is stopped out below its entry, so a stop above it has already happened.
+  assert.equal(setProtection(account, id, { stopLoss: 105_000 }).reason, 'stopLossSide')
+  assert.equal(setProtection(account, id, { takeProfit: 95_000 }).reason, 'takeProfitSide')
+  const ok = setProtection(account, id, { stopLoss: 95_000, takeProfit: 105_000 })
+  assert.equal(ok.reason, undefined)
+  assert.equal(ok.account.positions[0].stopLoss, 95_000)
+  assert.equal(ok.account.positions[0].takeProfit, 105_000)
+})
+
+test('protection can be cleared, and a blank or silly level counts as none', () => {
+  const account = open(flat, { stopLoss: 95_000, takeProfit: 105_000 })
+  const id = account.positions[0].id
+  const cleared = setProtection(account, id, { stopLoss: null })
+  assert.equal(cleared.account.positions[0].stopLoss, null)
+  assert.equal(cleared.account.positions[0].takeProfit, 105_000, 'the other level is left alone')
+  assert.equal(setProtection(account, id, { takeProfit: Number.NaN }).account.positions[0].takeProfit, null)
+  assert.equal(setProtection(account, id, { takeProfit: -5 }).account.positions[0].takeProfit, null)
+  assert.equal(setProtection(account, id, { stopLoss: 95_000 }, T0).reason, undefined)
+})
+
+test('protection on a position that is not open is refused rather than invented', () => {
+  const result = setProtection(funded(), 'nope', { stopLoss: 95_000 })
+  assert.equal(result.reason, 'position')
+  assert.equal(result.account.positions.length, 0)
+})
+
+test('protection asked for on a resting order reaches it once it fills', () => {
+  // Down to 90k by the half hour, then up to 120k by the hour. The order rests at
+  // 92k, fills on the way down, and the target it came in with is taken on the way
+  // up — all inside one settle, which is the case a queue worked once would miss.
+  const priceAt = (at) => {
+    const t = (at - T0) / HOUR
+    return t <= 0.5 ? 100_000 - t * 20_000 : 90_000 + (t - 0.5) * 60_000
+  }
+  const vee = stub(priceAt)
+  const account = placeOrder(
+    funded(),
+    { side: 'buy', kind: 'limit', price: 92_000, size: 1, leverage: 10, takeProfit: 95_000 },
+    T0,
+    vee
+  )
+  assert.equal(account.orders.length, 1, 'a buy below the market should rest')
+
+  const after = advanceTo(account, T0 + HOUR, vee)
+  assert.equal(after.orders.length, 0, 'the order should have filled')
+  assert.equal(after.positions.length, 0, 'the target should have closed it')
+  const closing = after.trades[after.trades.length - 1]
+  assert.equal(closing.purpose, 'close')
+  assert.equal(closing.trigger, 'takeProfit')
+  // The fill is where the market got to, not the 95,000 that was asked for.
+  assert.equal(closing.price, 120_000)
+})
+
+test('a stop on a position that just filled in this settle is not missed', () => {
+  // Falls far enough to fill the order and to reach the stop that came in with it.
+  const priceAt = (at) => 100_000 - ((at - T0) / HOUR) * 30_000
+  const falling = stub(priceAt)
+  const account = placeOrder(
+    funded(),
+    { side: 'buy', kind: 'limit', price: 95_000, size: 1, leverage: 10, stopLoss: 90_000 },
+    T0,
+    falling
+  )
+  assert.equal(account.orders.length, 1)
+
+  const after = advanceTo(account, T0 + HOUR, falling)
+  assert.equal(after.positions.length, 0, 'the stop should have closed it')
+  const closing = after.trades[after.trades.length - 1]
+  assert.equal(closing.trigger, 'stopLoss')
+  assert.equal(closing.price, 70_000, 'filled at the low the market reached')
+})
+
+test('protection survives a save and a load, and an old record without it still opens', () => {
+  const account = open(flat, { stopLoss: 95_000, takeProfit: 105_000 })
+  const reloaded = loadAccount(saveAccount(account, T0))
+  assert.equal(reloaded.positions[0].stopLoss, 95_000)
+  assert.equal(reloaded.positions[0].takeProfit, 105_000)
+
+  // A snapshot written before protection existed has neither field on the position.
+  const legacy = JSON.parse(saveAccount(open(flat), T0))
+  legacy.account.positions[0].stopLoss = undefined
+  legacy.account.positions[0].takeProfit = undefined
+  delete legacy.account.positions[0].stopLoss
+  delete legacy.account.positions[0].takeProfit
+  const back = loadAccount(JSON.stringify(legacy))
+  assert.equal(back.positions[0].stopLoss, null, 'a missing level reads as none')
+  assert.equal(back.positions[0].takeProfit, null)
+})
+
+test('protection asked for with a closing order is not carried anywhere', () => {
+  const account = open(flat, { stopLoss: 95_000 })
+  const id = account.positions[0].id
+  const closed = placeOrder(
+    account,
+    { side: 'sell', kind: 'market', purpose: 'close', positionId: id, size: 0.1, takeProfit: 105_000 },
+    T0 + 1000,
+    flat
+  )
+  assert.equal(closed.positions.length, 0)
+  assert.equal(closed.trades.at(-1).trigger, undefined, 'the reader closed it, so no trigger')
+})
+
+test('a limit close rests and fills at its price when the market reaches it', () => {
+  // A long is sold at 110k on the way up, so a close resting at 110k waits for it
+  // rather than filling where it was placed.
+  const priceAt = (at) => {
+    const t = (at - T0) / HOUR
+    return t <= 0.5 ? 100_000 + t * 20_000 : 110_000 + (t - 0.5) * 40_000
+  }
+  const vee = stub(priceAt)
+  const opened = placeOrder(funded(), { side: 'buy', kind: 'market', size: 1, leverage: 10 }, T0, vee)
+  const position = opened.positions[0]
+
+  const resting = placeOrder(
+    opened,
+    { side: 'sell', kind: 'limit', price: 110_000, size: position.size, purpose: 'close', positionId: position.id },
+    T0,
+    vee
+  )
+  assert.equal(resting.orders.length, 1, 'a sell above the market should rest')
+  assert.equal(resting.positions.length, 1, 'the position should still be open while the close waits')
+
+  const after = advanceTo(resting, T0 + HOUR, vee)
+  assert.equal(after.orders.length, 0, 'the close should have filled')
+  assert.equal(after.positions.length, 0, 'the close should have flattened the position')
+  const fill = after.trades[after.trades.length - 1]
+  assert.equal(fill.purpose, 'close')
+  assert.equal(fill.price, 110_000, 'a resting close fills at the price it asked for')
+})
+
+test('a limit close for a position that is already gone is refused', () => {
+  const vee = stub(() => FLAT)
+  const account = funded()
+  const quote = quoteOrder(
+    account,
+    { side: 'sell', kind: 'limit', price: 110_000, size: 1, purpose: 'close', positionId: 'no-such-position' },
+    FLAT
+  )
+  assert.equal(quote.ok, false, 'a close has to name a position that exists')
+})
+
+test('a stop on a position is listed among the orders that are working', () => {
+  // A stop is an order, so it is counted and carried in the same list as the
+  // resting ones rather than living only on the position card.
+  const vee = stub(() => FLAT)
+  const opened = placeOrder(
+    funded(),
+    { side: 'buy', kind: 'market', size: 1, leverage: 10, stopLoss: 90_000, takeProfit: 120_000 },
+    T0,
+    vee
+  )
+  const view = viewAccount(opened, FLAT)
+  assert.equal(view.orders.length, 0, 'the market order is not resting')
+  // The levels live on the position; what the panel shows is its own reading of
+  // them, so what the engine owes is that both of them survived the fill.
+  assert.equal(view.positions[0].stopLoss, 90_000)
+  assert.equal(view.positions[0].takeProfit, 120_000)
+})
+
+test('a size far below the reader\'s own precision is still a real position', () => {
+  // The boxes step by a hundred-millionth of the asset, and the engine has to be
+  // as fine as the boxes: a size the reader can type and see must not be refused
+  // or rounded up into a position they did not ask for.
+  const vee = stub(() => FLAT)
+  const account = placeOrder(funded(), { side: 'buy', kind: 'market', size: 0.0000001, leverage: 10 }, T0, vee)
+  assert.equal(account.positions.length, 1, 'a hundred-millionth of TMZB is a position')
+  assert.equal(account.positions[0].size, 0.0000001, 'and it is held at the size asked for')
+  assert.equal(account.trades.length, 1)
+
+  // A close that leaves a whole tick keeps the remainder at the same depth rather
+  // than rounding it away.
+  const position = account.positions[0]
+  const bigger = placeOrder(
+    { ...account, positions: [{ ...position, size: 0.000001 }] },
+    { side: 'sell', kind: 'market', size: 0.0000005, purpose: 'close', positionId: position.id },
+    T0,
+    vee
+  )
+  assert.equal(bigger.positions.length, 1, 'half of a ten-tick position is still a position')
+  assert.equal(bigger.positions[0].size, 0.0000005, 'and the half is held at full depth')
+
+  // And a close that leaves less than a tick flattens the position rather than
+  // leaving a sliver the market could not hold, so nothing is left behind that
+  // the reader can see but not act on.
+  const dust = placeOrder(
+    account,
+    { side: 'sell', kind: 'market', size: 0.00000005, purpose: 'close', positionId: position.id },
+    T0,
+    vee
+  )
+  assert.equal(dust.positions.length, 0, 'a remainder under one tick is not a position')
+})
+
+test('a level the market has already been through is refused rather than left standing', () => {
+  // The position is opened at 110k and the market then runs away from it in both
+  // directions. The levels below are each on the right side of the entry, so none of
+  // them is a mistyped price, and each is a price the market is already past: the stop
+  // at 107k when the market fell to 105k, the target at 112k when the market rose to
+  // 115k. Saving them would leave a reader believing a stop is watching a market that
+  // has already gone by, and a trigger is measured from the moment its level is
+  // saved, so neither would ever fire.
+  const vee = stub(() => 110_000)
+  const opened = placeOrder(funded(), { side: 'buy', kind: 'market', size: 1, leverage: 10 }, T0, vee)
+  const position = opened.positions[0]
+  assert.equal(position.entry, 110_000)
+
+  const fell = setProtection(opened, position.id, { stopLoss: 107_000 }, T0, 105_000)
+  assert.equal(fell.reason, 'stopLossPassed', 'a stop the market fell through')
+  const rose = setProtection(opened, position.id, { takeProfit: 112_000 }, T0, 115_000)
+  assert.equal(rose.reason, 'takeProfitPassed', 'a target the market rose past')
+  assert.equal(rose.account.positions[0].stopLoss, null, 'and the position is left as it was')
+  assert.equal(rose.account.positions[0].takeProfit, null)
+
+  // The levels the market can still reach are taken.
+  const good = setProtection(opened, position.id, { stopLoss: 105_000, takeProfit: 120_000 }, T0, 115_000)
+  assert.equal(good.reason, undefined)
+  assert.equal(good.account.positions[0].stopLoss, 105_000)
+  assert.equal(good.account.positions[0].takeProfit, 120_000)
+
+  // A short falls the same way, mirrored.
+  const short = placeOrder(funded(), { side: 'sell', kind: 'market', size: 1, leverage: 10 }, T0, vee)
+  const shortPosition = short.positions[0]
+  assert.equal(
+    setProtection(short, shortPosition.id, { stopLoss: 112_000 }, T0, 115_000).reason,
+    'stopLossPassed',
+    'a short stop the market rose through'
+  )
+  assert.equal(
+    setProtection(short, shortPosition.id, { takeProfit: 108_000 }, T0, 105_000).reason,
+    'takeProfitPassed',
+    'a short target the market fell past is already met'
+  )
+  assert.equal(setProtection(short, shortPosition.id, { stopLoss: 115_000 }, T0, 105_000).reason, undefined)
+})
+
+test('protection with no mark given is still judged on the entry alone', () => {
+  // A caller that cannot see a price is not a caller held to the stricter rule, so
+  // the side of the entry is all that is asked of it.
+  const vee = stub(() => FLAT)
+  const opened = placeOrder(funded(), { side: 'buy', kind: 'market', size: 1, leverage: 10 }, T0, vee)
+  const position = opened.positions[0]
+  assert.equal(setProtection(opened, position.id, { stopLoss: 90_000 }).reason, undefined)
+  assert.equal(setProtection(opened, position.id, { stopLoss: 120_000 }).reason, 'stopLossSide')
+})
+
+test('protection with no mark given is still judged on the entry alone', () => {
+  // A caller that cannot see a price is not a caller held to the stricter rule, so
+  // the side of the entry is all that is asked of it.
+  const vee = stub(() => FLAT)
+  const opened = placeOrder(funded(), { side: 'buy', kind: 'market', size: 1, leverage: 10 }, T0, vee)
+  const position = opened.positions[0]
+  assert.equal(setProtection(opened, position.id, { stopLoss: 90_000 }).reason, undefined)
+  assert.equal(setProtection(opened, position.id, { stopLoss: 120_000 }).reason, 'stopLossSide')
 })

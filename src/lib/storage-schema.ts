@@ -36,14 +36,39 @@ export const storageKeys = {
   lotteryBasis: 'tron-lottery:posterior-basis'
 } as const
 
+/**
+ * What the market tool remembers, which is a paper account, its trade record and
+ * two preferences. The names are kept exactly as they were in the localStorage
+ * days, because the migration below carries a reader's account over on the
+ * strength of the key it was written under: rename one and the account is lost.
+ */
+export const marketKeys = {
+  account: 'market-account-v1',
+  history: 'market-history-v1',
+  upColour: 'market-up-colour-v1',
+  sizeUnit: 'market-size-unit-v1',
+  // The ticket as the reader last had it: the two levels and the margin mode.
+  // The chart's period is remembered but where the reader has scrolled to is not,
+  // because that is a place rather than a setting.
+  orderConfig: 'market-order-config-v1',
+  timeframe: 'market-timeframe-v1'
+} as const
+
+export type MarketKeyName = keyof typeof marketKeys
+
 export type StorageKeyName = keyof typeof storageKeys
 
 /** Keys whose value is a preference small enough to keep in a cookie mirror. */
 export const mirroredKeys: string[] = [storageKeys.theme, storageKeys.locale]
 
+/** The market tool's own keys, listed rather than matched by prefix. */
+const ownedMarketKeys: string[] = Object.values(marketKeys)
+
 /** Whether a key belongs to the table rather than to some other extension. */
 export function isStorageKey(key: string): boolean {
-  return key.startsWith('code-space-') || key.startsWith('tron-lottery:')
+  return (
+    key.startsWith('code-space-') || key.startsWith('tron-lottery:') || ownedMarketKeys.includes(key)
+  )
 }
 
 /** The per-tab layout record for one tab, which the shared keys never collide with. */

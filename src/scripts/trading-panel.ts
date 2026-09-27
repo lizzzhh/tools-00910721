@@ -12,21 +12,29 @@ import {
   maxLeverage,
   maxNotionalFor,
   slippedPrice,
+  isolatedLiquidationFor,
+  maintenanceRateFor,
+  marginFor,
   placeOrder,
   quoteOrder,
   saveAccount,
   saveHistory,
   seededMarket,
+  setProtection,
   viewAccount,
   type Account,
   type AccountView,
   type MarginMode,
+  type Position,
   type OrderKind,
   type OrderRequest,
   type Side,
   type Trade
 } from '../lib/trading.ts'
 import { defaultSeed } from '../lib/candles.ts'
+import { readValue, storage, whenStorageReady, writeValue } from '../lib/storage.ts'
+import { marketKeys } from '../lib/storage-schema.ts'
+
 import {
   defaultSizeUnit,
   marginAsset,
@@ -43,6 +51,142 @@ import { currentIntlLocale, translateNow } from '../i18n/client'
 import type { MessageKey } from '../i18n'
 import { actionLabel, closeLabel } from '../lib/wording.ts'
 import type { ChartLevels } from './candle-chart.ts'
+/** What the orders that are working: the ones waiting to be filled, and the stops and
+ * targets waiting to be triggered.
+ *
+ * A stop is an order like any other, and it is listed with the limit orders
+ * because that is what it is. The market has not touched it yet, it is holding a
+ * position, and it can be taken off just as a resting order can. Leaving it to
+ * live on the position card alone would hide a working order from the one place
+ * the reader goes to see what is outstanding.
+ */
+function renderOrders(panel: Panel, view: AccountView): void {
+  const host = find(panel, '[data-orders]')
+  const count = find(panel, '[data-order-count]')
+  const triggers = view.positions.flatMap((position) =>
+    ([
+      { key: 'stopLoss', level: position.stopLoss },
+      { key: 'takeProfit', level: position.takeProfit }
+    ] as const)
+      .filter((row): row is { key: 'stopLoss' | 'takeProfit'; level: number } => row.level !== null)
+      .map((row) => ({ ...row, position }))
+  )
+  if (count) count.textContent = String(view.orders.length + triggers.length)
+  if (!host) return
+  if (view.orders.length === 0 && triggers.length === 0) {
+    host.innerHTML = `<p class="trade-empty">${escape(say('noOrders'))}</p>`
+    return
+  }
+  // A resting order is a question waiting for an answer, so the card leads with
+  // what it is waiting for and shows what it will cost to find out.
+  const cards = view.orders.map((order) => {
+    const long = order.side === 'buy'
+    const price = order.price ?? 0
+    const waiting = long ? price < view.price : price > view.price
+    // What the order would leave behind, if it is a close: the profit or loss at
+    // its own price. This is the number a reader deciding whether to wait for a
+    // fill is actually looking for, and the engine will book it as it stands.
+    const held = order.purpose === 'close' ? view.positions.find((row) => row.id === order.positionId) : undefined
+    const outcome = held ? (long ? held.entry - price : price - held.entry) * order.size : null
+    const opening = order.purpose === 'open'
+    const rows: string[] = [
+      `<div><dt>${escape(say('size'))}</dt><dd>${units(order.size)}</dd></div>`,
+      `<div><dt>${escape(say('notional'))}</dt><dd>${money(order.size * price)}</dd></div>`,
+      `<div><dt>${escape(say('fee'))}</dt><dd>${money(order.size * price * makerFeeRate, 4)}</dd></div>`,
+      `<div><dt>${escape(say('placedAt'))}</dt><dd class="trade-card-time">${stamp(order.placedAt)}</dd></div>`
+    ]
+    let expected: string | null = null
+    if (opening) {
+      // An order that opens has no profit to promise, but it does have a target:
+      // the one that came in with it. What that target is worth at this order's
+      // own size and price is the return the reader is waiting for, and the stop
+      // beside it is what the same trade costs if it is wrong. Between them they
+      // are the reason to keep the order or to cancel it, so they are shown
+      // together and a reader can see one without the other.
+      const margin = marginFor(order.size, price, order.leverage)
+      rows.push(`<div><dt>${escape(say('margin'))}</dt><dd>${money(margin)}</dd></div>`)
+      if (order.takeProfit != null) {
+        const reward = (long ? order.takeProfit - price : price - order.takeProfit) * order.size
+        expected = `<i class="trade-card-return" data-tone="${reward >= 0 ? 'up' : 'down'}">${escape(
+          say('expectedReturn')
+        )} ${signed(reward)}</i>`
+      } else {
+        expected = `<i class="trade-card-return is-dim">${escape(say('noExpectedReturn'))}</i>`
+      }
+      if (order.stopLoss != null) {
+        // Signed the other way from the return, because a stop is what the trade
+        // costs when it is wrong: showing it as a gain would be a number that
+        // reads well and means the opposite of what it is.
+        const risk = -(long ? price - order.stopLoss : order.stopLoss - price) * order.size
+        rows.push(`<div class="is-down"><dt>${escape(say('riskAtStop'))}</dt><dd>${signed(risk)}</dd></div>`)
+      }
+      // The liquidation line is only knowable for an isolated order, because a
+      // cross one sits behind the whole account's equity and no resting order can
+      // promise what that will be on the day it fills.
+      if (order.marginMode === 'isolated') {
+        const liq = isolatedLiquidationFor(order.size, price, order.side, margin, maintenanceRateFor(order.leverage))
+        if (liq !== null) {
+          rows.push(`<div><dt>${escape(say('liquidation'))}</dt><dd>${money(liq)}</dd></div>`)
+        }
+      }
+    } else if (held && outcome !== null) {
+      rows.push(
+        `<div><dt>${escape(say('entry'))}</dt><dd>${money(held.entry)}</dd></div>`,
+        `<div class="${outcome >= 0 ? 'is-up' : 'is-down'}"><dt>${escape(say(order.purpose === 'close' ? 'pnl' : 'pnlIfFilled'))}</dt><dd>${signed(outcome)}</dd></div>`
+      )
+    }
+    // Levels a resting order will carry to the position it opens are part of the
+    // order itself, so they are read on the order rather than left to be a
+    // surprise on a position that does not exist yet.
+    const levels = [
+      { key: 'stopLoss', value: order.stopLoss },
+      { key: 'takeProfit', value: order.takeProfit }
+    ].filter((row) => row.value !== null && row.value !== undefined)
+    return `<article class="trade-card is-order ${long ? 'is-long' : 'is-short'}">
+        <header class="trade-card-head">
+          <span class="trade-tag ${long ? 'is-long' : 'is-short'}">${escape(say(long ? 'long' : 'short'))}</span>
+          <b class="trade-card-price">${money(price)}</b>
+        </header>
+        ${expected ?? ''}
+        <dl class="trade-card-grid">${rows.join('')}</dl>
+        ${
+          levels.length === 0
+            ? ''
+            : `<p class="trade-card-levels">${levels
+                .map(
+                  (row) =>
+                    `<span class="trade-level-tag is-${row.key}">${escape(say(`reason.${row.key}`))} ${money(row.value as number)}</span>`
+                )
+                .join('')}</p>`
+        }
+        <footer class="trade-card-foot">
+          <span class="trade-card-settings">${escape(say(order.purpose === 'close' ? 'closeTicket' : waiting ? 'waiting' : 'crossing'))}</span>
+          <button type="button" class="trade-close is-cancel" data-cancel="${order.id}">${escape(say('cancel'))}</button>
+        </footer>
+      </article>`
+  })
+  const triggerCards = triggers.map(({ position, key, level }) => {
+    const long = position.side === 'buy'
+    return `<article class="trade-card is-order is-trigger ${long ? 'is-long' : 'is-short'}">
+        <header class="trade-card-head">
+          <span class="trade-tag is-trigger">${escape(say(`reason.${key}`))}</span>
+          <b class="trade-card-price">${money(level)}</b>
+        </header>
+        <dl class="trade-card-grid">
+          <div><dt>${escape(say('size'))}</dt><dd>${units(position.size)}</dd></div>
+          <div><dt>${escape(say(long ? 'long' : 'short'))}</dt><dd>${money(position.entry)}</dd></div>
+          <div><dt>${escape(say('notional'))}</dt><dd>${money(position.size * level)}</dd></div>
+          <div><dt>${escape(say('orderKind'))}</dt><dd>${escape(say(key === 'stopLoss' ? 'stopOrder' : 'targetOrder'))}</dd></div>
+        </dl>
+        <footer class="trade-card-foot">
+          <span class="trade-card-settings">${escape(say(key === 'stopLoss' ? 'stopWaiting' : 'targetWaiting'))}</span>
+          <button type="button" class="trade-close is-cancel" data-clear-level="${key}" data-position="${position.id}">${escape(say('cancel'))}</button>
+        </footer>
+      </article>`
+  })
+  host.innerHTML = [...cards, ...triggerCards].join('')
+}
+
 
 /**
  * How often the account is brought up to the present. Long enough that a long
@@ -72,42 +216,24 @@ let sizeUnit: SizeUnit = defaultSizeUnit
  * choice, it is remembered, and the panel and the candles take the same one
  * rather than each having their own idea.
  */
-const upColourStorageKey = 'market-up-colour-v1'
-const sizeUnitStorageKey = 'market-size-unit-v1'
+const upColourStorageKey = marketKeys.upColour
+const sizeUnitStorageKey = marketKeys.sizeUnit
 
 const readSizeUnit = (): SizeUnit => {
-  try {
-    const stored = localStorage.getItem(sizeUnitStorageKey)
-    return sizeUnits.some((unit) => unit.id === stored) ? (stored as SizeUnit) : defaultSizeUnit
-  } catch {
-    return defaultSizeUnit
-  }
+  const stored = readValue(sizeUnitStorageKey)
+  return sizeUnits.some((unit) => unit.id === stored) ? (stored as SizeUnit) : defaultSizeUnit
 }
 
 const writeSizeUnit = (value: SizeUnit): void => {
-  try {
-    localStorage.setItem(sizeUnitStorageKey, value)
-  } catch {
-    // A browser that will not remember the choice can still use it for now.
-  }
+  writeValue(sizeUnitStorageKey, value)
 }
 
 type UpColour = 'success' | 'danger'
 
-const readUpColour = (): UpColour => {
-  try {
-    return localStorage.getItem(upColourStorageKey) === 'danger' ? 'danger' : 'success'
-  } catch {
-    return 'success'
-  }
-}
+const readUpColour = (): UpColour => (readValue(upColourStorageKey) === 'danger' ? 'danger' : 'success')
 
 const writeUpColour = (value: UpColour): void => {
-  try {
-    localStorage.setItem(upColourStorageKey, value)
-  } catch {
-    // A browser that will not remember the choice can still use it for now.
-  }
+  writeValue(upColourStorageKey, value)
 }
 
 /** Puts the choice on the panel and tells the chart, so the two never disagree. */
@@ -124,7 +250,7 @@ const money = (value: number, places = 2) =>
 const signed = (value: number) =>
   number({ style: 'currency', currency: marginAsset, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' }).format(value)
 /** TMZB: how much of the asset, never a price and never a dollar. */
-const units = (value: number) => number({ minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(value)
+const units = (value: number) => number({ minimumFractionDigits: 0, maximumFractionDigits: sizePlacesFor('tmzb') }).format(value)
 /** A size in the unit the reader chose to type in. */
 const sizeIn = (value: number, unit: SizeUnit) =>
   number({ minimumFractionDigits: 0, maximumFractionDigits: sizePlacesFor(unit) }).format(value)
@@ -145,6 +271,10 @@ const say = (key: string, vars?: Record<string, string | number>) =>
 
 const escape = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+/** Not a real address. The balance on this page is a number in the reader's own
+ *  browser, so there is nothing to send anywhere, which is what the joke turns on. */
+const WIRE_ADDRESS = 'TRrnmU2GzstmYeUhCpxrzDfTGhrxz9Afgv'
 
 /** Every live panel, so a page swap can let go of them. */
 const panels = new Set<Panel>()
@@ -181,14 +311,164 @@ function readForm(panel: Panel): Form {
 function request(panel: Panel, form: Form, price: number): OrderRequest {
   const size = readSize(panel, price, form.leverage)
   const limit = Number(find<HTMLInputElement>(panel, '[data-limit-price]')?.value ?? 0)
+  // A blank box is not a level of zero. It is no level, and an empty string here
+  // becomes null on the way into the order so the position opens unprotected
+  // rather than protected at a price nobody chose.
+  const stopLoss = levelIn(panel, '[data-stop-loss]')
+  const takeProfit = levelIn(panel, '[data-take-profit]')
   return {
     side: form.side,
     kind: form.kind,
     size,
     ...(form.kind === 'limit' ? { price: limit } : {}),
     leverage: form.leverage,
-    marginMode: form.marginMode
+    marginMode: form.marginMode,
+    ...(stopLoss === null ? {} : { stopLoss }),
+    ...(takeProfit === null ? {} : { takeProfit })
   }
+}
+
+/** A protection box read as a price, or null when it is blank or not a number. */
+function levelIn(panel: Panel, selector: string): number | null {
+  const raw = (find<HTMLInputElement>(panel, selector)?.value ?? '').trim()
+  if (raw === '') return null
+  const value = Number(raw)
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
+/**
+ * A level the ticket is holding but has not sent yet.
+ *
+ * It is kept in a hidden box rather than in a variable so that everything which
+ * builds an order — the quote, the submit, the reset — reads the same one place,
+ * and so that a level cannot be quietly forgotten when the form is repainted.
+ */
+function readPending(panel: Panel, selector: string): string {
+  return find<HTMLInputElement>(panel, selector)?.value.trim() ?? ''
+}
+
+function writePending(panel: Panel, selector: string, value: number | null): void {
+  const input = find<HTMLInputElement>(panel, selector)
+  if (input) input.value = value === null ? '' : String(value)
+  rememberOrderConfig(panel)
+}
+
+/**
+ * The ticket as the reader last had it, kept so it is there next time.
+ *
+ * Setting a stop and choosing isolated margin are both decisions that take a
+ * moment to arrive at, and retyping them on every order is the reader doing the
+ * tool's work. The levels are remembered as typed and not as accepted: they are
+ * still checked against the price of whatever order they are sent with, so a
+ * remembered level the market has since run past is refused rather than quietly
+ * turned into the wrong side of a position.
+ */
+function rememberOrderConfig(panel: Panel): void {
+  const mode = find(panel, '[data-margin-mode][aria-pressed="true"]')?.dataset.marginMode
+  writeValue(
+    marketKeys.orderConfig,
+    JSON.stringify({
+      marginMode: mode === 'isolated' ? 'isolated' : 'cross',
+      stopLoss: levelIn(panel, '[data-stop-loss]'),
+      takeProfit: levelIn(panel, '[data-take-profit]')
+    })
+  )
+}
+
+/** Puts back what the ticket was last left holding, if it can still be read. */
+function restoreOrderConfig(panel: Panel): void {
+  const stored = readValue(marketKeys.orderConfig)
+  if (!stored) return
+  let config: { marginMode?: string; stopLoss?: number | null; takeProfit?: number | null }
+  try {
+    config = JSON.parse(stored) as typeof config
+  } catch {
+    // A preference that cannot be read is a preference that is not there, and the
+    // ticket opens with nothing set rather than with something invented.
+    return
+  }
+  if (config.marginMode === 'cross' || config.marginMode === 'isolated') {
+    setPressed(panel, '[data-margin-mode]', 'marginMode', config.marginMode)
+  }
+  const put = (selector: string, value: number | null | undefined) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return
+    const input = find<HTMLInputElement>(panel, selector)
+    if (input) input.value = value === null ? '' : String(value)
+  }
+  put('[data-stop-loss]', config.stopLoss)
+  put('[data-take-profit]', config.takeProfit)
+}
+
+/**
+ * Points the chips the only way that can be right.
+ *
+ * A chip is a distance from the mark, and which way that distance runs is not the
+ * reader's to guess: a stop sits below a long and above a short, a target does the
+ * opposite, and a resting order has to be on the far side of the mark from the one
+ * that would fill it at once. So each row is given the sign that puts its price
+ * where it can do the job it is there for, and a button that would set a price
+ * which is already past is a button that is not offered.
+ */
+function paintPriceChips(panel: Panel, mark: number, side: Side, kind?: string): void {
+  for (const group of panel.querySelectorAll<HTMLElement>('[data-price-chips]')) {
+    if (kind && group.dataset.priceKind !== kind) continue
+    // A stop is a floor for a long and a ceiling for a short; a target is the
+    // other way round. A plain price box has no such role, so it takes the side
+    // the order is on: a buy that rests waits below the mark, a sell waits above.
+    const sign =
+      group.dataset.priceKind === 'stopLoss'
+        ? side === 'buy' ? -1 : 1
+        : group.dataset.priceKind === 'takeProfit'
+          ? side === 'buy' ? 1 : -1
+          : side === 'buy' ? -1 : 1
+    for (const chip of group.querySelectorAll<HTMLElement>('[data-price-step]')) {
+      const step = chip.dataset.priceStep ?? ''
+      chip.dataset.sign = String(sign)
+      chip.textContent = `${sign < 0 ? '−' : '+'}${step}%`
+    }
+  }
+}
+
+/**
+ * Asks how the position should be closed, and closes it that way.
+ *
+ * A close is either a market order or a limit order, and the difference is worth
+ * real money, so the card's close button does not pick one on the reader's behalf:
+ * it opens this, where the choice is made and, for a limit order, the price is
+ * typed. The size is not offered at all. A close takes what the position holds,
+ * and a box that let the reader type a smaller number would be offering to close
+ * a fraction of a position the engine has no way to carry.
+ */
+function askToClose(panel: Panel, position: Position, price: number): void {
+  const dialog = find<HTMLDialogElement>(panel, '[data-close-dialog]')
+  if (!dialog) return
+  dialog.dataset.closePosition = position.id
+  const long = position.side === 'buy'
+  // The price the close is measured from is the mark, and the entry is named too:
+  // a limit close has to be on the right side of the mark to be a resting order
+  // rather than one that fills the moment it is placed.
+  setContext(panel, `${say(long ? 'long' : 'short')} ${units(position.size)} · ${say('entry')} ${money(position.entry)}`)
+  setPressed(panel, '[data-close-kind]', 'closeKind', 'market')
+  // Closing a long is a sell, so its chips point up: they are there to price a
+  // close that waits rather than one that fills at once.
+  paintPriceChips(panel, price, long ? 'sell' : 'buy')
+  const limitField = find(panel, '[data-close-limit-field]')
+  if (limitField) limitField.hidden = true
+  const box = find<HTMLInputElement>(panel, '[data-close-limit]')
+  if (box) box.value = ''
+  dialog.showModal()
+}
+
+/** Tells the reader which price the levels in the dialog are measured against. */
+function setContext(panel: Panel, text: string): void {
+  const context = find(panel, '[data-close-context]')
+  if (context) context.textContent = text
+}
+
+/** Tells the reader which price the levels in the dialog are measured against. */
+function setProtectionContext(panel: Panel, text: string): void {
+  const context = find(panel, '[data-protection-context]')
+  if (context) context.textContent = text
 }
 
 /**
@@ -364,15 +644,18 @@ function message(panel: Panel, key?: string): void {
  * balance, and is told the log is short rather than losing both.
  */
 function persist(panel: Panel, account: Account): void {
+  // The table is the site's one store, so a write cannot fail the way a
+  // localStorage write could when the quota ran out: the account is kept whole
+  // unless the whole store is gone, which the hint below is there to say.
   let state = true
   try {
-    localStorage.setItem(accountStorageKey, saveAccount(account))
+    writeValue(accountStorageKey, saveAccount(account))
   } catch {
     state = false
   }
   let history = true
   try {
-    localStorage.setItem(historyStorageKey, saveHistory(account))
+    writeValue(historyStorageKey, saveHistory(account))
   } catch {
     history = false
   }
@@ -415,6 +698,12 @@ function renderPositions(panel: Panel, view: AccountView): void {
     const long = position.side === 'buy'
     const won = position.pnl >= 0
     const margin = position.marginMode === 'isolated' ? position.margin : position.initialMargin
+    // The levels are shown, not typed: they are set in the same dialog the ticket
+    // uses, so there is one place in the panel where a stop can be entered and
+    // one set of rules about which side of the entry it belongs on.
+    const levels = `${position.stopLoss === null ? '—' : money(position.stopLoss)} / ${
+      position.takeProfit === null ? '—' : money(position.takeProfit)
+    }`
     return `<article class="trade-card ${long ? 'is-long' : 'is-short'}" data-tone="${won ? 'up' : 'down'}">
       <header class="trade-card-head">
         <span class="trade-tag ${long ? 'is-long' : 'is-short'}">${escape(say(long ? 'long' : 'short'))}</span>
@@ -424,7 +713,6 @@ function renderPositions(panel: Panel, view: AccountView): void {
         <div><dt>${escape(say('size'))}</dt><dd>${units(position.size)}</dd></div>
         <div><dt>${escape(say('notional'))}</dt><dd>${money(position.notional)}</dd></div>
         <div><dt>${escape(say('entry'))}</dt><dd>${money(position.entry)}</dd></div>
-        <div><dt>${escape(say('mark'))}</dt><dd>${money(position.mark)}</dd></div>
         <div class="is-warn"><dt>${escape(say('liquidation'))}</dt><dd>${
           position.liquidation === null ? escape(say('noLiquidation')) : money(position.liquidation)
         }</dd></div>
@@ -432,6 +720,9 @@ function renderPositions(panel: Panel, view: AccountView): void {
       </dl>
       <footer class="trade-card-foot">
         <span class="trade-card-settings">${position.leverage}x ${escape(position.marginMode === 'cross' ? say('cross') : say('isolated'))}</span>
+        <button type="button" class="trade-card-protection" data-protection-open="${position.id}">
+          <b data-protection-summary="${position.id}">${levels}</b>
+        </button>
         <button type="button" class="trade-close" data-close="${position.id}">${escape(say(closeLabel(long)))}</button>
       </footer>
     </article>`
@@ -439,47 +730,6 @@ function renderPositions(panel: Panel, view: AccountView): void {
   host.innerHTML = view.positions.map(card).join('')
 }
 
-function renderOrders(panel: Panel, view: AccountView): void {
-  const host = find(panel, '[data-orders]')
-  const count = find(panel, '[data-order-count]')
-  if (count) count.textContent = String(view.orders.length)
-  if (!host) return
-  if (view.orders.length === 0) {
-    host.innerHTML = `<p class="trade-empty">${escape(say('noOrders'))}</p>`
-    return
-  }
-  // A resting order is a question waiting for an answer, so the card leads with
-  // what it is waiting for and shows what it will cost to find out.
-  host.innerHTML = view.orders
-    .map((order) => {
-      const long = order.side === 'buy'
-      const price = order.price ?? 0
-      const waiting = long ? price < view.price : price > view.price
-      return `<article class="trade-card is-order ${long ? 'is-long' : 'is-short'}">
-        <header class="trade-card-head">
-          <span class="trade-tag ${long ? 'is-long' : 'is-short'}">${escape(say(long ? 'long' : 'short'))}</span>
-          <b class="trade-card-price">${money(price)}</b>
-        </header>
-        <dl class="trade-card-grid">
-          <div><dt>${escape(say('size'))}</dt><dd>${units(order.size)}</dd></div>
-          <div><dt>${escape(say('notional'))}</dt><dd>${money(order.size * price)}</dd></div>
-          <div><dt>${escape(say('fee'))}</dt><dd>${money(order.size * price * makerFeeRate, 4)}</dd></div>
-          <div><dt>${escape(say('placedAt'))}</dt><dd class="trade-card-time">${stamp(order.placedAt)}</dd></div>
-        </dl>
-        <footer class="trade-card-foot">
-          <span class="trade-card-settings">${waiting ? escape(say('waiting')) : escape(say('crossing'))}</span>
-          <button type="button" class="trade-close is-cancel" data-cancel="${order.id}">${escape(say('cancel'))}</button>
-        </footer>
-      </article>`
-    })
-    .join('')
-}
-
-/**
- * One line of history, carrying its own context. Everything shown is read out of
- * the record rather than recomputed, because the record is what the trade was: a
- * later change to the fees or the tiers must not rewrite what it says.
- */
 function tradeRow(trade: Trade): string {
   // A liquidation is named for the order that closed it, which is the other side
   // of the position it closed.
@@ -492,6 +742,7 @@ function tradeRow(trade: Trade): string {
     <span class="trade-detail is-dim">${escape(say(trade.liquidity))} ${money(trade.fee, 4)}</span>
     <span class="trade-detail is-dim">${trade.leverage}x ${escape(trade.marginMode === 'cross' ? say('cross') : say('isolated'))}</span>
     ${trade.liquidation === null ? '' : `<span class="trade-detail is-dim">${escape(say('liqAt'))} ${money(trade.liquidation)}</span>`}
+    ${trade.trigger ? `<span class="trade-detail is-dim">${escape(say(`reason.${trade.trigger}`))}</span>` : ''}
     ${trade.realized === 0 ? '' : `<span class="trade-detail" data-tone="${trade.realized >= 0 ? 'up' : 'down'}">${signed(trade.realized)}</span>`}
     <span class="trade-detail is-dim">${escape(say('balanceAfter'))} ${money(trade.balance)}</span>
   </div>`
@@ -560,6 +811,14 @@ function drawLevels(panel: Panel, view: AccountView, price: number): void {
       const rows: ChartLevels['levels'] = [
         { value: position.entry, label: position.side === 'buy' ? 'L' : 'S', kind: 'entry' }
       ]
+      // The two levels the reader set get the same treatment as the entry and the
+      // liquidation line, so all four are read down one edge of the chart.
+      if (position.stopLoss !== null) {
+        rows.push({ value: position.stopLoss, label: 'SL', kind: 'stopLoss' })
+      }
+      if (position.takeProfit !== null) {
+        rows.push({ value: position.takeProfit, label: 'TP', kind: 'takeProfit' })
+      }
       if (position.liquidation !== null) {
         rows.push({ value: position.liquidation, label: 'LIQ', kind: 'liquidation' })
       }
@@ -579,13 +838,28 @@ function drawLevels(panel: Panel, view: AccountView, price: number): void {
 function render(panel: Panel, account: Account, price: number): void {
   const view = viewAccount(account, price)
   const form = readForm(panel)
+  // The chips are a distance from the mark and the mark moves, so they are pointed
+  // on every repaint rather than only when the reader changes side.
+  paintPriceChips(panel, price, form.side)
   renderFigures(panel, view, account)
   renderPositions(panel, view)
   renderOrders(panel, view)
   renderHistory(panel, view)
   renderQuote(panel, account, form, price)
   paintSizeFacts(panel, account, form, price)
+  paintProtectionSummary(panel)
   drawLevels(panel, view, price)
+}
+
+/** What the ticket's stop and target are, read back the way a reader sees them. */
+function paintProtectionSummary(panel: Panel): void {
+  const summary = find(panel, '[data-protection-summary]')
+  if (!summary) return
+  const show = (selector: string) => {
+    const value = levelIn(panel, selector)
+    return value === null ? '—' : money(value)
+  }
+  summary.textContent = `${show('[data-stop-loss]')} / ${show('[data-take-profit]')}`
 }
 
 /**
@@ -650,6 +924,7 @@ function setup(panel: Panel): void {
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-side]')) {
     button.addEventListener('click', () => {
       setPressed(panel, '[data-side]', 'side', button.dataset.side ?? 'buy')
+      paintPriceChips(panel, price, button.dataset.side === 'sell' ? 'sell' : 'buy')
       renderQuote(panel, account, readForm(panel), price)
     })
   }
@@ -669,6 +944,7 @@ function setup(panel: Panel): void {
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-margin-mode]')) {
     button.addEventListener('click', () => {
       setPressed(panel, '[data-margin-mode]', 'marginMode', button.dataset.marginMode ?? 'cross')
+      rememberOrderConfig(panel)
       paintLeverage(panel, account, price)
     })
   }
@@ -678,6 +954,125 @@ function setup(panel: Panel): void {
   const dialog = find<HTMLDialogElement>(panel, '[data-margin-dialog]')
   find(panel, '[data-margin-open]')?.addEventListener('click', () => dialog?.showModal())
   find(panel, '[data-margin-done]')?.addEventListener('click', () => dialog?.close())
+
+  // The stop and the target are set in a dialog of their own, on the ticket and on
+  // a position alike, for the same reason the margin settings are: a price box
+  // lying beside the size box is read as one control with two meanings, and a
+  // position card is too small a place to type a price without covering itself.
+  const protection = find<HTMLDialogElement>(panel, '[data-protection-dialog]')
+  const stopBox = find<HTMLInputElement>(panel, '[data-protection-stop]')
+  const targetBox = find<HTMLInputElement>(panel, '[data-protection-target]')
+  const blank = (value: number | null) => (value === null ? '' : String(value))
+
+  const editProtection = (target?: string) => {
+    if (!protection) return
+    protection.dataset.editPosition = target ?? ''
+    const held = target ? account.positions.find((position) => position.id === target) : undefined
+    const long = held ? held.side === 'buy' : readForm(panel).side === 'buy'
+    if (held) {
+      if (stopBox) stopBox.value = blank(held.stopLoss)
+      if (targetBox) targetBox.value = blank(held.takeProfit)
+      // The side rule works off the entry, and the entry does not move, so it is
+      // the one price named here. The mark is not: it changes with the market, and
+      // a figure printed beside a level is one the reader is right to distrust.
+      setProtectionContext(panel, `${say(long ? 'long' : 'short')} · ${say('entry')} ${money(held.entry)}`)
+    } else {
+      if (stopBox) stopBox.value = readPending(panel, '[data-stop-loss]')
+      if (targetBox) targetBox.value = readPending(panel, '[data-take-profit]')
+      setProtectionContext(panel, say(long ? 'long' : 'short'))
+    }
+    paintPriceChips(panel, price, long ? 'buy' : 'sell')
+    protection.showModal()
+  }
+  for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-close-kind]')) {
+    button.addEventListener('click', () => {
+      setPressed(panel, '[data-close-kind]', 'closeKind', button.dataset.closeKind ?? 'market')
+      const limitField = find(panel, '[data-close-limit-field]')
+      if (limitField) limitField.hidden = button.dataset.closeKind !== 'limit'
+      find<HTMLInputElement>(panel, '[data-close-limit]')?.focus()
+    })
+  }
+  const closeDialog = find<HTMLDialogElement>(panel, '[data-close-dialog]')
+  find(panel, '[data-close-cancel]')?.addEventListener('click', () => closeDialog?.close())
+  find(panel, '[data-close-done]')?.addEventListener('click', () => {
+    const target = closeDialog?.dataset.closePosition
+    const position = account.positions.find((held) => held.id === target)
+    if (!position || !closeDialog) return
+    const kind = find(panel, '[data-close-kind][aria-pressed="true"]')?.dataset.closeKind === 'limit' ? 'limit' : 'market'
+    const limit = Number(find<HTMLInputElement>(panel, '[data-close-limit]')?.value ?? '')
+    const wanted: OrderRequest = {
+      // Closing buys back a short and sells a long: the side is the other side of
+      // the position, so it is derived here rather than asked for.
+      side: position.side === 'buy' ? 'sell' : 'buy',
+      kind,
+      // The engine checks a close against the position it names, so the size is
+      // read back from the position rather than taken from anything on screen.
+      size: position.size,
+      ...(kind === 'limit' ? { price: limit } : {}),
+      purpose: 'close',
+      positionId: position.id
+    }
+    const next = placeOrder(account, wanted, Date.now(), market)
+    if (next.trades.length === account.trades.length && next.orders.length === account.orders.length) {
+      const quote = quoteOrder(account, wanted, price)
+      message(panel, quote.reason ? `refused.${quote.reason}` : 'refused')
+      return
+    }
+    closeDialog.close()
+    commit(next)
+  })
+  find(panel, '[data-protection-open]')?.addEventListener('click', () => editProtection(undefined))
+  // Delegated, because the rows are the same everywhere and some of them live
+  // behind a dialog that is rebuilt rather than one that is bound once.
+  panel.addEventListener('click', (event) => {
+    const chip = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-price-step]')
+    const group = chip?.closest<HTMLElement>('[data-price-chips]')
+    const step = Number(chip?.dataset.priceStep)
+    const sign = Number(chip?.dataset.sign)
+    if (!group?.dataset.target || !Number.isFinite(step) || !Number.isFinite(sign)) return
+    // Offset from the mark, not from whatever is already typed, so two presses of
+    // the same chip land on the same price and the box never drifts.
+    const box = find<HTMLInputElement>(panel, group.dataset.target)
+    if (box) box.value = (price * (1 + (sign * step) / 100)).toFixed(2)
+  })
+  // The shortcut is in the markup, so it is bound here: it takes the price as it
+  // stands at the moment of the press, which is the only moment a reader looking
+  // for a market price can be asking about.
+  find(panel, '[data-at-market]')?.addEventListener('click', () => {
+    const box = find<HTMLInputElement>(panel, '[data-limit-price]')
+    if (box) box.value = price.toFixed(2)
+    render(panel, account, price)
+  })
+  find(panel, '[data-protection-clear]')?.addEventListener('click', () => {
+    if (stopBox) stopBox.value = ''
+    if (targetBox) targetBox.value = ''
+  })
+  find(panel, '[data-protection-done]')?.addEventListener('click', () => {
+    const stopLoss = levelIn(panel, '[data-protection-stop]')
+    const takeProfit = levelIn(panel, '[data-protection-target]')
+    const target = protection?.dataset.editPosition
+    if (!target) {
+      // On the ticket nothing is sent yet: the levels wait with the order and are
+      // checked against its price the moment the reader presses submit.
+      writePending(panel, '[data-stop-loss]', stopLoss)
+      writePending(panel, '[data-take-profit]', takeProfit)
+      render(panel, account, price)
+      protection?.close()
+      return
+    }
+    // The mark goes with it, so a level the market has already been through is
+    // refused here rather than saved as a stop that can never be triggered.
+    const result = setProtection(account, target, { stopLoss, takeProfit }, Date.now(), price)
+    if (result.reason) {
+      // A level on the wrong side of the entry, or of the price as it is now, is a
+      // mistyped price rather than a request, so the position is left as it was.
+      message(panel, `refused.${result.reason}`)
+      protection?.close()
+      return
+    }
+    commit(result.account)
+    protection?.close()
+  })
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-size-unit]')) {
     button.addEventListener('click', () => {
       const next = (button.dataset.sizeUnit ?? 'tmzb') as SizeUnit
@@ -745,6 +1140,7 @@ function setup(panel: Panel): void {
   find<HTMLInputElement>(panel, '[data-deposit-amount]')?.addEventListener('input', () => {
     pressChip(panel, '[data-amount]', 'amount', null)
   })
+  let topUps = 0
   find(panel, '[data-deposit-form]')?.addEventListener('submit', (event) => {
     event.preventDefault()
     const input = find<HTMLInputElement>(panel, '[data-deposit-amount]')
@@ -753,6 +1149,14 @@ function setup(panel: Panel): void {
     commit(deposit(account, amount))
     if (input) input.value = ''
     message(panel)
+    topUps += 1
+    // Every tenth top-up, and the first, the page asks to be paid by name. It is a
+    // joke, and the numbers make it one: the balance is a figure in the reader's own
+    // browser, and the address is not a real one, so there is nothing to send it to
+    // and nothing at stake in saying so.
+    if (topUps === 1 || topUps % 10 === 0) {
+      message(panel, say('wireTransfer', { amount: money(amount), address: WIRE_ADDRESS }))
+    }
   })
   find(panel, '[data-submit]')?.addEventListener('click', () => {
     const form = readForm(panel)
@@ -775,6 +1179,9 @@ function setup(panel: Panel): void {
   })
   find(panel, '[data-reset]')?.addEventListener('click', () => {
     if (typeof confirm === 'function' && !confirm(say('resetConfirm'))) return
+    // The ticket's levels belong to the account being cleared, so they go with it.
+    writePending(panel, '[data-stop-loss]', null)
+    writePending(panel, '[data-take-profit]', null)
     commit(createAccount({ seed }))
   })
   find(panel, '[data-back-live]')?.addEventListener('click', () => {
@@ -787,25 +1194,34 @@ function setup(panel: Panel): void {
   // Delegated, because the tables are rebuilt on every settle.
   panel.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null
+    // The ticket's own opener is in the markup and bound above; the ones on the
+    // position cards are not, since those cards arrive after setup.
+    const openProtection = target?.closest<HTMLElement>('[data-protection-open]')
+    if (openProtection) {
+      editProtection(openProtection.dataset.protectionOpen || undefined)
+      return
+    }
     const close = target?.closest<HTMLElement>('[data-close]')
     if (close?.dataset.close) {
       const position = account.positions.find((held) => held.id === close.dataset.close)
       if (!position) return
-      commit(
-        placeOrder(
-          account,
-          {
-            // Closing buys back a short and sells a long.
-            side: position.side === 'buy' ? 'sell' : 'buy',
-            kind: 'market',
-            purpose: 'close',
-            positionId: position.id,
-            size: position.size
-          },
-          Date.now(),
-          market
-        )
-      )
+      askToClose(panel, position, price)
+      return
+    }
+    // A stop or target listed among the orders is taken off the same way a
+    // resting one is: by naming the level and the position it was on.
+    const clearLevel = target?.closest<HTMLElement>('[data-clear-level]')
+    if (clearLevel?.dataset.clearLevel && clearLevel.dataset.position) {
+      const key = clearLevel.dataset.clearLevel === 'takeProfit' ? 'takeProfit' : 'stopLoss'
+      const held = account.positions.find((position) => position.id === clearLevel.dataset.position)
+      if (!held) return
+      const levels = { stopLoss: held.stopLoss, takeProfit: held.takeProfit, [key]: null }
+      const result = setProtection(account, held.id, levels)
+      if (result.reason) {
+        message(panel, `refused.${result.reason}`)
+        return
+      }
+      commit(result.account)
       return
     }
     const cancel = target?.closest<HTMLElement>('[data-cancel]')
@@ -859,10 +1275,10 @@ function setup(panel: Panel): void {
 function restore(panel: Panel, seed: string): Account {
   let account: Account | null = null
   try {
-    account = loadAccount(localStorage.getItem(accountStorageKey))
+    account = loadAccount(readValue(accountStorageKey) ?? null)
     if (account) {
       try {
-        account = loadHistory(localStorage.getItem(historyStorageKey), account)
+        account = loadHistory(readValue(historyStorageKey) ?? null, account)
       } catch {
         // A log that cannot be read is a missing log, not a broken account.
       }
@@ -878,27 +1294,127 @@ function restore(panel: Panel, seed: string): Account {
   return advanceTo(account, Date.now(), seededMarket(seed, account.startPrice))
 }
 
+/**
+ * One tab at a time may run the simulator.
+ *
+ * Two tabs on one account are not two views of it, they are two of it. Each holds
+ * its own copy of the position and writes the whole lot back on every action, so
+ * the second tab's click silently undoes the first tab's, and neither reader ever
+ * finds out. The lock is taken from the browser rather than written by hand, so a
+ * tab that is closed, reloaded or crashes hands it over by itself and nothing here
+ * has to notice and clear up after itself.
+ */
+const SIMULATOR_LOCK = 'tmzb-market-simulator-v1'
+const HEARTBEAT_KEY = 'tmzb-market-simulator-tab-v1'
+/** Long enough to cover a backgrounded tab's throttled timers, short enough that a
+ *  tab killed outright is not locked out for the rest of the session. */
+const HEARTBEAT_STALE_MS = 12_000
+
+function claimWithWebLocks(): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    let answered = false
+    const answer = (held: boolean) => {
+      if (answered) return
+      answered = true
+      resolve(held)
+    }
+    try {
+      const held = navigator.locks.request(SIMULATOR_LOCK, { ifAvailable: true }, async (lock) => {
+        if (!lock) {
+          answer(false)
+          return
+        }
+        // The lock is held for as long as this callback runs, so it is held for as
+        // long as this tab is open. A promise that never settles is the whole trick.
+        answer(true)
+        await new Promise<void>(() => {})
+      })
+      void held.catch(() => answer(false))
+    } catch {
+      answer(false)
+    }
+  })
+}
+
+/** The same rule for a browser without the Web Locks API, which cannot be allowed to
+ *  mean "two tabs at a time" either. */
+function claimWithHeartbeat(): boolean {
+  try {
+    const held = localStorage.getItem(HEARTBEAT_KEY)
+    if (held) {
+      const at = Number(JSON.parse(held).at)
+      if (Number.isFinite(at) && Date.now() - at < HEARTBEAT_STALE_MS) return false
+    }
+    localStorage.setItem(HEARTBEAT_KEY, JSON.stringify({ at: Date.now() }))
+  } catch {
+    return true
+  }
+  const beat = setInterval(() => {
+    try {
+      localStorage.setItem(HEARTBEAT_KEY, JSON.stringify({ at: Date.now() }))
+    } catch {
+      /* a tab that cannot write it cannot renew it, and will be locked out in time */
+    }
+  }, HEARTBEAT_STALE_MS / 3)
+  ;(beat as unknown as { unref?: () => void }).unref?.()
+  globalThis.addEventListener?.('pagehide', () => {
+    clearInterval(beat)
+    try {
+      localStorage.removeItem(HEARTBEAT_KEY)
+    } catch {
+      /* it goes stale on its own */
+    }
+  })
+  return true
+}
+
+async function claimSimulatorTab(): Promise<boolean> {
+  if (navigator.locks) return claimWithWebLocks()
+  return claimWithHeartbeat()
+}
+
+function showLockedNotice(panel: Panel): void {
+  find<HTMLElement>(panel, '.trade-columns')?.setAttribute('hidden', '')
+  const note = document.createElement('p')
+  note.className = 'trade-locked'
+  note.setAttribute('role', 'status')
+  note.textContent = say('tabLocked')
+  panel.append(note)
+}
+
 export function initTradingPanels(scope: ParentNode = document): void {
   for (const element of scope.querySelectorAll<HTMLElement>('[data-trade-panel]')) {
     const panel = element as Panel
     if (panel.dataset.ready === 'true') continue
     panel.dataset.ready = 'true'
-    try {
-      // The remembered choice goes on before anything is drawn, so the first
-      // frame is already in the colours and the unit the reader last asked for.
-      applyUpColour(panel, chartFor(panel), readUpColour())
-      sizeUnit = readSizeUnit()
-      // The remembered unit comes with its own step and its own pressed state, or
-      // the first keystroke in the box is rounded by another unit's step.
-      find<HTMLInputElement>(panel, '[data-size]')?.setAttribute('step', sizeStepFor(sizeUnit))
-      for (const button of panel.querySelectorAll<HTMLElement>('[data-size-unit]')) {
-        button.setAttribute('aria-pressed', String(button.dataset.sizeUnit === sizeUnit))
+    // The table is filled from IndexedDB after the module has run, so anything
+    // that remembers a choice has to wait for it: read too early and every
+    // preference comes back as its default and is then written over.
+    whenStorageReady(async () => {
+      try {
+        // Before anything is read: a tab that does not hold the lock must not load
+        // the account, let alone write one back.
+        if (!(await claimSimulatorTab())) {
+          showLockedNotice(panel)
+          return
+        }
+        // The remembered choice goes on before anything is drawn, so the first
+        // frame is already in the colours and the unit the reader last asked for.
+        applyUpColour(panel, chartFor(panel), readUpColour())
+        sizeUnit = readSizeUnit()
+        restoreOrderConfig(panel)
+        // The remembered unit comes with its own step and its own pressed state, or
+        // the first keystroke in the box is rounded by another unit's step.
+        find<HTMLInputElement>(panel, '[data-size]')?.setAttribute('step', sizeStepFor(sizeUnit))
+        for (const button of panel.querySelectorAll<HTMLElement>('[data-size-unit]')) {
+          button.setAttribute('aria-pressed', String(button.dataset.sizeUnit === sizeUnit))
+        }
+        setup(panel)
+      } catch (error) {
+        // A broken panel must not take the chart down with it.
+        console.error(error)
       }
-      setup(panel)
-    } catch (error) {
-      // A broken panel must not take the chart down with it.
-      console.error(error)
-    }
+    })
   }
 }
 
