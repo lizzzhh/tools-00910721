@@ -1,8 +1,11 @@
 import { localizeTools, tools } from '../data/tools'
+import { readValue, whenStorageReady, writeValue } from '../lib/storage'
 import { pickFavoriteTool, rankByUsage } from '../lib/usage-ranking'
+import { readDaySeries, setDay, todayKey, type DaySeries } from '../lib/day-series'
 import { currentIntlLocale, currentTranslator } from '../i18n/client'
 import type { MessageKey } from '../i18n'
-import { getUsageSnapshot } from './usage'
+import { getUsageSnapshot, type UsageSnapshot } from './usage'
+import { renderTrend } from './trend-chart'
 
 type Fortune = { score: number; labelKey: MessageKey; messageKey: MessageKey }
 
@@ -17,8 +20,33 @@ const fortunes: Fortune[] = [
 ]
 
 const fortuneStorageKey = 'code-space-daily-fortune'
-const todayKey = () => new Date().toLocaleDateString('sv-SE')
+
+/** Long enough for any window the chart draws, short enough to stay readable. */
+const fortuneHistoryDays = 90
+
 const mountedRoots = new WeakSet<HTMLElement>()
+
+/** The stored draw for today, if there is one and it is still today's. */
+function readFortuneRecord(): { index: number } | undefined {
+  try {
+    const saved = JSON.parse(readValue(fortuneStorageKey) ?? 'null') as { date?: string; index?: number } | null
+    if (saved?.date !== todayKey() || typeof saved.index !== 'number') return undefined
+    if (saved.index < 0 || saved.index >= fortunes.length) return undefined
+    return { index: saved.index }
+  } catch {
+    return undefined
+  }
+}
+
+/** Every day's score, so the dashboard can draw them against a day axis. */
+function readFortuneHistory(): DaySeries {
+  try {
+    const saved = JSON.parse(readValue(fortuneStorageKey) ?? 'null') as { history?: unknown } | null
+    return readDaySeries(saved?.history)
+  } catch {
+    return {}
+  }
+}
 
 function initDashboard() {
   const root = document.querySelector<HTMLElement>('.dashboard-workspace')
@@ -41,13 +69,15 @@ function initDashboard() {
   const usageEmpty = document.querySelector<HTMLElement>('#usage-empty')
   const topLimit = 5
 
-  function getSavedFortune() {
-    const date = todayKey()
-    try {
-      const saved = JSON.parse(localStorage.getItem(fortuneStorageKey) ?? 'null') as { date?: string; index?: number } | null
-      if (saved?.date === date && typeof saved.index === 'number' && saved.index >= 0 && saved.index < fortunes.length) return { date, index: saved.index }
-    } catch {}
-    return undefined
+  /** Both trend charts describe themselves through data attributes. */
+  function renderFortuneTrend() {
+    const figure = document.querySelector<HTMLElement>('#fortune-trend')
+    if (figure) renderTrend(figure, readFortuneHistory())
+  }
+
+  function renderUsageTrend(usage: UsageSnapshot) {
+    const figure = document.querySelector<HTMLElement>('#usage-trend')
+    if (figure) renderTrend(figure, usage.daily)
   }
 
   function renderFortune(fortune: Fortune | undefined) {
@@ -70,18 +100,17 @@ function initDashboard() {
   }
 
   function drawFortune() {
-    if (getSavedFortune()) return
+    if (readFortuneRecord()) return
     const index = Math.floor(Math.random() * fortunes.length)
-    try {
-      localStorage.setItem(fortuneStorageKey, JSON.stringify({ date: todayKey(), index }))
-    } catch {}
+    const history = setDay(readFortuneHistory(), new Date(), fortunes[index].score, fortuneHistoryDays)
+    writeValue(fortuneStorageKey, JSON.stringify({ date: todayKey(), index, history }))
     renderFortune(fortunes[index])
+    renderFortuneTrend()
   }
 
-  function renderUsage() {
+  function renderUsage(usage: UsageSnapshot) {
     const t = currentTranslator()
     const localized = localizeTools(tools, t)
-    const usage = getUsageSnapshot()
     const top = rankByUsage(tools, usage.byTool, topLimit)
     const maxCount = Math.max(...top.map((item) => item.count), 1)
     const favorite = pickFavoriteTool(tools, usage.byTool) ?? tools[0]
@@ -126,9 +155,16 @@ function initDashboard() {
   }
 
   drawButton?.addEventListener('click', drawFortune)
-  const savedFortune = getSavedFortune()
-  renderFortune(savedFortune === undefined ? undefined : fortunes[savedFortune.index])
-  renderUsage()
+  // The table is still opening at this point, so the first paint waits for it
+  // rather than showing a fresh start for someone who has a history.
+  whenStorageReady(() => {
+    const savedFortune = readFortuneRecord()
+    const usage = getUsageSnapshot()
+    renderFortune(savedFortune === undefined ? undefined : fortunes[savedFortune.index])
+    renderUsage(usage)
+    renderFortuneTrend()
+    renderUsageTrend(usage)
+  })
 }
 
 document.addEventListener('astro:page-load', initDashboard)

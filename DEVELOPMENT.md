@@ -74,7 +74,7 @@ src/
 - 组件 Props 必须使用 TypeScript interface 定义。
 - 组件通过 `class` 参数接收布局类，不在通用组件中写具体业务选择器。
 - 可复用组件不得直接依赖某个页面的业务数据。
-- 组件默认保持无状态；需要状态时使用原生 DOM API、`localStorage` 或后续统一的状态模块。
+- 组件默认保持无状态；需要状态时使用原生 DOM API 或第 7 节的存储表。
 
 当前通用组件包括：
 
@@ -138,18 +138,58 @@ src/
 
 ## 7. 状态与本地存储
 
-当前使用的 `localStorage` 键：
+所有需要记住的东西都放在同一个 IndexedDB 表里：数据库 `code-space`，对象仓库
+`kv`（out-of-line 字符串键），入口是 `src/lib/storage.ts`。业务代码不要直接
+调用 `localStorage`、`sessionStorage` 或 `indexedDB`，一律走
+`readValue` / `writeValue` / `storage()`。
 
 | Key | 用途 |
 | --- | --- |
 | `code-space-theme` | 明暗主题 |
-| `code-space-usage` | 工具使用统计 |
+| `code-space-locale` | 界面语言 |
+| `code-space-usage` | 工具使用记录 |
 | `code-space-daily-fortune` | 每日运势结果 |
 | `code-space-favorites` | 收藏工具列表 |
-| `code-space-scratchpad` | 草稿纸的标题、正文与字体（`localStorage`，跨标签页共享） |
-| `code-space-scratchpad-view` | 草稿纸的位置与折叠状态（`sessionStorage`，仅当前标签页） |
+| `code-space-scratchpad` | 草稿纸的标题、正文与字体（跨标签页共享） |
+| `code-space-scratchpad-view:<tabId>` | 草稿纸的位置与折叠状态（按标签页独立） |
+| `tron-lottery:stats` | TRON 抽奖记录 |
+| `tron-lottery:posterior-basis` | TRON 推断方式 |
 
-读写 `localStorage` 时必须进行异常处理，存储不可用时不能阻塞页面功能。
+关于这张表的几条约定：
+
+- 读取是同步的，因为整张表在启动时会被读进内存快照；写入先落快照，再以
+  120ms 批量写回数据库。
+- 打开数据库需要时间。页面构建期间就要读值的代码，必须用 `whenStorageReady`
+  包一层，否则读到的是空表。
+- 跨标签页同步走 `BroadcastChannel('code-space-storage')`；广播里空字符串表示
+  「这个键被删了」。
+- 主题和语言额外镜像到 `cs-code-space-theme` / `cs-code-space-locale` cookie，
+  因为 `<head>` 里的内联脚本必须在首屏绘制前读到它们，而 IndexedDB 是异步的。
+  cookie 只是镜像，真实数据仍以表为准。
+- 旧版本的 `localStorage` / `sessionStorage` 数据在启动时自动搬进表里，搬完
+  即删除；不属于本站前缀的键不动。`sessionStorage` 只保留 `code-space-tab-id`
+  这一随机标签页身份，不是用户数据。
+- 存储不可用（隐私模式、配额满）时不能阻塞页面功能：`StorageTable` 会退回空
+  快照，页面照常工作。
+
+### 工具使用记录
+
+`code-space-usage` 分三部分，含义不同，不要混用：
+
+- `log`：**逐次**使用记录，每条是 `{ id, at }`，`id` 是工具 id，`at` 是该次使用的
+  ISO 时间。它是关于「什么时候用了哪个工具」的唯一事实来源，今日次数、每日曲线
+  和最近使用列表都在读取时从它算出来（`src/lib/usage-history.ts`），不另存一份，
+  以免两份数据对不上。上限 `usageLogLimit` 条，满了丢最旧的。
+- `total` / `byTool`：历史累计次数和每个工具的累计次数。这两个不能从 `log` 推导，
+  否则 `log` 截断后「累计使用」会突然变小。
+- `daily` 不再落盘：`dayCounts` 每次读取时按读者所在时区把 `log` 折算成每日次数，
+  只保留 `usageDayHistory` 天。日期键一律用本地 `YYYY-MM-DD`，规则见
+  `src/lib/day-series.ts`。
+
+数据页会整表导出这条记录，所以 `log` 的长度直接影响那一行的体积。
+
+数据页 `/[locale]/data/` 提供整表导出、合并导入和清空，格式见
+`src/lib/storage-schema.ts`（`{ app, version, exportedAt, entries }`）。
 
 ## 8. 交互与可访问性
 

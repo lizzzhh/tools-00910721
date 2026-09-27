@@ -1,36 +1,52 @@
+import { readValue, writeValue } from '../lib/storage'
+import { storageKeys } from '../lib/storage-schema'
+import { todayKey, type DaySeries } from '../lib/day-series'
+import {
+  appendEvent,
+  dayCounts,
+  latestByTool,
+  readEvents,
+  type UsageEvent
+} from '../lib/usage-history'
+
+export type { UsageEvent } from '../lib/usage-history'
+
+/**
+ * What the dashboard shows. `total` and `byTool` count every run ever, so they
+ * do not shrink when the log is trimmed; everything that is about time is read
+ * out of `log`.
+ */
 export type UsageSnapshot = {
   total: number
   today: number
   byTool: Record<string, number>
-  recent: { id: string; at: string }[]
+  /** The last tools used, newest first, one entry per tool. */
+  recent: UsageEvent[]
+  /** Runs per calendar day, for the day axis. A day with no runs is absent. */
+  daily: DaySeries
+  /** Every recorded run, oldest first. */
+  log: UsageEvent[]
 }
 
-type StoredUsage = UsageSnapshot & {
-  date: string
+type StoredUsage = {
+  total: number
+  byTool: Record<string, number>
+  log: UsageEvent[]
 }
 
-const storageKey = 'code-space-usage'
-const todayKey = () => new Date().toLocaleDateString('sv-SE')
+const storageKey = storageKeys.usage
 
-const emptyUsage = (): StoredUsage => ({
-  total: 0,
-  today: 0,
-  byTool: {},
-  recent: [],
-  date: todayKey()
-})
+const emptyUsage = (): StoredUsage => ({ total: 0, byTool: {}, log: [] })
 
 function readUsage(): StoredUsage {
-  if (typeof localStorage === 'undefined') return emptyUsage()
   try {
-    const stored = JSON.parse(localStorage.getItem(storageKey) ?? '{}') as Partial<StoredUsage>
-    const currentDate = todayKey()
+    const stored = JSON.parse(readValue(storageKey) ?? '{}') as Partial<StoredUsage> & { recent?: unknown }
     return {
       total: Number(stored.total) || 0,
-      today: stored.date === currentDate ? Number(stored.today) || 0 : 0,
       byTool: stored.byTool && typeof stored.byTool === 'object' ? stored.byTool : {},
-      recent: Array.isArray(stored.recent) ? stored.recent : [],
-      date: currentDate
+      // Records written before the log existed kept only the last few runs, and
+      // those are the only ones that can be brought over.
+      log: readEvents(stored.log ?? stored.recent)
     }
   } catch {
     return emptyUsage()
@@ -38,22 +54,27 @@ function readUsage(): StoredUsage {
 }
 
 function writeUsage(usage: StoredUsage) {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(usage))
-  } catch {}
+  writeValue(storageKey, JSON.stringify(usage))
 }
 
+/** Records one run of a tool, with the moment it happened. */
 export function recordToolUsage(toolId: string) {
   const usage = readUsage()
   usage.total += 1
-  usage.today += 1
   usage.byTool[toolId] = (usage.byTool[toolId] ?? 0) + 1
-  usage.recent = [{ id: toolId, at: new Date().toISOString() }, ...usage.recent.filter((item) => item.id !== toolId)].slice(0, 6)
+  usage.log = appendEvent(usage.log, { id: toolId, at: new Date().toISOString() })
   writeUsage(usage)
 }
 
 export function getUsageSnapshot(): UsageSnapshot {
-  const { total, today, byTool, recent } = readUsage()
-  return { total, today, byTool, recent }
+  const { total, byTool, log } = readUsage()
+  const daily = dayCounts(log)
+  return {
+    total,
+    today: daily[todayKey()] ?? 0,
+    byTool,
+    recent: latestByTool(log),
+    daily,
+    log
+  }
 }
