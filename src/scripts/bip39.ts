@@ -1,4 +1,5 @@
 import {
+  activeSpan,
   bip39LanguageLabels,
   completionOptions,
   bip39Languages,
@@ -16,6 +17,7 @@ import {
   readingOf,
   mnemonicToSeed,
   splitMnemonic,
+  suggestionEdit,
   tokenizeMnemonic,
   validateMnemonic,
   type Bip39Language,
@@ -159,10 +161,6 @@ function init() {
 
   /** True while an IME composition is in flight; the marks and popup wait for it. */
   let composing = false
-  // True while the open list is checksum completions rather than spelling
-  // candidates, which changes what applying one does: there is no word under the
-  // caret to replace, so the word is appended instead.
-  let completionMode = false
   /** Candidate words currently offered, and which one the keyboard has reached. */
   let suggestOptions: string[] = []
   let optionIndex = -1
@@ -193,13 +191,6 @@ function init() {
    * so the popup stays up for the word just typed; the next word only claims the
    * caret once a separator has been typed, because then the offsets differ.
    */
-  function activeSpan(spans: MnemonicWordSpan[], caret: number): MnemonicWordSpan | null {
-    for (const span of spans) {
-      if (caret >= span.start && caret <= span.end) return span
-    }
-    return null
-  }
-
   /**
    * Rebuilds the layer that sits behind the textarea.
    *
@@ -264,7 +255,6 @@ function init() {
   }
 
   function closeSuggest() {
-    completionMode = false
     suggestOptions = []
     optionIndex = -1
     suggestList?.replaceChildren()
@@ -443,7 +433,6 @@ function init() {
    * here, and it needs no state of its own to notice.
    */
   function renderCompletion() {
-    completionMode = false
     if (!input || !everyListReady) return
     // The decision lives in the lib so it can be tested: this is the branch that
     // decides whether a popup appears at all, and getting it wrong either hides a
@@ -473,7 +462,6 @@ function init() {
     })
     suggestList?.replaceChildren(fragment)
     suggestOptions = options
-    completionMode = true
     setText(suggestLabel, t('toolUi.bip39.suggestCompleteLabel'))
     setText(suggestHint, t('toolUi.bip39.suggestCompleteHint'))
     setSelectedOption(0)
@@ -535,34 +523,27 @@ function init() {
     renderSuggest(active)
   }
 
-  /** Replaces the word under the caret with a candidate, or appends a completion. */
+  /**
+   * Applies the highlighted suggestion: a spelling correction for the word under
+   * the caret, or a checksum completion appended when there is no such word.
+   *
+   * Which of the two this is comes from the field, not from a flag left behind by
+   * whichever render last opened the list. A flag set by one render and read by a
+   * later keystroke is how "aut" plus "autumn" ends up in the field: the
+   * completion list sets it, the spelling list that follows does not clear it, and
+   * Enter then appends where it should have replaced. Only the completions list is
+   * ever open with no word under the caret, so the caret settles it exactly, and
+   * the typed letters always go with the word they belong to.
+   */
   function applyCandidate(position = optionIndex) {
     const word = suggestOptions[position]
     if (!word || !input) return
-    if (completionMode) {
-      // There is no word under the caret to replace — the caret is parked in the
-      // gap — so the word goes in at the caret with a separator after it, which
-      // leaves the mnemonic complete and ready for the next one.
-      const caret = input.selectionStart ?? input.value.length
-      input.setRangeText(`${word} `, caret, caret, 'end')
-      closeSuggest()
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-      return
-    }
-    const spans = tokenizeMnemonic(input.value)
-    const active = activeSpan(spans, input.selectionStart ?? input.value.length)
-    if (!active) return
-    // A word span always stops at a separator or at the end of the field, so the
-    // only case that needs a gap is the end of the field: applying a candidate to
-    // the last word would otherwise leave the next keystroke glued to it. A word
-    // that already has a separator after it gets nothing — a second space would
-    // only be a stray one to clean up.
-    const trailing = input.value.slice(active.end)
-    const suffix = trailing === '' ? ' ' : ''
-    // `setRangeText` swaps exactly the active word and leaves the caret after it.
-    // It fires no `input` event, so one is raised by hand to keep the rest of
-    // the panel in step.
-    input.setRangeText(word + suffix, active.start, active.end, 'end')
+    const edit = suggestionEdit(input.value, input.selectionStart ?? input.value.length, word)
+    if (!edit) return
+    // `setRangeText` swaps exactly that range and leaves the caret after it, and
+    // fires no `input` event, so one is raised by hand to keep the rest of the
+    // panel in step.
+    input.setRangeText(edit.text, edit.start, edit.end, 'end')
     closeSuggest()
     input.dispatchEvent(new Event('input', { bubbles: true }))
   }

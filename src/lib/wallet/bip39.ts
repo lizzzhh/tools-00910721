@@ -655,6 +655,52 @@ export function checksumCompletions(parts: string[], words: string[]): string[] 
 }
 
 /**
+ * The word the caret is in, or null when it is in a separator.
+ *
+ * A caret sitting exactly on a separator's edge counts as inside the word it
+ * touches, since that is the word the user is working on.
+ */
+export function activeSpan(spans: MnemonicWordSpan[], caret: number): MnemonicWordSpan | null {
+  for (const span of spans) {
+    if (caret >= span.start && caret <= span.end) return span
+  }
+  return null
+}
+
+/**
+ * What applying a suggestion does to the field: the range to swap out and the
+ * text to put in its place.
+ *
+ * A suggestion is either a spelling correction for the word under the caret, in
+ * which case the whole of that word goes — including however much of it has been
+ * typed, since leaving the typed letters behind glues them to the front of the
+ * replacement — or a checksum completion offered with no word under the caret, in
+ * which case there is nothing to replace and the word is appended.
+ *
+ * Returned as a range rather than a finished string so the editor can apply it
+ * with `setRangeText` and keep its own undo history.
+ */
+export function suggestionEdit(
+  value: string,
+  caret: number,
+  word: string,
+  separator = ' '
+): { start: number; end: number; text: string } | null {
+  if (!word) return null
+  const active = activeSpan(tokenizeMnemonic(value), caret)
+  if (active) {
+    // A word span always stops at a separator or at the end of the field, so the
+    // only case needing a gap is the end of the field: a candidate applied to the
+    // last word would otherwise leave the next keystroke glued to it. A word that
+    // already has a separator after it gets none — a second one would only be a
+    // stray to clean up.
+    const suffix = value.slice(active.end) === '' ? separator : ''
+    return { start: active.start, end: active.end, text: word + suffix }
+  }
+  return { start: caret, end: caret, text: word + separator }
+}
+
+/**
  * The completing words for a value whose caret is parked in the gap after the
  * last separator, one word short of a valid length.
  *

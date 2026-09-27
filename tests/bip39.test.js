@@ -8,8 +8,10 @@ import {
   bip39Separators,
   bip39Strengths,
   bip39WordCounts,
+  activeSpan,
   checksumCompletions,
   completionOptions,
+  suggestionEdit,
   convertMnemonic,
   createWordlistIndex,
   detectLanguage,
@@ -962,6 +964,87 @@ test('a ticked spelling candidate really is an answer', async () => {
     // tick is not decoration: at three letters it has to mark something.
     if (typed === 'aut' || typed === 'autu') assert.ok(ticked.length > 0, `nothing ticked for "${typed}"`)
   }
+})
+
+test('applying a suggestion replaces the typed letters, never appends to them', () => {
+  // The typed part of a word belongs to that word. Replacing only the tail of it
+  // leaves the head behind, so "aut" plus the candidate "autumn" lands as
+  // "autautumn" — a word in no list, so the field then reports the user's
+  // keystroke back to them as a mistake.
+  // The caret at the very end of the field is still *inside* the last word, since
+  // a word span runs to the end of the field, so this replaces rather than
+  // appends. Only a caret past a separator is in the gap.
+  const value = 'abandon ability able'
+  const edit = suggestionEdit(value, value.length, 'absorb')
+  // ...and it picks up a trailing separator, since the last word runs to the end
+  // of the field and the next keystroke would otherwise land against it.
+  assert.deepEqual(edit, { start: 16, end: 20, text: 'absorb ' })
+  assert.equal(value.slice(0, edit.start) + edit.text + value.slice(edit.end), 'abandon ability absorb ')
+
+  // Mid-word, with the caret at the end of what has been typed so far.
+  const typing = 'abandon ability au'
+  const typed = suggestionEdit(typing, typing.length, 'autumn')
+  assert.deepEqual(typed, { start: 16, end: 18, text: 'autumn ' })
+  assert.equal(typing.slice(0, typed.start) + typed.text + typing.slice(typed.end), 'abandon ability autumn ')
+
+  // The caret inside the word, not after it, replaces the same whole word.
+  for (const caret of [16, 17, 18]) {
+    const edit = suggestionEdit(typing, caret, 'autumn')
+    assert.equal(typing.slice(0, edit.start) + edit.text + typing.slice(edit.end), 'abandon ability autumn ')
+  }
+
+  // A word with a separator already after it gets no second one, or the next
+  // keystroke starts on a stray space.
+  const middle = 'abandon abil able'
+  const swapped = suggestionEdit(middle, 11, 'absorb')
+  assert.equal(swapped.text, 'absorb')
+  assert.equal(middle.slice(0, swapped.start) + swapped.text + middle.slice(swapped.end), 'abandon absorb able')
+
+  // The gap after the last separator is the one case that appends, and it appends
+  // with a separator so the mnemonic ends up complete.
+  const gap = 'abandon ability able '
+  const appended = suggestionEdit(gap, gap.length, 'above')
+  assert.deepEqual(appended, { start: gap.length, end: gap.length, text: 'above ' })
+
+  // There is no offset that sits "in the gap" between two words: the spans are a
+  // single separator apart, and both of that separator's offsets belong to a word.
+  // The append case is therefore reachable only at the end of a field ending in a
+  // separator — which is exactly where the completion list opens, so the two
+  // states cannot be mistaken for one another.
+  const after = 'abandon ability able zoo'
+  const joined = (caret) => {
+    const edit = suggestionEdit(after, caret, 'above')
+    return after.slice(0, edit.start) + edit.text + after.slice(edit.end)
+  }
+  // On the separator: the word before it. At the next word's start, and anywhere
+  // inside it: that word, replaced whole.
+  assert.equal(joined(20), 'abandon ability above zoo')
+  assert.equal(joined(21), 'abandon ability able above ')
+  assert.equal(joined(23), 'abandon ability able above ')
+  assert.equal(joined(after.length), 'abandon ability able above ')
+
+  // The boundary the distinction rests on: a caret exactly on a separator counts
+  // as being in the word it touches, so a correction still replaces rather than
+  // inserting.
+  const edge = 'abandon ability'
+  for (const [caret, expected] of [
+    [7, 'able ability'], // on the separator: the word before it
+    [8, 'abandon able '] // at the start of the next word: inside it, and last, so it gains a separator
+  ]) {
+    const edit = suggestionEdit(edge, caret, 'able')
+    assert.equal(edge.slice(0, edit.start) + edit.text + edge.slice(edit.end), expected, `caret at ${caret}`)
+  }
+
+  // And activeSpan is what decides that, so the two cannot drift apart.
+  const spans = tokenizeMnemonic(typing)
+  assert.equal(activeSpan(spans, 16).text, 'au')
+  assert.equal(activeSpan(spans, 18).text, 'au', 'the end of the field is still inside the last word')
+  assert.equal(activeSpan(spans, 15).text, 'ability', 'the separator belongs to the word before it')
+  assert.equal(activeSpan(spans, 14).text, 'ability')
+  assert.equal(activeSpan(spans, 19), null, 'past the end of the field is not inside a word')
+
+  // An empty candidate changes nothing rather than clearing the word.
+  assert.equal(suggestionEdit(typing, typing.length, ''), null)
 })
 
 // --- BIP32 ------------------------------------------------------------------
