@@ -1,0 +1,92 @@
+---
+import { Icon } from 'astro-icon/components'
+import Card from '../ui/Card.astro'
+import TradingPanel from './TradingPanel.astro'
+import type { Locale, MessageKey } from '../../i18n'
+import { createTranslator } from '../../i18n'
+import type { Timeframe } from '../../lib/candles'
+
+interface Props {
+  locale: Locale
+  seed?: string
+  timeframe?: Timeframe
+}
+
+const { locale, seed = 'code-space:market/v1', timeframe = '1d' } = Astro.props
+const t = createTranslator(locale)
+
+// Every period the model can produce, grouped the way a futures market lists
+// them, so the seconds are one click away rather than buried in a dropdown.
+const groups: { timeframes: Timeframe[] }[] = [
+  { timeframes: ['1s', '5s', '10s', '15s', '30s'] },
+  { timeframes: ['1m', '3m', '5m', '15m', '30m'] },
+  { timeframes: ['1h', '2h', '4h', '6h', '8h', '12h'] },
+  { timeframes: ['1d', '1w'] }
+]
+
+// Green up is the western convention and red up is the Chinese one, so the chart
+// follows the reader's locale rather than picking a side.
+const up = locale === 'zh-CN' || locale === 'zh-TW' ? 'danger' : 'success'
+---
+
+<section class="tool-workspace market-workspace" aria-live="polite">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>{t('categories.market')}</span><b>/</b><strong>{t('tools.market.name')}</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:trending-up" size={25} /></span>
+        <div><h1>{t('tools.market.name')}</h1><p>{t('toolUi.market.subtitle')}</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
+  </div>
+
+  <Card class="tool-card market-card">
+    <div class="field-heading">
+      <b>{t('toolUi.market.timeframeLabel')}</b>
+      <span>{t('toolUi.market.timeframeHint')}</span>
+    </div>
+    <div
+      class="candle-chart"
+      data-candle-chart
+      data-timeframe={timeframe}
+      data-seed={seed}
+      data-up={up}
+    >
+      <div class="candle-chart-bar">
+        <div class="candle-chart-switch" role="group" aria-label={t('toolUi.market.timeframeLabel')}>
+          {groups.map((group) => (
+            <div class="candle-chart-group">
+              {group.timeframes.map((option) => (
+                <button
+                  type="button"
+                  class="candle-chart-timeframe"
+                  data-candle-timeframe={String(option)}
+                  aria-pressed={option === timeframe}
+                >
+                  {t(`toolUi.market.timeframe.${option}` as MessageKey)}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div class="candle-chart-meta">
+          <b class="candle-chart-price" data-candle-price>&mdash;</b>
+          <span class="candle-chart-note">{t('toolUi.market.disclaimer')}</span>
+        </div>
+      </div>
+      <div class="candle-chart-plot" data-candle-plot hidden></div>
+    </div>
+    <div class="security-notice"><Icon name="lucide:triangle-alert" size={16} />{t('toolUi.market.notice')}</div>
+  </Card>
+
+  <Card class="tool-card market-card">
+    <TradingPanel locale={locale} seed={seed} up={up} />
+  </Card>
+
+  <div class="security-notice"><Icon name="lucide:triangle-alert" size={16} />{t('toolUi.market.trading.notice')}</div>
+</section>
+
+<script>
+  import '../../scripts/candle-chart'
+</script>

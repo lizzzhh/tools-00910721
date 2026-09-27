@@ -1,0 +1,275 @@
+---
+import { Icon } from 'astro-icon/components'
+import type { Locale, MessageKey } from '../../i18n'
+import { createTranslator } from '../../i18n'
+import { marginAsset, priceUnit, sizeTicker, tradedAsset } from '../../lib/units.ts'
+
+interface Props {
+  locale: Locale
+  seed?: string
+  /** Which colour means a gain, following the reader's locale. */
+  up?: string
+}
+
+const { locale, seed = 'code-space:market/v1', up = 'success' } = Astro.props
+const sizeUnitName = sizeTicker('tmzb')
+const t = createTranslator(locale)
+const label = (key: string) => t(`toolUi.market.trading.${key}` as MessageKey)
+
+/** Shares of the free margin, which is how a size is usually picked. */
+const sizePresets = [10, 25, 50, 100]
+const amounts = [1_000, 10_000, 100_000]
+---
+
+<div class="trade" data-trade-panel data-seed={seed} data-up={up}>
+  <div class="trade-columns">
+  <div class="trade-column-trade">
+  <section class="trade-box">
+    <header class="trade-head">
+      <h2>{label('ticket')}</h2>
+      <span class="trade-unit">{tradedAsset} / {marginAsset}</span>
+    </header>
+
+    <div class="trade-segment trade-segment-wide" role="group" aria-label={label('side')}>
+      <button type="button" class="is-long" data-side="buy" aria-pressed="true">{label('buyOpenLong')}</button>
+      <button type="button" class="is-short" data-side="sell" aria-pressed="false">{label('sellOpenShort')}</button>
+    </div>
+
+    <div class="trade-segment trade-segment-wide" role="group" aria-label={label('orderKind')}>
+      <button type="button" data-kind="market" aria-pressed="true">{label('market')}</button>
+      <button type="button" data-kind="limit" aria-pressed="false">{label('limit')}</button>
+    </div>
+
+    <button type="button" class="trade-settings-button" data-margin-open>
+      <Icon name="lucide:sliders-horizontal" size={14} />
+      <span class="trade-unit">{label('margin')}</span>
+      <b data-margin-summary>{label('cross')} · 10x</b>
+    </button>
+
+    <div class="trade-field">
+      <div class="trade-field-head">
+        <label for="trade-size">{label('size')}</label>
+        <div class="trade-segment trade-segment-sm" role="group" aria-label={label('sizeUnit')}>
+          <button type="button" data-size-unit="tmzb" aria-pressed="true">{label('unitTmzb')}</button>
+          <button type="button" data-size-unit="value" aria-pressed="false">{label('unitValue')}</button>
+          <button type="button" data-size-unit="cost" aria-pressed="false">{label('unitCost')}</button>
+        </div>
+      </div>
+      <input
+        id="trade-size"
+        type="number"
+        min="0"
+        step="0.001"
+        inputmode="decimal"
+        data-size
+        placeholder="0.010"
+      />
+      <p class="trade-hint">
+        {label('sizeIs')} <b data-size-readout>{sizeUnitName} 0</b>
+      </p>
+      {/* A slider of shares rather than of amounts, so its ends stay put while the
+          price moves underneath it and the reader can still see what full scale is. */}
+      <div class="trade-slider">
+        <input
+          type="range"
+          class="trade-size-slider"
+          min="0"
+          max="100"
+          step="0.1"
+          value="0"
+          data-size-slider
+          aria-label={label('sizeShare')}
+        />
+        <div class="trade-slider-ends">
+          <span>0</span>
+          <span>{label('sliderFull')} <b data-size-max>&mdash;</b></span>
+        </div>
+      </div>
+      <div class="trade-chips">
+        {sizePresets.map((preset) => (
+          <button type="button" class="trade-chip" data-size-preset={preset}>{preset}%</button>
+        ))}
+      </div>
+      <dl class="trade-size-facts">
+        <div>
+          <dt>{label('worthAbout')}</dt>
+          <dd data-size-about>&mdash;</dd>
+        </div>
+        <div>
+          <dt>{label('maxOpen')}</dt>
+          <dd data-max-open>&mdash;</dd>
+        </div>
+        <div>
+          <dt>{label('freeMargin')}</dt>
+          <dd data-free-margin>&mdash;</dd>
+        </div>
+      </dl>
+      <p class="trade-hint">{label('slippageHint')}</p>
+    </div>
+
+    <div class="trade-field" data-limit-field hidden>
+      <label for="trade-limit-price">
+        {label('limitPrice')} <span class="trade-unit">{priceUnit}</span>
+      </label>
+      <input id="trade-limit-price" type="number" min="0" step="any" inputmode="decimal" data-limit-price />
+    </div>
+
+    <dl class="trade-quote">
+      <div><dt>{label('notional')}</dt><dd data-quote-notional>&mdash;</dd></div>
+      <div><dt>{label('marginRequired')}</dt><dd data-quote-margin>&mdash;</dd></div>
+      <div><dt><span data-quote-fee-kind>{label('takerFee')}</span></dt><dd data-quote-fee>&mdash;</dd></div>
+      <div class="is-warn"><dt>{label('liquidationEstimate')}</dt><dd data-quote-liq>&mdash;</dd></div>
+    </dl>
+
+    <button type="button" class="primary-button trade-submit is-long" data-submit>{label('buyOpenLong')}</button>
+    <p class="trade-message" data-message role="status"></p>
+  </section>
+  </div>
+
+  <div class="trade-column-lists">
+  <section class="trade-box">
+    <header class="trade-head">
+      <h2>{label('account')}</h2>
+      <div class="trade-segment trade-segment-sm" role="group" aria-label={label('pnlColours')}>
+        <button type="button" data-up-colour="success" aria-pressed="true">{label('greenUp')}</button>
+        <button type="button" data-up-colour="danger" aria-pressed="false">{label('redUp')}</button>
+      </div>
+    </header>
+    <span class="trade-seed" title={label('seedHint')}>
+      <Icon name="lucide:fingerprint" size={13} />
+      <b data-seed-name>{seed}</b>
+    </span>
+
+    <div class="trade-figures">
+      <div class="trade-figure">
+        <span>{label('equity')}</span>
+        <b data-equity>&mdash;</b>
+      </div>
+      <div class="trade-figure">
+        <span>{label('balance')}</span>
+        <b data-balance>&mdash;</b>
+      </div>
+      <div class="trade-figure">
+        <span>{label('available')}</span>
+        <b data-available>&mdash;</b>
+      </div>
+      <div class="trade-figure">
+        <span>{label('unrealized')}</span>
+        <b data-unrealized>&mdash;</b>
+      </div>
+      <div class="trade-figure">
+        <span>{label('marginUsed')}</span>
+        <b data-margin-used>&mdash;</b>
+      </div>
+      <div class="trade-figure">
+        <span>{label('feesPaid')}</span>
+        <b data-fees>&mdash;</b>
+      </div>
+      <div class="trade-figure">
+        <span>{label('deposited')}</span>
+        <b data-deposited>&mdash;</b>
+      </div>
+    </div>
+
+    <form class="trade-deposit" data-deposit-form>
+      <label for="trade-deposit-amount">
+        {label('deposit')} <span class="trade-unit">{marginAsset}</span>
+      </label>
+      <div class="trade-chips">
+        {amounts.map((amount) => (
+          <button type="button" class="trade-chip" data-amount={amount}>
+            {amount.toLocaleString('en-US')}
+          </button>
+        ))}
+      </div>
+      <div class="trade-deposit-row">
+        <input
+          id="trade-deposit-amount"
+          type="number"
+          min="0"
+          step="any"
+          inputmode="decimal"
+          data-deposit-amount
+          placeholder="10000"
+        />
+        <button type="submit" class="trade-deposit-button" data-deposit>
+          <Icon name="lucide:wallet" size={15} />
+          {label('depositButton')}
+        </button>
+      </div>
+    </form>
+  </section>
+
+    <section class="trade-box">
+      <header class="trade-head">
+        <h2>{label('positions')}</h2>
+        <span class="trade-count" data-position-count>0</span>
+      </header>
+      <div class="trade-table" data-positions></div>
+    </section>
+
+    <section class="trade-box">
+      <header class="trade-head">
+        <h2>{label('orders')}</h2>
+        <span class="trade-count" data-order-count>0</span>
+      </header>
+      <div class="trade-table" data-orders></div>
+    </section>
+  </div>
+  </div>
+  <section class="trade-box trade-box-wide">
+    <header class="trade-head">
+      <h2>{label('history')}</h2>
+      <div class="trade-history-head">
+        <span class="trade-seed" title={label('seedHint')}>
+          <Icon name="lucide:fingerprint" size={12} />
+          <b data-seed-name>{seed}</b>
+        </span>
+        <span class="trade-seed" title={label('startPriceHint')}>
+          <Icon name="lucide:circle-dollar-sign" size={12} />
+          <b data-start-price>&mdash;</b>
+        </span>
+        <button type="button" class="trade-link" data-reset>{label('reset')}</button>
+      </div>
+    </header>
+    <p class="trade-hint" data-history-hint>{label('historyHint')}</p>
+    <div class="trade-history" data-history></div>
+  </section>
+
+  <div class="trade-live" data-live-bar hidden>
+    <span>{label('historyMode')}</span>
+    <b data-live-context></b>
+    <button type="button" class="primary-button" data-back-live>{label('backLive')}</button>
+  </div>
+
+  <dialog class="trade-dialog" data-margin-dialog aria-labelledby="trade-margin-title">
+    <h2 id="trade-margin-title">{label('margin')}</h2>
+    <div class="trade-box-nested">
+      <div class="trade-field-head">
+        <span class="trade-label">{label('marginMode')}</span>
+        <div class="trade-segment trade-segment-sm" role="group" aria-label={label('marginMode')}>
+          <button type="button" data-margin-mode="cross" aria-pressed="true">{label('cross')}</button>
+          <button type="button" data-margin-mode="isolated" aria-pressed="false">{label('isolated')}</button>
+        </div>
+      </div>
+      <div class="trade-field">
+        <label for="trade-leverage">
+          {label('leverage')} <b class="trade-leverage-value" data-leverage-value>10x</b>
+        </label>
+        <input id="trade-leverage" type="range" min="1" max="400" step="1" value="10" data-leverage />
+        <div class="trade-chips">
+          {[2, 5, 10, 25, 50, 100, 200, 400].map((value) => (
+            <button type="button" class="trade-chip" data-leverage-preset={value}>{value}x</button>
+          ))}
+        </div>
+      </div>
+      <p class="trade-hint">{label('marginHint')}</p>
+    </div>
+    <button type="button" class="primary-button" data-margin-done>{label('done')}</button>
+  </dialog>
+</div>
+
+
+<script>
+  import '../../scripts/trading-panel'
+</script>

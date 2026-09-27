@@ -1,6 +1,6 @@
 import type { MessageKey, Translator } from '../i18n'
 
-export type ToolCategoryId = 'developer' | 'encoding' | 'text' | 'security' | 'media' | 'efficiency'
+export type ToolCategoryId = 'developer' | 'encoding' | 'text' | 'security' | 'media' | 'market' | 'efficiency'
 
 export type Tool = {
   id: string
@@ -20,10 +20,18 @@ export const toolCategories: { id: ToolCategoryId }[] = [
   { id: 'text' },
   { id: 'security' },
   { id: 'media' },
+  { id: 'market' },
   { id: 'efficiency' }
 ]
 
 export const tools: Tool[] = [
+  {
+    id: 'market',
+    category: 'market',
+    icon: 'lucide:trending-up',
+    keywords: ['kline', 'candlestick', 'ohlc', 'chart', 'trading', 'market', '虚拟交易', 'K线', '行情', '图表', '交易', 'ローソク足', 'チャート', '取引', 'K線', '走勢', '圖表'],
+    available: true
+  },
   {
     id: 'hash',
     category: 'security',

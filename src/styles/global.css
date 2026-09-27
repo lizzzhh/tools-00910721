@@ -33,8 +33,12 @@
   --field-bg: oklch(0.975 0.006 var(--hue));
   --sidebar-bg: oklch(0.985 0.005 var(--hue));
   --success: oklch(0.65 0.14 150);
+  --success-strong: oklch(0.53 0.13 150);
   --danger: oklch(0.60 0.16 25);
   --danger-strong: oklch(0.53 0.18 25);
+  /* What a filled button's label has to be, given the theme flips the accents
+     from dark in light mode to light in dark mode. */
+  --on-accent: white;
   --danger-wash: oklch(0.65 0.18 25 / 10%);
   --lottery-gold: oklch(0.72 0.13 82);
   --lottery-gold-strong: oklch(0.58 0.12 78);
@@ -85,6 +89,8 @@
 :root.dark {
   --danger: oklch(0.72 0.15 25);
   --danger-strong: oklch(0.66 0.17 25);
+  --success-strong: oklch(0.68 0.14 150);
+  --on-accent: oklch(0.16 0.02 150);
   --danger-wash: oklch(0.72 0.15 25 / 14%);
   --lottery-gold: oklch(0.83 0.13 86);
   --lottery-gold-strong: oklch(0.9 0.11 90);
@@ -1977,6 +1983,908 @@ input[type='number']:focus::-webkit-outer-spin-button {
   color: var(--content-meta);
   font-size: 0.7rem;
   line-height: 1.8;
+}
+
+/* A price chart is taller than a dashboard card, and it is the one place on the
+   site where the plot is the point rather than a footnote. */
+.market-page {
+  max-width: 64rem;
+}
+
+.candle-chart {
+  /* Explicit for the same reason as the trend plot: ECharts measures this box. */
+  --candle-plot-height: clamp(19rem, 54vh, 30rem);
+  width: 100%;
+  margin-top: var(--spacing-2xl);
+  padding-top: var(--spacing-2xl);
+  border-top: 1px solid var(--line-divider);
+  text-align: left;
+}
+
+.candle-chart-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.candle-chart-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.candle-chart-group {
+  display: flex;
+}
+
+.candle-chart-timeframe {
+  min-width: 2.9rem;
+  min-height: 1.9rem;
+  padding: 0 var(--spacing-sm);
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  background: transparent;
+  border: 1px solid var(--line-color);
+  /* Neighbours share a border, so a group reads as one control. */
+  margin-left: -1px;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+
+.candle-chart-group:first-child .candle-chart-timeframe {
+  margin-left: 0;
+}
+
+.candle-chart-timeframe:hover {
+  color: var(--primary);
+  background: var(--btn-plain-bg-hover);
+}
+
+.candle-chart-timeframe[aria-pressed='true'] {
+  color: var(--primary-strong);
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  border-color: color-mix(in oklch, var(--primary) 40%, transparent);
+  /* Lifted, so the chosen timeframe is readable without relying on colour. */
+  z-index: 1;
+}
+
+.candle-chart-timeframe:focus-visible {
+  outline: 0;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 13%, transparent);
+}
+
+.candle-chart-note {
+  margin: 0;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.06em;
+}
+
+/* Positioning context, because ECharts parents the tooltip to this box in
+   chart-local pixels. The clip is a backstop: whatever the canvas is asked to
+   draw, it cannot reach down into the notice below. */
+.candle-chart-plot {
+  position: relative;
+  height: var(--candle-plot-height);
+  overflow: hidden;
+}
+
+/* The price readout sits with the note, and is the one thing on the card that
+   changes on its own, so it is set in the monospace face the numbers use. */
+.candle-chart-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-md);
+  margin-left: auto;
+}
+
+.candle-chart-price {
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.market-card {
+  padding: var(--spacing-2xl);
+}
+
+.market-workspace .candle-chart {
+  /* Inside a card the divider and the top gap are the card's job. */
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.market-workspace .security-notice {
+  /* The notice's own negative top margin is there to tuck it under a card edge.
+     Here the chart is above it, so that pull would drag it over the zoom bar. */
+  margin-top: var(--spacing-xl);
+}
+
+/* ---------------------------------------------------------------- trading -- */
+
+.trade {
+  display: grid;
+  gap: var(--spacing-xl);
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  align-items: start;
+}
+
+.trade-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-lg);
+  background: var(--float-panel-bg);
+}
+
+.trade-box-wide {
+  grid-column: 1 / -1;
+}
+
+/* An order is placed in the ticket and judged against the positions and the
+   orders waiting to fill, so those three are on screen together: the ticket on
+   one side, the two lists stacked on the other. The outer grid spread its boxes
+   out instead, which put the lists the reader needs to check a trade on the far
+   side of a scroll. */
+.trade-columns {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  align-items: start;
+}
+
+.trade-column-trade,
+.trade-column-lists {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  min-width: 0;
+}
+
+/* The one line in the ticket that opens the margin settings. It reads as a
+   summary of a choice already made, which is why the mode and the leverage sit
+   behind it rather than under the size box competing with it for attention. */
+.trade-settings-button {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--btn-regular-bg);
+  color: var(--deep-text);
+  cursor: pointer;
+}
+
+.trade-settings-button:hover {
+  border-color: var(--primary-strong);
+}
+
+.trade-settings-button b {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.trade-dialog {
+  /* Deliberately no `display` here. A closed dialog is hidden by the user agent
+     with `display: none`, and any display set on the element beats that rule — so
+     the dialog would sit at the bottom of the page permanently instead of opening
+     over it. The layout is applied below, only while it is open. */
+  width: min(24rem, calc(100vw - 2rem));
+  padding: var(--spacing-lg);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-lg);
+  background: var(--float-panel-bg);
+  color: var(--deep-text);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 28%);
+}
+
+.trade-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.trade-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.trade-dialog h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.trade-dialog > .primary-button {
+  width: 100%;
+}
+
+/* Leverage and margin mode are one decision, so they are one box. */
+.trade-box-nested {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--btn-regular-bg);
+}
+
+.trade-label {
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+/* What the size is worth, what the account can reach, and what it has to spend. */
+.trade-size-facts {
+  display: grid;
+  gap: var(--spacing-xs) var(--spacing-md);
+  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+}
+
+.trade-size-facts dt {
+  color: var(--content-meta);
+  font-size: 0.64rem;
+}
+
+.trade-size-facts dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.trade-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trade-head h2 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.trade-count {
+  padding: 0 var(--spacing-sm);
+  border-radius: 999px;
+  background: var(--btn-regular-bg);
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+/* The seed travels with the account, because a market nobody can name is a
+   market nobody can go back to. */
+.trade-seed {
+  display: inline-flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  min-width: 0;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.trade-seed b {
+  overflow: hidden;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-history-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.trade-figures {
+  display: grid;
+  gap: var(--spacing-sm) var(--spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+}
+
+.trade-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.trade-figure span {
+  color: var(--content-meta);
+  font-size: 0.68rem;
+}
+
+.trade-figure b {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.trade-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.trade-field label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--content-meta);
+  font-size: 0.7rem;
+}
+
+.trade-field input[type='number'] {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--bg-body);
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.trade-field input[type='range'] {
+  width: 100%;
+  accent-color: var(--primary-strong);
+}
+
+.trade-leverage-value {
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.trade-deposit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--line-divider);
+}
+
+.trade-deposit > label {
+  color: var(--content-meta);
+  font-size: 0.7rem;
+}
+
+.trade-deposit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.trade-deposit-button {
+  display: inline-flex;
+  flex: 1 1 9rem;
+  gap: var(--spacing-xs);
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid var(--primary-strong);
+  border-radius: var(--radius-md);
+  background: var(--primary-strong);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 16%);
+  color: var(--on-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trade-deposit-button:hover {
+  filter: brightness(1.08);
+}
+
+.trade-deposit-button:active {
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+.trade-deposit-row input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--bg-body);
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.trade-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.trade-chip,
+.trade-link {
+  padding: 0.2rem var(--spacing-sm);
+  border: 1px solid var(--line-divider);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.trade-chip:hover,
+.trade-link:hover {
+  border-color: var(--primary-strong);
+  color: var(--deep-text);
+}
+
+/* A shortcut that has just been used is a filled chip, not a slightly darker
+   outline: the reader has to be able to tell at a glance which one they hit. */
+.trade-chip.is-on {
+  border-color: var(--primary-strong);
+  background: var(--primary-strong);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.trade-segment {
+  display: inline-flex;
+  /* Beside a title, a segment is a fixed thing the reader is aiming at. Letting
+     it be squeezed is what forces its labels onto a second line. */
+  flex-shrink: 0;
+  padding: 0.15rem;
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--btn-regular-bg);
+}
+
+.trade-segment-wide {
+  display: flex;
+}
+
+.trade-segment button {
+  flex: 1;
+  /* A segmented control is a row of short answers, and two of them stacked on
+     two lines each is a different shape depending on how wide the box happens to
+     be. These labels are words, not amounts, so they are never broken to fit. */
+  white-space: nowrap;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--content-meta);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.trade-segment button[aria-pressed='true'] {
+  border-color: var(--primary-strong);
+  background: var(--primary-strong);
+  box-shadow: 0 1px 0 0 rgb(0 0 0 / 12%);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.trade-segment-sm button {
+  padding: 0.15rem var(--spacing-sm);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+/* The side of the market is the one choice a reader must never misread, so it is
+   filled in the direction's colour rather than tinted. */
+.trade-segment-wide button {
+  min-height: 2.1rem;
+  font-weight: 600;
+}
+
+.trade-segment button.is-long[aria-pressed='true'] {
+  border-color: var(--danger-strong);
+  background: var(--danger-strong);
+  color: var(--on-accent);
+}
+
+.trade-segment button.is-short[aria-pressed='true'] {
+  border-color: var(--success-strong);
+  background: var(--success-strong);
+  color: var(--on-accent);
+}
+
+.trade-unit {
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 400;
+}
+
+.trade-field-head {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trade-field-head label {
+  flex: 1;
+}
+
+.trade-hint b {
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.trade-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: var(--spacing-xs);
+}
+
+.trade-size-slider {
+  width: 100%;
+  height: 1.25rem;
+  accent-color: var(--primary-strong);
+  cursor: pointer;
+}
+
+/* The two ends say what the slider's range means, because a slider whose top end
+   is a number with no unit beside it is a slider nobody can aim. */
+.trade-slider-ends {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+}
+
+.trade-slider-ends b {
+  color: var(--deep-text);
+  font-weight: 500;
+}
+
+.trade-submit {
+  width: 100%;
+  margin-top: var(--spacing-sm);
+  font-weight: 600;
+}
+
+.trade-submit.is-long {
+  border-color: var(--danger-strong);
+  background: var(--danger-strong);
+  color: var(--on-accent);
+}
+
+.trade-submit.is-short {
+  border-color: var(--success-strong);
+  background: var(--success-strong);
+  color: var(--on-accent);
+}
+
+.trade-submit.is-long:hover,
+.trade-submit.is-short:hover {
+  filter: brightness(1.08);
+  color: var(--on-accent);
+}
+
+.trade-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: var(--spacing-sm) 0;
+  border-top: 1px solid var(--line-divider);
+}
+
+.trade-quote > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.trade-quote dt {
+  color: var(--content-meta);
+  font-size: 0.7rem;
+}
+
+.trade-quote dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+/* The liquidation price is the number a reader is actually looking for. */
+.trade-quote .is-warn dt,
+.trade-quote .is-warn dd {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.trade-message {
+  min-height: 1rem;
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.7rem;
+}
+
+.trade-message[data-tone='down'] {
+  color: var(--danger);
+}
+
+/* Positions and orders are cards rather than rows of a table. A row asks a
+   reader to hold nine columns in their head and read across; a card puts the
+   number that decides everything — which way it points, and whether it is
+   winning — at the size of the rest, with the details it is derived from under
+   them where they can be read one at a time. */
+.trade-table {
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+.trade-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  padding: var(--spacing-md);
+  border: 1px solid var(--line-divider);
+  border-left: 3px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--float-panel-bg);
+}
+
+.trade-card.is-long {
+  border-left-color: var(--danger-strong);
+}
+
+.trade-card.is-short {
+  border-left-color: var(--success-strong);
+}
+
+.trade-card-head {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.trade-card-pnl,
+.trade-card-price {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.trade-card-grid {
+  display: grid;
+  gap: var(--spacing-xs) var(--spacing-sm);
+  margin: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trade-card-grid > div {
+  min-width: 0;
+}
+
+.trade-card-grid dt {
+  overflow: hidden;
+  color: var(--content-meta);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-card-grid dd {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-card-grid dd.is-warn,
+.trade-card-grid > div.is-warn dd {
+  color: var(--warning);
+}
+
+.trade-card-time {
+  font-size: 0.62rem !important;
+}
+
+.trade-card-foot {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--line-divider);
+}
+
+.trade-card-settings {
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+}
+
+/* The button that flattens a position is the one control whose direction the
+   reader must not misread, so it is filled in the colour of the side it hits
+   rather than tinted. */
+.trade-close {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--btn-regular-bg);
+  color: var(--deep-text);
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.trade-card.is-long .trade-close {
+  border-color: var(--success-strong);
+  background: var(--success-strong);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.trade-card.is-short .trade-close {
+  border-color: var(--danger-strong);
+  background: var(--danger-strong);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.trade-tag {
+  display: inline-block;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--btn-regular-bg);
+  font-family: var(--font-body);
+  font-size: 0.64rem;
+}
+
+.trade-tag.is-long {
+  color: var(--danger);
+}
+
+.trade-tag.is-short {
+  color: var(--success);
+}
+
+.trade-tag.is-deposit,
+.trade-tag.is-warn {
+  color: var(--deep-text);
+}
+
+.trade-empty,
+.trade-hint {
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.trade-hint[data-tone='warn'] {
+  color: var(--warning);
+}
+
+.trade-hint[data-tone='down'] {
+  color: var(--danger);
+}
+
+/* The record is the point of the tool, so it gets the whole width and scrolls
+   rather than being trimmed: a history that drops its oldest lines is not one. */
+.trade-history {
+  display: flex;
+  flex-direction: column;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.trade-event {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-top: 1px solid var(--line-divider);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.trade-event:hover,
+.trade-event.is-focus {
+  background: var(--btn-regular-bg);
+}
+
+.trade-event:focus-visible {
+  outline: 1px solid var(--primary-strong);
+}
+
+.trade-when {
+  color: var(--content-meta);
+}
+
+.trade-detail {
+  color: var(--deep-text);
+}
+
+.trade-detail.is-dim {
+  color: var(--content-meta);
+}
+
+/* Green up is the western convention and red up is the Chinese one, so a gain
+   takes its colour from the reader's locale rather than from the panel. */
+.trade [data-tone='up'] {
+  color: var(--success);
+}
+
+.trade [data-tone='down'] {
+  color: var(--danger);
+}
+
+.trade[data-up='danger'] [data-tone='up'] {
+  color: var(--danger);
+}
+
+.trade[data-up='danger'] [data-tone='down'] {
+  color: var(--success);
+}
+
+.trade-live {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: var(--spacing-md);
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--float-panel-bg);
+  color: var(--content-meta);
+  font-size: 0.72rem;
+}
+
+.trade-live b {
+  overflow: hidden;
+  color: var(--deep-text);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-live .btn {
+  margin-left: auto;
 }
 
 .dashboard-card-heading > a {
