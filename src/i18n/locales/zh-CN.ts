@@ -220,7 +220,6 @@ const zhCN = {
       statAddresses: '生成地址',
       statWins: '中奖次数',
       statChecks: '开奖次数',
-      idle: '还没有抽奖记录。',
       historyTitle: '抽奖记录',
       clearHistory: '清空记录',
       historyEmpty: '暂无记录。',

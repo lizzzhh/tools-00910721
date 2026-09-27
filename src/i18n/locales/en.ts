@@ -220,7 +220,6 @@ const en: Dictionary = {
       statAddresses: 'Addresses',
       statWins: 'Wins',
       statChecks: 'Checks',
-      idle: 'No draws yet.',
       historyTitle: 'Draw history',
       clearHistory: 'Clear history',
       historyEmpty: 'Nothing here yet.',

@@ -4396,12 +4396,6 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
-.lottery-idle {
-  margin: var(--spacing-sm) 0 0;
-  color: var(--content-meta);
-  font-size: 0.72rem;
-}
-
 .lottery-history {
   display: grid;
   gap: var(--spacing-xs);

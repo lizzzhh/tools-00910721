@@ -222,7 +222,6 @@ const zhTW: Dictionary = {
       statAddresses: '產生位址',
       statWins: '中獎次數',
       statChecks: '開獎次數',
-      idle: '還沒有抽獎記錄。',
       historyTitle: '抽獎記錄',
       clearHistory: '清除記錄',
       historyEmpty: '尚無記錄。',

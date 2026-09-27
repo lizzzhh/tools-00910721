@@ -220,7 +220,6 @@ const ja: Dictionary = {
       statAddresses: '生成アドレス',
       statWins: '当選回数',
       statChecks: '確認回数',
-      idle: 'まだ抽選していません。',
       historyTitle: '抽選履歴',
       clearHistory: '履歴を消去',
       historyEmpty: '履歴はまだありません。',

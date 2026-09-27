@@ -1,4 +1,5 @@
 import {
+  claimCountsAsWin,
   drawFromSource,
   formatRandomSource,
   newRandomSource,
@@ -93,7 +94,6 @@ function init() {
   const statAddresses = el<HTMLElement>(root, '#lottery-stat-addresses')
   const statWins = el<HTMLElement>(root, '#lottery-stat-wins')
   const statChecks = el<HTMLElement>(root, '#lottery-stat-checks')
-  const idle = el<HTMLElement>(root, '#lottery-idle')
 
   const resultCard = el<HTMLElement>(root, '#lottery-result')
   const resultStatus = el<HTMLElement>(root, '#lottery-result-status')
@@ -265,6 +265,10 @@ function init() {
       row = { source: currentSource, at: Date.now(), winners: 0 }
       stats.history = trimHistory([row, ...stats.history])
     }
+    // A win the user reports from the dialog counts towards the tally, otherwise
+    // `wins` only ever reflected the algorithm's own verdict. The claim is
+    // counted once per draw, so confirming it again cannot inflate the total.
+    if (claimCountsAsWin(row)) stats.wins += 1
     row.claim = claim
     saveStats(stats)
     renderStats()
@@ -296,7 +300,6 @@ function init() {
         ? t('toolUi.tron-lottery.statusReplayed').replace('{count}', String(list.length))
         : t('toolUi.tron-lottery.statusDrawn').replace('{count}', String(list.length))
     )
-    setText(idle, '')
     toggleHidden(resultCard, false)
     recordToolUsage('tron-lottery')
   }

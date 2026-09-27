@@ -171,6 +171,17 @@ export function trimHistory(rows: readonly HistoryEntry[]): HistoryEntry[] {
   return kept
 }
 
+/**
+ * Whether recording a claim on `row` should also add to the lifetime win tally.
+ *
+ * A draw carries at most one claim, so claiming the same draw again replaces
+ * the earlier claim instead of counting a second win. Without that guard the
+ * dialog could be reopened and confirmed over and over to inflate the count.
+ */
+export function claimCountsAsWin(row: HistoryEntry): boolean {
+  return !row.claim
+}
+
 export function tronscanUrl(address: string): string {
   return `https://tronscan.org/#/address/${address}`
 }

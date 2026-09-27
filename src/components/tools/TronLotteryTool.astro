@@ -69,13 +69,6 @@ const chances = odds()
       <div><span>{t('toolUi.tron-lottery.statWins')}</span><strong id="lottery-stat-wins">0</strong></div>
       <div><span>{t('toolUi.tron-lottery.statChecks')}</span><strong id="lottery-stat-checks">0</strong></div>
     </div>
-    <p class="lottery-idle" id="lottery-idle">{t('toolUi.tron-lottery.idle')}</p>
-
-    <div class="result-subheading tool-subsection">
-      <strong>{t('toolUi.tron-lottery.historyTitle')}</strong>
-      <button id="lottery-clear-history" type="button" class="inline-copy"><Icon name="lucide:trash-2" size={14} />{t('toolUi.tron-lottery.clearHistory')}</button>
-    </div>
-    <div id="lottery-history" class="lottery-history"></div>
   </Card>
 
   <Card id="lottery-result" class="result-card security-result-card" hidden>
@@ -89,6 +82,14 @@ const chances = odds()
     </div>
     <ul class="security-warnings" id="lottery-warnings"></ul>
     <div id="lottery-entries"></div>
+  </Card>
+
+  <Card class="result-card">
+    <div class="result-subheading tool-subsection">
+      <strong>{t('toolUi.tron-lottery.historyTitle')}</strong>
+      <button id="lottery-clear-history" type="button" class="inline-copy"><Icon name="lucide:trash-2" size={14} />{t('toolUi.tron-lottery.clearHistory')}</button>
+    </div>
+    <div id="lottery-history" class="lottery-history"></div>
   </Card>
 
   <dialog id="lottery-win-dialog" class="lottery-dialog" aria-labelledby="lottery-dialog-title">

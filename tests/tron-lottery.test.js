@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   ADDRESS_COUNT,
   HISTORY_BASE_LIMIT,
+  claimCountsAsWin,
   WIN_THRESHOLD,
   drawFromSource,
   formatRandomSource,
@@ -219,4 +220,32 @@ test('an empty or short history is returned unchanged', () => {
   assert.deepEqual(trimHistory([]), [])
   const few = [row(0), row(1)]
   assert.deepEqual(trimHistory(few), few)
+})
+
+// ------------------------------------------------------------ claim accounting
+
+test('a reported win counts towards the lifetime tally', () => {
+  // The claim is the only thing that can move `wins` in practice: the algorithm
+  // threshold makes a real hit astronomically unlikely, so without this the
+  // counter the UI shows would sit at zero forever.
+  assert.equal(claimCountsAsWin(row(0)), true)
+})
+
+test('re-confirming the same draw does not count a second win', () => {
+  // The dialog can be reopened per address, so claiming again must replace the
+  // stored claim rather than inflating the total.
+  const claimed = row(0, { index: 3, amount: '1000 TRX' })
+  assert.equal(claimCountsAsWin(claimed), false)
+  // A claim with an empty amount is still a claim, so it still blocks a re-count.
+  assert.equal(claimCountsAsWin(row(1, { index: 0, amount: '' })), false)
+})
+
+test('each distinct draw can be claimed once', () => {
+  const rows = [row(0), row(1), row(2)]
+  // First pass: every row is unclaimed, so all three count.
+  const counted = rows.filter((r) => claimCountsAsWin(r))
+  assert.equal(counted.length, 3)
+  // Second pass: every row now carries a claim, so nothing counts again.
+  for (const r of rows) r.claim = { index: 0, amount: '1 TRX' }
+  assert.equal(rows.filter((r) => claimCountsAsWin(r)).length, 0)
 })
