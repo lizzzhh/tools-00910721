@@ -427,6 +427,82 @@ export function findWordCandidates(input: string, index: WordlistIndex, limit = 
   return [...prefix.map((entry) => entry.word), ...merged.map((entry) => entry.word)].slice(0, limit)
 }
 
+/** Why a mnemonic failed to validate, in the order the remedies are needed. */
+export type MnemonicFault = 'wordCount' | 'unknown' | 'mixed' | 'checksum'
+
+export type MnemonicInspection = {
+  reason: MnemonicFault
+  /** Word positions to mark, most useful first. May be empty. */
+  indices: number[]
+}
+
+/**
+ * Works out what is wrong with a mnemonic, and which words to point at.
+ *
+ * The reason and the marked words come out of one pass deliberately. They used
+ * to be worked out separately, which is how "these N words are in none of the
+ * bundled wordlists" came to be printed under a field with nothing marked in it,
+ * and how a mixed-language paste could be named without ever showing where the
+ * mix was.
+ *
+ * Order matters, and it is the order the remedies are needed in. A word count
+ * that is not a BIP39 length means the paste was truncated or doubled. A word in
+ * no list has to be retyped, and until it is, a mix elsewhere in the field is not
+ * yet the thing worth reporting. Words drawn from more than one list can never
+ * validate, and retyping them one at a time will not help. And a full set of
+ * individually valid words that still fails means the order is wrong, which
+ * retyping will not fix either.
+ *
+ * `ownerOf` reports which wordlists hold a word, because that is the one thing
+ * this needs to know about the lists themselves; the caller supplies it so this
+ * stays independent of which languages are bundled.
+ */
+export function inspectMnemonic(
+  parts: string[],
+  ownerOf: (word: string) => string[]
+): MnemonicInspection {
+  const unknown = parts.flatMap((word, index) => (ownerOf(word).length === 0 ? [index] : []))
+  if (strengthFromWordCount(parts.length) === null) return { reason: 'wordCount', indices: unknown }
+  if (unknown.length > 0) return { reason: 'unknown', indices: unknown }
+
+  // Which lists the words belong to. A word can be in more than one — the two
+  // Chinese lists share a good number of characters — so it joins every group it
+  // qualifies for and stays markable from either side.
+  const groups = new Map<string, number[]>()
+  for (const [index, word] of parts.entries()) {
+    for (const language of ownerOf(word)) {
+      const group = groups.get(language)
+      if (group) group.push(index)
+      else groups.set(language, [index])
+    }
+  }
+  // Every word is in at least one list by now, so there is always a group to
+  // compare against.
+  if (groups.size <= 1) return { reason: 'checksum', indices: unknown }
+
+  // The list most of the words agree on is the one that was meant; the rest
+  // arrived from somewhere else and are what has to be corrected. When the split
+  // is even there is no majority to appeal to, so the list of the first word
+  // anchors it — the only thing that tells the two sides apart — and a
+  // deterministic answer beats leaving the field unmarked.
+  let intended = ''
+  for (const [language, group] of groups) {
+    if (intended === '') {
+      intended = language
+      continue
+    }
+    const best = groups.get(intended) as number[]
+    if (group.length > best.length || (group.length === best.length && group.includes(0) && !best.includes(0))) {
+      intended = language
+    }
+  }
+  // Marking the majority instead would point at everything except the mistake.
+  return {
+    reason: 'mixed',
+    indices: parts.flatMap((word, index) => (ownerOf(word).includes(intended) ? [] : [index]))
+  }
+}
+
 /**
  * Generates cryptographically strong entropy, or throws when the browser has no
  * CSPRNG. Every allowed size is a whole number of 32-bit words, so filling the

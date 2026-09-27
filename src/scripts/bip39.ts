@@ -8,13 +8,13 @@ import {
   findWordCandidates,
   findWordPosition,
   generateMnemonic,
+  inspectMnemonic,
   isBip39Language,
   loadWordlist,
   loadWordlistIndex,
   readingOf,
   mnemonicToSeed,
   splitMnemonic,
-  strengthFromWordCount,
   tokenizeMnemonic,
   validateMnemonic,
   type Bip39Language,
@@ -408,10 +408,14 @@ function init() {
     // because the select still reads English would be wrong on nearly every
     // paste. Until all four have resolved, nothing is marked rather than
     // something marked against the wrong list.
-    const unknown = everyListReady
-      ? spans.filter((span) => listsWith(span.text).length === 0).map((span) => span.index)
-      : []
-    paintHighlight(value, spans, unknown, active)
+    //
+    // Which words to mark comes from the same inspection that writes the error
+    // message, so the two can never describe different problems. Beyond a plain
+    // typo that means the words pulled in from a second list get marked too:
+    // saying "these come from different wordlists" without showing which is a
+    // puzzle the user has to solve by eye.
+    const indices = everyListReady ? inspectMnemonic(spans.map((span) => span.text), listsWith).indices : []
+    paintHighlight(value, spans, indices, active)
     setText(wordCount, String(spans.length))
     renderSuggest(active)
   }
@@ -516,20 +520,18 @@ function init() {
    *   be misread as a typo.
    */
   function diagnoseMnemonic(parts: string[]): string {
-    if (strengthFromWordCount(parts.length) === null) {
+    const { reason, indices } = inspectMnemonic(parts, listsWith)
+    if (reason === 'wordCount') {
       return t('toolUi.bip39.errors.wordCount').replace('{count}', String(parts.length))
     }
-    const unknown = parts
-      .map((word, index) => ({ word, index }))
-      .filter((entry) => listsWith(entry.word).length === 0)
-    if (unknown.length > 0) {
+    if (reason === 'unknown') {
       return t('toolUi.bip39.errors.unknownWordAt')
-        .replace('{count}', String(unknown.length))
-        .replace('{index}', String(unknown[0].index + 1))
-        .replace('{word}', unknown[0].word)
+        .replace('{count}', String(indices.length))
+        .replace('{index}', String(indices[0] + 1))
+        .replace('{word}', parts[indices[0]])
     }
-    if (new Set(parts.flatMap((word) => listsWith(word))).size > 1) {
-      return t('toolUi.bip39.errors.mixedLanguages')
+    if (reason === 'mixed') {
+      return t('toolUi.bip39.errors.mixedLanguages').replace('{count}', String(indices.length))
     }
     return t('toolUi.bip39.errors.checksum')
   }

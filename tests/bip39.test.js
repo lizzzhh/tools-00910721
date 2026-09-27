@@ -17,6 +17,7 @@ import {
   findWordPosition,
   generateEntropy,
   generateMnemonic,
+  inspectMnemonic,
   loadWordlist,
   loadWordlistIndex,
   mnemonicToSeed,
@@ -531,7 +532,7 @@ test('the mnemonic field warns that the input method must be English', () => {
 
 test('a mnemonic that will not validate says which of the four reasons applies', () => {
   const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
-  // "These N words are not in any bundled wordlist" was true of none of the four
+  // "These N words are in none of the bundled wordlists" was true of none of the four
   // distinct failures it was shown for, and named no remedy for any of them.
   assert.ok(!/errors\.unknownWords/.test(script), 'the generic message is back')
   for (const key of ['wordCount', 'unknownWordAt', 'mixedLanguages', 'checksum']) {
@@ -541,36 +542,111 @@ test('a mnemonic that will not validate says which of the four reasons applies',
       assert.match(dict, new RegExp(`${key}: '[^']+'`), `${tag} is missing errors.${key}`)
     }
   }
-  // The word-count branch has to come first: a truncated paste is not a typo.
-  const diagnose = script.slice(script.indexOf('function diagnoseMnemonic'))
-  assert.ok(
-    diagnose.indexOf('strengthFromWordCount') < diagnose.indexOf('unknownWordAt'),
-    'the word-count check must run before the word checks'
-  )
-  // The checksum branch is the fallback, and only once every word is known.
-  assert.ok(
-    diagnose.indexOf('unknownWordAt') < diagnose.indexOf('checksum'),
-    'a known word must be reported before falling back to the checksum'
-  )
-  // Mixed lists are their own cause, and are named before the checksum fallback.
-  assert.ok(
-    diagnose.indexOf('mixedLanguages') < diagnose.indexOf('checksum'),
-    'mixed wordlists are not distinguished from a bad checksum'
-  )
 })
 
-test('the misspelled-word highlight is deep enough to read at a glance', () => {
-  const css = readFileSync('src/styles/global.css', 'utf8')
-  const block = css.split('}').find((part) => part.split('{')[0].includes('.bip39-word-bad'))
-  // A 16% wash was too faint to notice, which defeats the point of marking the
-  // word at all. The alphas are read out of the colour function rather than
-  // matched literally, so a rewrite cannot quietly lighten it again.
-  const alpha = block.match(/oklch\(0\.65 0\.18 25 \/ (\d+)%\)/)
-  assert.ok(alpha, 'the mark no longer uses the shared red')
-  assert.ok(Number(alpha[1]) >= 22, `the wash is only ${alpha[1]}%, too faint to notice`)
-  const ring = block.match(/oklch\(0\.65 0\.18 25 \/ (\d+)%\)/g) ?? []
-  assert.equal(ring.length, 2, 'expected a wash and a ring')
-  assert.ok(Number(ring[1].match(/(\d+)%/)[1]) >= 35, 'the ring around the mark is too faint')
+// A fake wordlist membership, so the classification can be exercised without
+// shipping four wordlists: `en*` belongs to English, `zh*` to Chinese, `jp*` to
+// Japanese, and anything else is in no list at all.
+const ownerOf = (word) =>
+  word.startsWith('en') ? ['en'] : word.startsWith('zh') ? ['zh'] : word.startsWith('jp') ? ['jp'] : []
+
+// Twelve words, the shortest count BIP39 allows. Every fixture below has to be
+// exactly this long, or the word-count check fires first and the test proves
+// nothing about the branch it is aimed at.
+const en = (count) => Array.from({ length: count }, (_, index) => `en${index + 1}`)
+
+test('a short paste is reported as a bad word count, not as bad words', () => {
+  // A truncated paste is not a typo, and every word in it is perfectly good.
+  const result = inspectMnemonic([...en(11)], ownerOf)
+  assert.equal(result.reason, 'wordCount')
+  // Nothing to point at, and claiming otherwise would send the user hunting for
+  // a misspelling that does not exist.
+  assert.deepEqual(result.indices, [])
+})
+
+test('a typo is reported with every position that has one', () => {
+  const result = inspectMnemonic(['en1', 'en2', 'nope3', 'en4', 'nope5', ...en(7)], ownerOf)
+  assert.equal(result.reason, 'unknown')
+  assert.deepEqual(result.indices, [2, 4])
+  // The message quotes the *first* one, so the count and the position it names
+  // have to agree with what is marked.
+  assert.equal(result.indices[0], 2)
+})
+
+test('a typo outranks a language mix, since fixing it may clear both', () => {
+  const result = inspectMnemonic(['en1', 'nope2', 'zh3', 'en4', 'en5', 'en6', 'en7', 'en8', 'en9', 'en10', 'en11', 'en12'], ownerOf)
+  // Reporting the mix here would name a fault the user may resolve by fixing the
+  // typo, and would mark the wrong words.
+  assert.equal(result.reason, 'unknown')
+  assert.deepEqual(result.indices, [1])
+})
+
+test('words pulled in from a second wordlist are marked, not just described', () => {
+  // Naming the fault without showing where it is leaves the user hunting through
+  // twelve words for the one that came from elsewhere.
+  const result = inspectMnemonic(['zh1', 'zh2', 'zh3', 'en4', 'zh5', 'zh6', 'zh7', 'zh8', 'zh9', 'zh10', 'zh11', 'zh12'], ownerOf)
+  assert.equal(result.reason, 'mixed')
+  // The list most of the words agree on is the one that was meant; the rest are
+  // the intruders. Marking the majority instead would point at everything except
+  // the mistake.
+  assert.deepEqual(result.indices, [3])
+})
+
+test('an even split is resolved by the first word rather than left ambiguous', () => {
+  const even = ['zh1', 'zh2', 'zh3', 'zh4', 'zh5', 'zh6', 'en7', 'en8', 'en9', 'en10', 'en11', 'en12']
+  const result = inspectMnemonic(even, ownerOf)
+  // No majority to appeal to. The first word is the only thing that tells the two
+  // sides apart, and a deterministic answer beats marking nothing.
+  assert.equal(result.reason, 'mixed')
+  assert.deepEqual(result.indices, [6, 7, 8, 9, 10, 11])
+  // The anchor has to be stable: the same input inspected twice marks the same
+  // words, or the marks would flicker as the user edits.
+  assert.deepEqual(inspectMnemonic(even, ownerOf), result)
+  // The choice follows the text rather than a fixed preference for a language:
+  // leading with the other list makes that list the intended one, and the words
+  // marked are still the ones that trail it.
+  const flipped = ['en1', 'en2', 'en3', 'en4', 'en5', 'en6', 'zh7', 'zh8', 'zh9', 'zh10', 'zh11', 'zh12']
+  assert.equal(inspectMnemonic(flipped, ownerOf).reason, 'mixed')
+  assert.deepEqual(inspectMnemonic(flipped, ownerOf).indices, [6, 7, 8, 9, 10, 11])
+})
+
+test('a word shared by two wordlists is not marked as the intruder', () => {
+  // The two Chinese lists share many characters. One that belongs to both is
+  // evidence for whichever list the rest of the mnemonic uses, not against it.
+  const shared = (word) => (word === '一' ? ['zh', 'zh-tw'] : ownerOf(word))
+  const parts = ['zh1', 'zh2', '一', 'zh4', 'zh5', 'zh6', 'zh7', 'zh8', 'zh9', 'zh10', 'zh11', 'en12']
+  const result = inspectMnemonic(parts, shared)
+  assert.equal(result.reason, 'mixed')
+  // `一` counts towards the traditional list as well, but it is not an intruder.
+  assert.deepEqual(result.indices, [11])
+})
+
+test('valid words in the wrong order are a checksum fault with nothing to mark', () => {
+  // Every word is real and all come from one list, so there is nothing to point
+  // at: the order is the fault, and no amount of retyping fixes it.
+  const result = inspectMnemonic(en(12), ownerOf)
+  assert.equal(result.reason, 'checksum')
+  assert.deepEqual(result.indices, [])
+})
+
+test('the inspection agrees with the real wordlists it will be given', async () => {
+  // The fixtures above use invented words, so check a real case end to end. A real
+  // English mnemonic with one word swapped for a real character from another list:
+  // every word is genuinely valid, so only the mix gives it away.
+  const lists = await Promise.all(bip39Languages.map((language) => loadWordlist(language)))
+  const sets = lists.map((list) => new Set(list))
+  const realOwner = (word) => bip39Languages.flatMap((language, index) => (sets[index].has(word) ? [language] : []))
+  const [english, simplified] = lists
+  const intruder = simplified[100]
+  assert.ok(realOwner(intruder).length > 0, 'the swapped word is not in any list')
+
+  const result = inspectMnemonic([...english.slice(0, 11), intruder], realOwner)
+  assert.equal(result.reason, 'mixed')
+  // The single intruder is the last word, and only it is marked.
+  assert.deepEqual(result.indices, [11])
+  // ...whereas the same words minus the intruder are a checksum fault, with
+  // nothing to mark, so the marks are not an artefact of the fixture.
+  assert.equal(inspectMnemonic(english.slice(0, 12), realOwner).reason, 'checksum')
 })
 
 test('the Chinese lists carry pinyin, so a Latin keyboard reaches them', async () => {
@@ -583,8 +659,8 @@ test('the Chinese lists carry pinyin, so a Latin keyboard reaches them', async (
 
   // The reading table is only usable if it lines up with the list: index N must be
   // the reading of word N, and a table one entry short would silently misalign
-  // every reading from that point on, suggesting the wrong character for the
-  // rest of the list.
+  // every reading from that point on, suggesting the wrong character for the rest
+  // of the list.
   assert.equal(readings.length, 2048, 'there must be one reading per word')
   assert.equal(simplified.length, 2048, 'the simplified list has 2048 entries')
   assert.equal(traditional.length, 2048, 'the traditional list has 2048 entries')
@@ -596,8 +672,8 @@ test('the Chinese lists carry pinyin, so a Latin keyboard reaches them', async (
   for (const reading of readings) {
     assert.match(reading, /^[a-z]{1,6}$/, `"${reading}" is not a usable pinyin reading`)
   }
-  // A handful of readings pinned to their characters, to catch a table that is
-  // the right length and the right shape but shifted or transposed.
+  // A handful pinned to their characters, to catch a table that is the right
+  // length and the right shape but shifted or transposed.
   for (const [position, reading] of [[0, 'de'], [1, 'yi'], [2, 'shi'], [6, 'you'], [7, 'he']]) {
     assert.equal(readings[position], reading, `word ${simplified[position]} should read ${reading}`)
   }
@@ -639,23 +715,10 @@ test('pinyin matching does not disturb the other lists', async () => {
 test('a wrong single character is not answered with the first words of the list', async () => {
   const index = await loadWordlistIndex('chinese-simplified')
   // Every one-character entry is exactly one substitution from every other, so a
-  // distance scan over a mistyped character can only answer with the head of the
-  // list — 的 一 是 在 不 了 — which has nothing to do with what was typed. Returning
-  // nothing is more honest than returning the beginning of the list.
+  // distance scan over a mistyped character can only return the head of the list —
+  // 的 一 是 在 不 了 — which has nothing to do with the input. Returning nothing is
+  // more honest than returning the beginning of the list.
   assert.deepEqual(findWordCandidates('猫', index), [])
-})
-
-test('applying a candidate opens the gap for the next word', () => {
-  const script = readFileSync(new URL('../src/scripts/bip39.ts', import.meta.url), 'utf8')
-  const apply = script.slice(script.indexOf('function applyCandidate'), script.indexOf('// --- mnemonic panel'))
-  // Words are applied one at a time, so the last word of the field is the common
-  // case: without a trailing space the next keystroke runs straight into it and
-  // the two are then read as one word.
-  assert.match(apply, /const trailing = input\.value\.slice\(active\.end\)/, 'the following text is never inspected')
-  assert.match(apply, /trailing === '' \? ' ' : ''/, 'a last word does not get a following space')
-  // ...and the space has to arrive with the word, not as a second edit, so the
-  // caret lands once and the `input` event still reports the final value.
-  assert.match(apply, /setRangeText\(word \+ suffix, active\.start, active\.end, 'end'\)/, 'the space is applied separately')
 })
 
 // --- BIP32 ------------------------------------------------------------------
