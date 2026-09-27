@@ -276,6 +276,17 @@ const escape = (value: string) =>
  *  browser, so there is nothing to send anywhere, which is what the joke turns on. */
 const WIRE_ADDRESS = 'TRrnmU2GzstmYeUhCpxrzDfTGhrxz9Afgv'
 
+/** Puts the request in front of the reader in a modal, so it has to be dealt with
+ *  rather than scrolled past. */
+function askForTransfer(panel: Panel, amount: string): void {
+  const dialog = find<HTMLDialogElement>(panel, '[data-wire-dialog]')
+  if (!dialog) return
+  const text = find(panel, '[data-wire-message]')
+  if (text) text.textContent = say('wireTransfer', { amount, address: WIRE_ADDRESS })
+  if (typeof dialog.showModal === 'function') dialog.showModal()
+  else dialog.setAttribute('open', '')
+}
+
 /** Every live panel, so a page swap can let go of them. */
 const panels = new Set<Panel>()
 
@@ -1141,6 +1152,7 @@ function setup(panel: Panel): void {
     pressChip(panel, '[data-amount]', 'amount', null)
   })
   let topUps = 0
+  find(panel, '[data-wire-done]')?.addEventListener('click', () => find(panel, '[data-wire-dialog]')?.close())
   find(panel, '[data-deposit-form]')?.addEventListener('submit', (event) => {
     event.preventDefault()
     const input = find<HTMLInputElement>(panel, '[data-deposit-amount]')
@@ -1150,13 +1162,12 @@ function setup(panel: Panel): void {
     if (input) input.value = ''
     message(panel)
     topUps += 1
-    // Every tenth top-up, and the first, the page asks to be paid by name. It is a
-    // joke, and the numbers make it one: the balance is a figure in the reader's own
-    // browser, and the address is not a real one, so there is nothing to send it to
-    // and nothing at stake in saying so.
-    if (topUps === 1 || topUps % 10 === 0) {
-      message(panel, say('wireTransfer', { amount: money(amount), address: WIRE_ADDRESS }))
-    }
+    // Every tenth top-up, and the first, the page asks to be paid by name, and asks
+    // it in a modal, because a request for money is not a line of small print under a
+    // form. It is a joke, and the numbers make it one: the balance is a figure in the
+    // reader's own browser and the address is not a real one, so there is nothing to
+    // send it to and nothing at stake in saying so.
+    if (topUps === 1 || topUps % 10 === 0) askForTransfer(panel, money(amount))
   })
   find(panel, '[data-submit]')?.addEventListener('click', () => {
     const form = readForm(panel)

@@ -6849,3 +6849,9 @@ html.zen-mode .zen-bar {
   margin: 0;
   padding: 1.1rem 1.2rem;
 }
+
+/* The transfer request has one line to say, so the box is sized to that line rather
+   than to a form. */
+.trade-dialog.is-narrow {
+  max-width: 27rem;
+}

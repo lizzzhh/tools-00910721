@@ -345,6 +345,8 @@ const en: Dictionary = {
         'refused.price': 'Enter a limit price.',
         'refused.margin': 'Not enough free margin to carry that size.',
         'refused.position': 'That position is no longer open.',
+        'wireTransferTitle': 'Top up by transfer',
+        'ok': 'OK',
         'wireTransfer': 'To top up, send {amount} as USDT to {address}',
         'tabLocked': 'The simulator is already open in another tab. One account can only be driven from one tab at a time, so close that tab and reload this page.',
         'refused.stopLossPassed': 'That stop is at or above the price now, so the market has already been through it. Pick one below.',

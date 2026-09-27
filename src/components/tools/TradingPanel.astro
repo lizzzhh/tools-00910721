@@ -337,6 +337,14 @@ const chipButtons = protectionSteps
     </div>
   </dialog>
 
+  <dialog class="trade-dialog is-narrow" data-wire-dialog aria-labelledby="trade-wire-title">
+    <h2 id="trade-wire-title">{label('wireTransferTitle')}</h2>
+    <p class="trade-hint" data-wire-message />
+    <div class="trade-dialog-foot">
+      <button type="button" class="primary-button" data-wire-done>{label('ok')}</button>
+    </div>
+  </dialog>
+
   <dialog class="trade-dialog" data-protection-dialog aria-labelledby="trade-protection-title">
     <h2 id="trade-protection-title">{label('stopLoss')} / {label('takeProfit')}</h2>
     <div class="trade-box-nested">
