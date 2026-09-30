@@ -4,11 +4,22 @@ import {
   candleIndexAt,
   defaultStartPrice,
   generateCandles,
+  marketDefaults,
   marketEpoch,
   minuteExtremesBetween,
+  paramsKey,
   resetMarketCache,
+  resolveParams,
   timeframeSeconds,
 } from '../src/lib/candles.ts'
+import { changedCount, labFields, labPresets, overridesFrom, presetFields } from '../src/lib/market-lab.ts'
+import {
+  advanceClicks,
+  doubleClickWindowMs,
+  doubleClicks,
+  newSequence,
+  takeRun
+} from '../src/lib/click-sequence.ts'
 
 const DAY_MS = 86_400_000
 const IN_2026 = Date.UTC(2026, 8, 26, 23, 59, 59)
@@ -429,4 +440,155 @@ test('a range that has not happened yet, or has not happened at all, is answered
   const empty = minuteExtremesBetween(marketEpoch, marketEpoch)
   assert.equal(empty.low, empty.high, 'a single moment has one price')
   assert.equal(empty.lowAt, marketEpoch)
+})
+
+// ------------------------------------------------------- the published market
+
+test('the defaults are the market the site already published', () => {
+  // Taken from the generator before the knobs became data, across the two branches
+  // that draw from different paths: ticks for the sub-minute frames, the minute
+  // grid for the rest. If this fails, the published market has moved, and every
+  // reader's saved game has moved with it.
+  const golden = {
+    '1s': [ // until 1790467198001
+      { time: 1790467197000, open: 133827.23, high: 133832.67, low: 133821.41, close: 133822.77, volume: 2.27 },
+      { time: 1790467198000, open: 133822.77, high: 133836.59, low: 133822.77, close: 133832.11, volume: 2.46 }
+    ],
+    '1h': [ // until 1790424000001
+      { time: 1790424000000, open: 133940.63, high: 135286.07, low: 130508.09, close: 134567.42, volume: 21745.75 }
+    ],
+    '1d': [ // until 1789603200001
+      { time: 1789430400000, open: 129963.08, high: 132144.82, low: 128420.05, close: 131022.02, volume: 135185.69 },
+      { time: 1789516800000, open: 131022.02, high: 135760.66, low: 127030.27, close: 132799.64, volume: 209778.23 },
+      { time: 1789603200000, open: 132799.64, high: 139784.89, low: 131996.54, close: 139335.69, volume: 84577.01 }
+    ]
+  }
+
+  for (const [timeframe, bars] of Object.entries(golden)) {
+    const asked = generateCandles({ timeframe, count: bars.length, until: bars[bars.length - 1].time + 1 })
+    assert.deepEqual(asked, bars, `the ${timeframe} market moved`)
+  }
+})
+
+test('a lab can ask for a different market without moving the published one', () => {
+  const until = IN_2026
+  const published = () => generateCandles({ timeframe: '1d', count: 30, until })
+  const before = published()
+
+  // The cache is keyed on the knobs, so a tuned run and the published run interleave
+  // here in the order that would expose a shared day: tuned, published, tuned again.
+  const wild = { dailyVolatility: 3, jumpChancePerDay: 0.5, baseDailyVolume: 1 }
+  const wildBars = generateCandles({ timeframe: '1d', count: 30, until, params: wild })
+  assert.deepEqual(published(), before, 'a tuned market reached the published cache')
+  assert.deepEqual(generateCandles({ timeframe: '1d', count: 30, until, params: wild }), wildBars)
+
+  // And the tuned market really is a different one, not the same path renamed.
+  assert.notDeepEqual(wildBars, before)
+  const spread = (bars) => (Math.max(...bars.map((bar) => bar.high)) / Math.min(...bars.map((bar) => bar.low)))
+  assert.ok(spread(wildBars) > spread(before), 'the tuned market is not wilder')
+})
+
+test('an unknown knob is ignored and a half-set one is finished from the defaults', () => {
+  // The lab builds its parameters from a form, so a field the generator does not
+  // know about has to be harmless rather than silently become a market.
+  const loose = resolveParams({ driftPerDay: 0.002, notAKnob: 7, activityPeaks: [{ hour: 3, amp: 1, width: 2 }] })
+  assert.equal(loose.driftPerDay, 0.002)
+  assert.equal('notAKnob' in loose, false)
+  assert.equal(loose.burstSpread, marketDefaults.burstSpread)
+  assert.equal(loose.activityPeaks.length, 1)
+  assert.equal(resolveParams().trendPeriods, marketDefaults.trendPeriods, 'the defaults are shared, not copied')
+
+  // Two markets that differ are told apart, and one market is told from itself.
+  assert.equal(paramsKey(resolveParams()), paramsKey(resolveParams({})))
+  assert.notEqual(paramsKey(resolveParams({})), paramsKey(resolveParams({ driftPerDay: 0.00056 })))
+})
+
+// ------------------------------------------------------------- the lab's knobs
+
+test('every knob the lab exposes is a knob the generator has', () => {
+  // The lab builds its sliders from this list and hands the result straight to the
+  // generator, so a field that names something the model does not have would be a
+  // control that silently does nothing.
+  const unknown = labFields.filter((field) => !(field.key in marketDefaults))
+  assert.deepEqual(unknown.map((field) => field.key), [])
+
+  // Every field starts on the published value, and every one of them is a number
+  // the generator will accept rather than a label.
+  for (const { field, value } of presetFields(labPresets[0])) {
+    assert.equal(value, field.fallback, `${field.key} does not start on the published value`)
+    assert.ok(Number.isFinite(value))
+  }
+
+  // The ranges have to admit their own default, or the slider would open with the
+  // thumb pinned to an end and the first drag would jump.
+  for (const field of labFields) {
+    assert.ok(field.min <= field.fallback && field.fallback <= field.max, `${field.key} default is out of range`)
+    assert.ok(field.step > 0, `${field.key} has no step`)
+  }
+})
+
+test('an untouched slider sends nothing and a moved one sends exactly itself', () => {
+  const fields = labFields.map((field) => ({ field, value: field.fallback }))
+  assert.deepEqual(overridesFrom(fields), {}, 'an untouched field was sent to the generator')
+
+  const first = labFields[0]
+  const moved = fields.map((entry) => (entry.field === first ? { field: entry.field, value: first.fallback * 2 } : entry))
+  const overrides = overridesFrom(moved)
+  assert.deepEqual(Object.keys(overrides), [first.key])
+  assert.equal(overrides[first.key], first.fallback * 2)
+
+  // A list-valued knob keeps the entries it was not given, and an entry that holds
+  // more than a number keeps the parts of it that are not on a slider.
+  const peak = labFields.find((field) => field.key === 'activityPeaks' && field.index === 1)
+  const one = fields.map((entry) => (entry.field === peak ? { field: entry.field, value: 1.5 } : entry))
+  const peaks = overridesFrom(one).activityPeaks
+  assert.equal(peaks[1].amp, 1.5)
+  assert.equal(peaks[1].hour, marketDefaults.activityPeaks[1].hour)
+  assert.equal(peaks[1].width, marketDefaults.activityPeaks[1].width)
+  assert.deepEqual(peaks[0], marketDefaults.activityPeaks[0])
+  assert.equal(peaks.length, marketDefaults.activityPeaks.length)
+})
+
+test('a preset moves the sliders and nothing else', () => {
+  for (const preset of labPresets) {
+    const fields = presetFields(preset)
+    const changed = changedCount(fields)
+    if (preset.id === 'published') assert.equal(changed, 0, 'the published preset moved a slider')
+    else assert.ok(changed > 0, `${preset.id} moved nothing`)
+    // And a preset is reachable by hand: the values it sets are all in range.
+    for (const { field, value } of fields) {
+      assert.ok(value >= field.min && value <= field.max, `${preset.id} pushes ${field.key} out of range`)
+    }
+  }
+  // The contrasting presets have to disagree in the direction their names promise,
+  // or picking one would not show what it is for.
+  const valueOf = (id, key) => {
+    const entry = presetFields(labPresets.find((preset) => preset.id === id)).find((item) => item.field.key === key)
+    return entry.value
+  }
+  assert.ok(valueOf('calm', 'dailyVolatility') < valueOf('published', 'dailyVolatility'))
+  assert.ok(valueOf('wild', 'dailyVolatility') > valueOf('published', 'dailyVolatility'))
+  assert.ok(valueOf('crash', 'driftPerDay') < 0)
+  assert.equal(valueOf('chain', 'intradayJumpsPerDay'), 0)
+})
+
+// ------------------------------------------------------------- the way in
+
+test('the lab opens on a double-click and not on a stray one', () => {
+  // One click is a click on a fingerprint. Two in a row are a request for the page
+  // that explains where the fingerprint came from.
+  const tap = (...times) => {
+    const run = times.reduce((state, at) => advanceClicks(state, at, doubleClickWindowMs), newSequence())
+    return takeRun(run, doubleClicks).reached
+  }
+  assert.equal(doubleClicks, 2)
+  assert.equal(tap(0), false, 'one click is just a click on a fingerprint')
+  assert.equal(tap(0, 200), true)
+  assert.equal(tap(0, 1_500), false, 'two slow clicks are two gestures')
+  assert.equal(tap(0, 200, 260), true)
+
+  // The window is short enough that scrolling or dragging past the icon cannot
+  // land the pair that opens the page.
+  assert.ok(doubleClickWindowMs <= 500)
+  assert.equal(tap(0, 100, 900), false)
 })

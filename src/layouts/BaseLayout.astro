@@ -14,9 +14,15 @@ interface Props {
   description: string
   activeTool?: string
   activeNav?: 'home' | 'tools' | 'favorites' | 'data' | 'about'
+  /**
+   * Asked of a page nobody is meant to arrive at from a search: the lab is reached
+   * by double-clicking the fingerprint on the trading page, and a search result
+   * would hand it to anyone who guessed the path.
+   */
+  noindex?: boolean
 }
 
-const { title, description, activeTool = '', activeNav = 'tools' } = Astro.props
+const { title, description, activeTool = '', activeNav = 'tools', noindex = false } = Astro.props
 const locale = Astro.locals.locale
 const t = createTranslator(locale)
 const siteName = t('meta.siteName')
@@ -50,6 +56,7 @@ const isDefaultLocale = locale === defaultLocale
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <meta name="theme-color" content="#f2f7f7" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="canonical" href={canonical} />

@@ -152,50 +152,156 @@ export const defaultSeed = 'code-space:market/v1'
  */
 export const defaultStartPrice = 64_800
 
-/** Prices print to the cent, as a market quoted in dollars would. */
-const priceDecimals = 2
-
-const dailyVolatility = 0.45 / Math.sqrt(365)
-/** Roughly a quarter a year, which trends up without running away. */
-const driftPerDay = 0.00055
-/** How fast a quiet spell turns into a wild one. */
-const volatilityHalfLife = 3 * secondsPerDay
-/** A calm stretch runs at about 0.6x the baseline volatility. */
-const volatilitySpread = 0.45
-/** About six jumps a year, which is the tail a normal distribution cannot make. */
-const jumpChancePerDay = 1 / 60
-const jumpLow = 0.02
-const jumpHigh = 0.09
-/** Flash moves inside a day, per day, on top of whatever the bridge does. */
-const intradayJumpsPerDay = 2
-const intradayJumpLow = 0.003
-const intradayJumpHigh = 0.015
-/** How long a busy spell inside a day lasts before it settles again. */
-const burstHalfLife = 20 * 60
-/** How often that spell is redrawn, in seconds. */
-const burstBlockSeconds = 8 * 60
-/** A quiet stretch inside a day runs at roughly a third of the busy one. */
-const burstSpread = 0.8
-/** Units of the asset traded in a quiet day. */
-const baseDailyVolume = 18_000
-/** How much a big move lifts its volume over an ordinary one. */
-const volumeMoveBoost = 3.5
-const volumeWobble = 0.28
-
-/** How many samples a day is cut into. */
-const coarseSteps = 1440
 /**
- * How many samples a second of history is drawn at, and so how many a minute
- * holds. This is what gives a one-second candle a body and a shadow: a second is
- * not one sample but twenty of them, strung between that minute's own open and
- * close, which is also why the sub-minute candles and the minute candle agree
- * about where the minute ended.
+ * The model's knobs, collected as data.
+ *
+ * They are a value rather than a set of constants so the lab can hand the
+ * generator a different market and get a different answer out of it. The
+ * published page never does: it passes nothing and runs on {@link marketDefaults},
+ * which is why a change here cannot move the market anybody is playing on. The
+ * values below are the published ones, and the tests hold them there.
  */
-const tickRate = 20
-const ticksPerMinute = 60 * tickRate
+export type MarketParams = {
+  /** Prices print to the cent, as a market quoted in dollars would. */
+  priceDecimals: number
+  /** Daily volatility in log terms. 0.45 annualised, divided by the square root of a year. */
+  dailyVolatility: number
+  /** Roughly a quarter a year, which trends up without running away. */
+  driftPerDay: number
+  /** How fast a quiet spell turns into a wild one, in seconds. */
+  volatilityHalfLife: number
+  /** A calm stretch runs at about 0.6x the baseline volatility. */
+  volatilitySpread: number
+  /** About six jumps a year, which is the tail a normal distribution cannot make. */
+  jumpChancePerDay: number
+  /** Smallest daily jump, in log terms. */
+  jumpLow: number
+  /** Largest daily jump, in log terms. */
+  jumpHigh: number
+  /** Flash moves inside a day, per day, on top of whatever the bridge does. */
+  intradayJumpsPerDay: number
+  /** Smallest flash move. */
+  intradayJumpLow: number
+  /** Largest flash move. */
+  intradayJumpHigh: number
+  /** How long a busy spell inside a day lasts before it settles again, in seconds. */
+  burstHalfLife: number
+  /** How often that spell is redrawn, in seconds. */
+  burstBlockSeconds: number
+  /** A quiet stretch inside a day runs at roughly a third of the busy one. */
+  burstSpread: number
+  /** Units of the asset traded in a quiet day. */
+  baseDailyVolume: number
+  /** How much a big move lifts its volume over an ordinary one. */
+  volumeMoveBoost: number
+  /** How clumpy trades arrive within a step. */
+  volumeWobble: number
+  /** How many samples a day is cut into. */
+  coarseSteps: number
+  /**
+   * How many samples a second of history is drawn at, and so how many a minute
+   * holds. This is what gives a one-second candle a body and a shadow: a second is
+   * not one sample but twenty of them, strung between that minute's own open and
+   * close, which is also why the sub-minute candles and the minute candle agree
+   * about where the minute ended.
+   */
+  tickRate: number
+  /** The three horizons of the slow trend, in days, shortest first. */
+  trendPeriods: number[]
+  /** How much the trend moves a day at its widest, in log terms. */
+  trendAmp: number
+  /** How much each horizon counts for less than the one before it. */
+  trendDecay: number
+  /** How busy a 24x7 market is at the quietest point of the day. */
+  activityBase: number
+  /**
+   * The crowds a 24x7 market gathers: the Asian open, the European afternoon and
+   * the US open, each an hour, a size and a width. The same curve scales both the
+   * volatility and the volume of a step, which is why a quiet hour looks quiet in
+   * both.
+   */
+  activityPeaks: { hour: number; amp: number; width: number }[]
+}
 
-const volatilityDecay = Math.exp(-secondsPerDay / volatilityHalfLife)
-const volatilityShock = volatilitySpread * Math.sqrt(1 - volatilityDecay * volatilityDecay)
+export const marketDefaults: MarketParams = {
+  priceDecimals: 2,
+  dailyVolatility: 0.45 / Math.sqrt(365),
+  driftPerDay: 0.00055,
+  volatilityHalfLife: 3 * secondsPerDay,
+  volatilitySpread: 0.45,
+  jumpChancePerDay: 1 / 60,
+  jumpLow: 0.02,
+  jumpHigh: 0.09,
+  intradayJumpsPerDay: 2,
+  intradayJumpLow: 0.003,
+  intradayJumpHigh: 0.015,
+  burstHalfLife: 20 * 60,
+  burstBlockSeconds: 8 * 60,
+  burstSpread: 0.8,
+  baseDailyVolume: 18_000,
+  volumeMoveBoost: 3.5,
+  volumeWobble: 0.28,
+  coarseSteps: 1440,
+  tickRate: 20,
+  trendPeriods: [9, 23, 61],
+  trendAmp: 0.004,
+  trendDecay: 1.4,
+  activityBase: 0.72,
+  activityPeaks: [
+    { hour: 14, amp: 0.5, width: 9 },
+    { hour: 8, amp: 0.42, width: 6 },
+    { hour: 0, amp: 0.34, width: 5 },
+    { hour: 21, amp: 0.3, width: 6 }
+  ]
+}
+
+/**
+ * A finished set of knobs, with anything the caller left out taken from the
+ * published market. Unknown keys are dropped and the arrays are copied, so a
+ * caller cannot reach in and edit a run that is already under way.
+ */
+export function resolveParams(overrides?: Partial<MarketParams>): MarketParams {
+  if (!overrides) return marketDefaults
+  const merged = { ...marketDefaults }
+  for (const key of Object.keys(marketDefaults) as (keyof MarketParams)[]) {
+    const value = overrides[key]
+    if (value === undefined) continue
+    if (Array.isArray(marketDefaults[key])) {
+      if (Array.isArray(value)) (merged as Record<string, unknown>)[key] = [...(value as unknown[])]
+    } else if (typeof value === typeof marketDefaults[key]) {
+      ;(merged as Record<string, unknown>)[key] = value
+    }
+  }
+  return merged
+}
+
+/**
+ * What a set of knobs is worth, as a short string.
+ *
+ * The caches are keyed on this, so a market tuned in the lab cannot be served to
+ * the published page out of a path that happens to look like a match, and two
+ * differently tuned runs cannot see each other's days. Six decimals is well
+ * inside the noise floor of a 64-bit double and short enough to stay readable in
+ * a debugger.
+ */
+export function paramsKey(params: MarketParams): string {
+  const parts: string[] = []
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'number') parts.push(`${key}=${value.toFixed(6)}`)
+    else parts.push(`${key}=${JSON.stringify(value)}`)
+  }
+  return parts.join(',')
+}
+
+/**
+ * The mean-reversion of the daily volatility, and the size of the draw that drives
+ * it. Both follow from the half-life, so they are worked out per set of knobs
+ * rather than once for the whole module.
+ */
+function volatilityRates(params: MarketParams) {
+  const decay = Math.exp(-secondsPerDay / params.volatilityHalfLife)
+  return { decay, shock: params.volatilitySpread * Math.sqrt(1 - decay * decay) }
+}
 
 /** The cheapest day a market can ask for, in log terms. */
 type MarketDay = {
@@ -210,14 +316,13 @@ type MarketDay = {
  * rather than only noise around a line. The phases come from the seed, which is
  * what makes one market's bull run land somewhere else than another's.
  */
-function trendPerDay(seed: number, day: number): number {
-  const periods = [9, 23, 61]
+function trendPerDay(seed: number, day: number, params: MarketParams): number {
   let total = 0
-  for (let index = 0; index < periods.length; index += 1) {
+  for (let index = 0; index < params.trendPeriods.length; index += 1) {
     const phase = 2 * Math.PI * hashUnit(seed, randomStreams.trend, index)
-    total += Math.sin((2 * Math.PI * day) / periods[index] + phase) / (index + 1.4)
+    total += Math.sin((2 * Math.PI * day) / params.trendPeriods[index] + phase) / (index + params.trendDecay)
   }
-  return total * 0.004
+  return total * params.trendAmp
 }
 
 /** One uniform draw at a coordinate, for the places that need a phase or a coin flip. */
@@ -225,9 +330,9 @@ function hashUnit(seed: number, stream: number, a: number, b = 0): number {
   return uniform(seed, stream, a, b)
 }
 
-function jumpFor(seed: number, day: number): number {
-  if (hashUnit(seed, randomStreams.jump, day) >= jumpChancePerDay) return 0
-  const size = jumpLow + (jumpHigh - jumpLow) * hashUnit(seed, randomStreams.jump, day, 1)
+function jumpFor(seed: number, day: number, params: MarketParams): number {
+  if (hashUnit(seed, randomStreams.jump, day) >= params.jumpChancePerDay) return 0
+  const size = params.jumpLow + (params.jumpHigh - params.jumpLow) * hashUnit(seed, randomStreams.jump, day, 1)
   return (hashUnit(seed, randomStreams.jump, day, 2) < 0.5 ? -1 : 1) * size
 }
 
@@ -238,15 +343,21 @@ function jumpFor(seed: number, day: number): number {
  * same no matter how far back the caller asked to start — the price on a
  * Tuesday cannot depend on which week someone wanted to look at.
  */
-function marketDays(seed: number, startPrice: number, last: number): MarketDay[] {
+function marketDays(seed: number, startPrice: number, last: number, params: MarketParams): MarketDay[] {
   const days: MarketDay[] = []
+  const { decay, shock } = volatilityRates(params)
   let logPrice = Math.log(startPrice)
   let logVolatility = 0
   for (let day = 0; day <= last; day += 1) {
-    logVolatility = volatilityDecay * logVolatility + volatilityShock * normal(seed, randomStreams.volatility, day, 0)
-    const sigma = dailyVolatility * Math.exp(logVolatility)
+    logVolatility = decay * logVolatility + shock * normal(seed, randomStreams.volatility, day, 0)
+    const sigma = params.dailyVolatility * Math.exp(logVolatility)
     const open = logPrice
-    const close = open + driftPerDay + trendPerDay(seed, day) + sigma * normal(seed, randomStreams.price, day, 0) + jumpFor(seed, day)
+    const close =
+      open +
+      params.driftPerDay +
+      trendPerDay(seed, day, params) +
+      sigma * normal(seed, randomStreams.price, day, 0) +
+      jumpFor(seed, day, params)
     days.push({ open, close, sigma })
     logPrice = close
   }
@@ -261,15 +372,13 @@ function marketDays(seed: number, startPrice: number, last: number): MarketDay[]
  * same curve scales both the volatility and the volume of a step, which is why
  * a quiet hour looks quiet in both.
  */
-function activity(secondOfDay: number): number {
+function activity(secondOfDay: number, params: MarketParams): number {
   const hour = secondOfDay / 3600
-  return (
-    0.72 +
-    0.5 * Math.exp(-((hour - 14) ** 2) / 9) +
-    0.42 * Math.exp(-((hour - 8) ** 2) / 6) +
-    0.34 * Math.exp(-((hour - 0) ** 2) / 5) +
-    0.3 * Math.exp(-((hour - 21) ** 2) / 6)
-  )
+  let total = params.activityBase
+  for (const peak of params.activityPeaks) {
+    total += peak.amp * Math.exp(-((hour - peak.hour) ** 2) / peak.width)
+  }
+  return total
 }
 
 type DayPath = {
@@ -286,25 +395,25 @@ type DayPath = {
  * The walk is built first and the implied drift is subtracted afterwards, which
  * pins the end without ever looking at where the end was going.
  */
-function buildDayPath(seed: number, day: number, state: MarketDay): DayPath {
-  const steps = coarseSteps
+function buildDayPath(seed: number, day: number, state: MarketDay, params: MarketParams): DayPath {
+  const steps = params.coarseSteps
   const stepSeconds = secondsPerDay / steps
   const stepVolatility = state.sigma / Math.sqrt(steps)
   // Jumps are counted per *step*, not per second. Scaling the other way gave every
   // single minute of the day a jump, which is not a market that trades but one
   // that teleports.
-  const jumpChance = intradayJumpsPerDay / steps
+  const jumpChance = params.intradayJumpsPerDay / steps
   const price = new Float64Array(steps + 1)
   const volume = new Float64Array(steps + 1)
-  const baseRate = baseDailyVolume / secondsPerDay
+  const baseRate = params.baseDailyVolume / secondsPerDay
   // Activity is not the same thing as volatility. A day carries quiet stretches
   // and bursts inside it, and a burst is what makes a second of history worth
   // watching: without one every second is an identical step, and a chart of
   // seconds is a flat line pretending to be a market. The burst is held constant
   // across a block of steps and redrawn at the boundary, so a block lasts the same
   // stretch of time whichever grid the day is being walked on.
-  const burstDecay = Math.exp(-burstBlockSeconds / burstHalfLife)
-  const burstShock = burstSpread * Math.sqrt(1 - burstDecay * burstDecay)
+  const burstDecay = Math.exp(-params.burstBlockSeconds / params.burstHalfLife)
+  const burstShock = params.burstSpread * Math.sqrt(1 - burstDecay * burstDecay)
   let walk = 0
   let farthest = 0
   let block = -1
@@ -312,21 +421,22 @@ function buildDayPath(seed: number, day: number, state: MarketDay): DayPath {
   let burst = 1
 
   for (let step = 1; step <= steps; step += 1) {
-    const blockIndex = Math.floor((step * stepSeconds) / burstBlockSeconds)
+    const blockIndex = Math.floor((step * stepSeconds) / params.burstBlockSeconds)
     if (blockIndex !== block) {
       block = blockIndex
       burstLevel = burstDecay * burstLevel + burstShock * normal(seed, randomStreams.burst, day, blockIndex)
       burst = Math.exp(burstLevel)
     }
-    const busy = activity(step * stepSeconds)
+    const busy = activity(step * stepSeconds, params)
     const move = normal(seed, randomStreams.path, day, step)
     // One coin flip per step is the price of the fat tail, and it is the only
     // draw in this loop that is not needed every time.
     const jump =
       hashUnit(seed, randomStreams.jump, day, step) < jumpChance
         ? (hashUnit(seed, randomStreams.jump, day, step + 0x4000_0000) < 0.5 ? -1 : 1) *
-          (intradayJumpLow +
-            (intradayJumpHigh - intradayJumpLow) * hashUnit(seed, randomStreams.jump, day, step + 0x8000_0000))
+          (params.intradayJumpLow +
+            (params.intradayJumpHigh - params.intradayJumpLow) *
+              hashUnit(seed, randomStreams.jump, day, step + 0x8000_0000))
         : 0
     walk += stepVolatility * busy * burst * move + jump
     price[step] = walk
@@ -336,14 +446,14 @@ function buildDayPath(seed: number, day: number, state: MarketDay): DayPath {
     // having a small sigma as well as a small move. Measured this way a day that
     // ranges far from where it opened trades noticeably more than one that drifts.
     if (Math.abs(walk) > farthest) farthest = Math.abs(walk)
-    const traded = Math.min(farthest / dailyVolatility, 6)
+    const traded = Math.min(farthest / params.dailyVolatility, 6)
     volume[step] =
       baseRate *
       stepSeconds *
       busy *
       burst *
-      Math.exp(volumeWobble * normal(seed, randomStreams.volume, day, step)) *
-      (1 + volumeMoveBoost * traded)
+      Math.exp(params.volumeWobble * normal(seed, randomStreams.volume, day, step)) *
+      (1 + params.volumeMoveBoost * traded)
   }
 
   // Pin both ends. A Brownian bridge is a random walk with the linear ramp that
@@ -370,15 +480,22 @@ function buildDayPath(seed: number, day: number, state: MarketDay): DayPath {
  * traded volume is this path's traded volume, so the ladder from seconds to
  * minutes adds up instead of merely looking like it should.
  */
-function buildTickPath(seed: number, day: number, minute: number, coarse: DayPath, state: MarketDay): DayPath {
-  const steps = ticksPerMinute
+function buildTickPath(
+  seed: number,
+  day: number,
+  minute: number,
+  coarse: DayPath,
+  state: MarketDay,
+  params: MarketParams
+): DayPath {
+  const steps = 60 * params.tickRate
   const price = new Float64Array(steps + 1)
   const volume = new Float64Array(steps + 1)
   const open = coarse.price[minute]
   const close = coarse.price[minute + 1]
   // A tick is a fraction of a minute's worth of movement, so it is a fraction of
   // that minute's worth of noise as well.
-  const stepVolatility = state.sigma / Math.sqrt(coarseSteps * steps)
+  const stepVolatility = state.sigma / Math.sqrt(params.coarseSteps * steps)
   const base = minute * steps
   let walk = 0
 
@@ -399,7 +516,7 @@ function buildTickPath(seed: number, day: number, minute: number, coarse: DayPat
   let weightSum = 0
   const weight = new Float64Array(steps + 1)
   for (let step = 1; step <= steps; step += 1) {
-    weight[step] = Math.exp(volumeWobble * normal(seed, randomStreams.tickVolume, day, base + step))
+    weight[step] = Math.exp(params.volumeWobble * normal(seed, randomStreams.tickVolume, day, base + step))
     weightSum += weight[step]
   }
   const traded = coarse.volume[minute + 1]
@@ -417,21 +534,21 @@ function buildTickPath(seed: number, day: number, minute: number, coarse: DayPat
 const pathCache = new Map<string, DayPath>()
 const pathCacheLimit = 8
 
-function dayPathFor(seed: number, day: number, state: MarketDay): DayPath {
-  const key = `${seed}:${day}`
-  const cached = pathCache.get(key)
+function dayPathFor(seed: number, day: number, state: MarketDay, params: MarketParams, key: string): DayPath {
+  const cacheKey = `${key}:${day}`
+  const cached = pathCache.get(cacheKey)
   if (cached) {
     // Re-insert so the map keeps insertion order and the oldest goes first.
-    pathCache.delete(key)
-    pathCache.set(key, cached)
+    pathCache.delete(cacheKey)
+    pathCache.set(cacheKey, cached)
     return cached
   }
-  const built = buildDayPath(seed, day, state)
+  const built = buildDayPath(seed, day, state, params)
   if (pathCache.size >= pathCacheLimit) {
     const oldest = pathCache.keys().next()
     if (!oldest.done) pathCache.delete(oldest.value)
   }
-  pathCache.set(key, built)
+  pathCache.set(cacheKey, built)
   return built
 }
 
@@ -443,20 +560,28 @@ function dayPathFor(seed: number, day: number, state: MarketDay): DayPath {
 const tickCache = new Map<string, DayPath>()
 const tickCacheLimit = 320
 
-function tickPathFor(seed: number, day: number, minute: number, coarse: DayPath, state: MarketDay): DayPath {
-  const key = `${seed}:${day}:${minute}`
-  const cached = tickCache.get(key)
+function tickPathFor(
+  seed: number,
+  day: number,
+  minute: number,
+  coarse: DayPath,
+  state: MarketDay,
+  params: MarketParams,
+  key: string
+): DayPath {
+  const cacheKey = `${key}:${day}:${minute}`
+  const cached = tickCache.get(cacheKey)
   if (cached) {
-    tickCache.delete(key)
-    tickCache.set(key, cached)
+    tickCache.delete(cacheKey)
+    tickCache.set(cacheKey, cached)
     return cached
   }
-  const built = buildTickPath(seed, day, minute, coarse, state)
+  const built = buildTickPath(seed, day, minute, coarse, state, params)
   if (tickCache.size >= tickCacheLimit) {
     const oldest = tickCache.keys().next()
     if (!oldest.done) tickCache.delete(oldest.value)
   }
-  tickCache.set(key, built)
+  tickCache.set(cacheKey, built)
   return built
 }
 
@@ -467,8 +592,8 @@ const minuteIndexAt = (timeMs: number): number => Math.floor((timeMs - marketEpo
 
 const minuteStartMs = (minute: number): number => marketEpoch + minute * msPerMinute
 
-const roundPrice = (value: number): number => {
-  const scale = 10 ** priceDecimals
+const roundPrice = (value: number, decimals: number): number => {
+  const scale = 10 ** decimals
   return Math.round(value * scale) / scale
 }
 
@@ -480,6 +605,11 @@ export type CandleRequest = {
   until?: number
   seed?: string
   startPrice?: number
+  /**
+   * Knobs for a different market. Left out, the published market is generated, which
+   * is the only thing the published page ever asks for.
+   */
+  params?: Partial<MarketParams>
   /**
    * Cuts the last bar off at the present moment, so a chart can show the bar that
    * is still forming rather than waiting for it to close. The market is decided in
@@ -502,11 +632,17 @@ export function generateCandles(request: CandleRequest = {}): Candle[] {
     until = Date.now(),
     seed = defaultSeed,
     startPrice = defaultStartPrice,
+    params: overrides,
     live = false
   } = request
   if (!isTimeframe(timeframe)) throw new Error(`unknown timeframe: ${timeframe}`)
   const seconds = timeframeSeconds[timeframe]
   const seedNumber = hashSeed(seed)
+  const params = resolveParams(overrides)
+  // The knobs are part of the cache key, so a market that is not the published one
+  // cannot be served a day the published page built, however unlikely that would be
+  // to notice by eye.
+  const key = `${seedNumber}:${startPrice}:${paramsKey(params)}`
   // Bars are numbered from the day the market opened, not from 1970, so asking for
   // more history than has happened is answered with less history.
   const lastIndex = Math.floor((until - marketEpoch) / (seconds * msPerSecond))
@@ -516,7 +652,7 @@ export function generateCandles(request: CandleRequest = {}): Candle[] {
   // A bar can be longer than a day, so the chain has to reach the day holding its
   // *end*: a weekly candle walks into the six days after the week opened.
   const lastBarEnd = marketEpoch + (lastIndex + 1) * seconds * msPerSecond - 1
-  const days = marketDays(seedNumber, startPrice, dayIndexAt(lastBarEnd))
+  const days = marketDays(seedNumber, startPrice, dayIndexAt(lastBarEnd), params)
   // A bar of a minute or less is drawn from the ticks inside its own minutes, which
   // is what gives it a shadow; a longer one is drawn from the minute grid. A minute
   // candle therefore knows more about its minute than an hourly candle does about
@@ -552,7 +688,7 @@ export function generateCandles(request: CandleRequest = {}): Candle[] {
     while (cursor < barEnd) {
       const day = dayIndexAt(cursor)
       const dayEnd = Math.min(marketEpoch + (day + 1) * msPerDay, barEnd)
-      const coarse = dayPathFor(seedNumber, day, days[day])
+      const coarse = dayPathFor(seedNumber, day, days[day], params, key)
 
       while (cursor < dayEnd) {
         const minuteStart = minuteStartMs(minuteIndexAt(cursor))
@@ -565,9 +701,9 @@ export function generateCandles(request: CandleRequest = {}): Candle[] {
         if (fine) {
           // The bar's own resolution, so a shadow that is on the candle is one the
           // closed candle keeps: ticks all the way through, forming bar included.
-          const ticks = tickPathFor(seedNumber, day, minuteOfDay, coarse, days[day])
-          const from = Math.round(((cursor - minuteStart) / msPerSecond) * tickRate)
-          const to = Math.round(((minuteEnd - minuteStart) / msPerSecond) * tickRate)
+          const ticks = tickPathFor(seedNumber, day, minuteOfDay, coarse, days[day], params, key)
+          const from = Math.round(((cursor - minuteStart) / msPerSecond) * params.tickRate)
+          const to = Math.round(((minuteEnd - minuteStart) / msPerSecond) * params.tickRate)
           for (let tick = from; tick <= to; tick += 1) {
             const price = Math.exp(ticks.price[tick])
             if (first) {
@@ -596,9 +732,9 @@ export function generateCandles(request: CandleRequest = {}): Candle[] {
           }
           if (boundary > high) high = boundary
           if (boundary < low) low = boundary
-          const ticks = tickPathFor(seedNumber, day, minuteOfDay, coarse, days[day])
-          const from = Math.round(((cursor - minuteStart) / msPerSecond) * tickRate)
-          const to = Math.round(((minuteEnd - minuteStart) / msPerSecond) * tickRate)
+          const ticks = tickPathFor(seedNumber, day, minuteOfDay, coarse, days[day], params, key)
+          const from = Math.round(((cursor - minuteStart) / msPerSecond) * params.tickRate)
+          const to = Math.round(((minuteEnd - minuteStart) / msPerSecond) * params.tickRate)
           // The ticks carry the minute's own volume, so the part of the minute that
           // has happened is a share of it rather than a guess, and the total can
           // only ever grow towards what the closed bar will report.
@@ -624,15 +760,15 @@ export function generateCandles(request: CandleRequest = {}): Candle[] {
       }
     }
 
-    const openRounded = roundPrice(open)
-    const closeRounded = roundPrice(close)
+    const openRounded = roundPrice(open, params.priceDecimals)
+    const closeRounded = roundPrice(close, params.priceDecimals)
     candles.push({
       time: startMs,
       open: openRounded,
       // Rounding is monotonic, so this can only ever agree; the guard is what
       // makes the invariant a fact of the output rather than a hope.
-      high: Math.max(roundPrice(high), openRounded, closeRounded),
-      low: Math.min(roundPrice(low), openRounded, closeRounded),
+      high: Math.max(roundPrice(high, params.priceDecimals), openRounded, closeRounded),
+      low: Math.min(roundPrice(low, params.priceDecimals), openRounded, closeRounded),
       close: closeRounded,
       volume: Math.round(volume * 100) / 100
     })
@@ -662,7 +798,8 @@ export function minuteExtremesBetween(
   fromMs: number,
   toMs: number,
   seed: string = defaultSeed,
-  startPrice: number = defaultStartPrice
+  startPrice: number = defaultStartPrice,
+  overrides?: Partial<MarketParams>
 ): RangeExtremes {
   const from = Math.max(fromMs, marketEpoch)
   const to = Math.max(from, toMs)
@@ -673,13 +810,15 @@ export function minuteExtremesBetween(
   let highAt = from
   const firstMinute = Math.floor((from - marketEpoch) / msPerMinute)
   const lastMinute = Math.floor((to - marketEpoch) / msPerMinute)
-  const days = marketDays(seedNumber, startPrice, dayIndexAt(to))
+  const params = resolveParams(overrides)
+  const key = `${seedNumber}:${startPrice}:${paramsKey(params)}`
+  const days = marketDays(seedNumber, startPrice, dayIndexAt(to), params)
   const firstDay = dayIndexAt(from)
 
   for (let day = firstDay; day <= dayIndexAt(to); day += 1) {
     const state = days[day]
     if (!state) break
-    const path = dayPathFor(seedNumber, day, state)
+    const path = dayPathFor(seedNumber, day, state, params, key)
     const first = day * minutesPerDay
     const last = Math.min(lastMinute, first + minutesPerDay)
     for (let minute = Math.max(firstMinute, first); minute <= last; minute += 1) {
@@ -703,7 +842,7 @@ export function minuteExtremesBetween(
 
   if (!Number.isFinite(low) || !Number.isFinite(high)) {
     const first = days[firstDay] ?? days[0]
-    const price = Math.exp(dayPathFor(seedNumber, firstDay, first).price[0])
+    const price = Math.exp(dayPathFor(seedNumber, firstDay, first, params, key).price[0])
     return { low: price, high: price, lowAt: from, highAt: from }
   }
   return { low, high, lowAt, highAt }

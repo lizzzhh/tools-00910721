@@ -1,0 +1,196 @@
+---
+import { Icon } from 'astro-icon/components'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import Card from '../ui/Card.astro'
+import { createTranslator } from '../../i18n'
+import type { MessageKey } from '../../i18n'
+import { localePath } from '../../i18n/config'
+import { labFields, labGroups, labPresets } from '../../lib/market-lab.ts'
+import { defaultSeed, defaultStartPrice, marketEpoch, timeframes } from '../../lib/candles.ts'
+
+const locale = Astro.locals.locale
+const t = createTranslator(locale)
+const backHref = localePath(locale, '/tools/market/')
+
+/** Green up is the western convention and red up is the Chinese one, as on the published page. */
+const up = locale === 'zh-CN' || locale === 'zh-TW' ? 'danger' : 'success'
+
+const unitOf = (key: string): MessageKey =>
+  (key === 'volatilityHalfLife' || key === 'burstHalfLife' || key === 'burstBlockSeconds'
+    ? 'lab.market.unitSeconds'
+    : key === 'baseDailyVolume'
+      ? 'lab.market.unitVolume'
+      : key === 'coarseSteps' || key === 'trendPeriod1' || key === 'trendPeriod2' || key === 'trendPeriod3'
+        ? 'lab.market.unit'
+        : 'lab.market.unitPercent') as MessageKey
+
+const decimalsOf = (step: number): number => (step >= 1 ? 0 : Math.min(6, Math.max(2, Math.round(-Math.log10(step)) + 1)))
+
+/** The seed and price the published page uses, so the lab starts on the real market. */
+const seedValue = defaultSeed
+const startValue = defaultStartPrice
+---
+
+<BaseLayout title={`${t('lab.market.title')} · ${t('meta.siteName')}`} description={t('lab.market.subtitle')} activeTool="market" noindex>
+  <section class="tool-workspace lab-workspace" data-market-lab-panel data-up={up} data-seed={seedValue} data-start-price={startValue} data-epoch={marketEpoch}>
+    <div class="workspace-header">
+      <div>
+        <div class="breadcrumb"><span>{t('categories.market')}</span><b>/</b><strong>{t('tools.market.name')}</strong><b>/</b><strong>{t('lab.market.title')}</strong></div>
+        <div class="title-line">
+          <span class="title-icon"><Icon name="lucide:flask-conical" size={25} /></span>
+          <div><h1>{t('lab.market.title')}</h1><p>{t('lab.market.subtitle')}</p></div>
+        </div>
+      </div>
+      <div class="lab-header-tools">
+        <span class="lab-badge"><Icon name="lucide:wrench" size={15} />{t('lab.market.badge')}</span>
+        <a class="lab-back" href={backHref}><Icon name="lucide:arrow-left" size={15} />{t('lab.market.back')}</a>
+      </div>
+    </div>
+
+    <div class="security-notice"><Icon name="lucide:triangle-alert" size={16} />{t('lab.market.notice')}</div>
+
+    <div class="lab-columns">
+      <div class="lab-controls">
+        <Card class="tool-card lab-card">
+          <div class="field-heading"><b>{t('lab.market.requestTitle')}</b><span>{t('lab.market.door')}</span></div>
+          <div class="lab-request">
+            <label class="lab-field">
+              <span>{t('lab.market.seed')}</span>
+              <input type="text" data-lab-seed value={seedValue} spellcheck="false" />
+            </label>
+            <label class="lab-field">
+              <span>{t('lab.market.startPrice')}</span>
+              <input type="number" data-lab-start min="1" step="1" value={startValue} />
+            </label>
+            <label class="lab-field">
+              <span>{t('lab.market.timeframe')}</span>
+              <select data-lab-timeframe>
+                {timeframes.map((option) => <option value={option} selected={option === '1h'}>{t(`toolUi.market.timeframe.${option}` as MessageKey)}</option>)}
+              </select>
+            </label>
+            <label class="lab-field">
+              <span>{t('lab.market.bars')}</span>
+              <input type="number" data-lab-count min="2" max="1500" step="1" value="200" />
+            </label>
+            <label class="lab-field lab-field-wide">
+              <span>{t('lab.market.futureBars')}</span>
+              <input type="number" data-lab-future min="0" max="1500" step="1" value="0" />
+              <small>{t('lab.market.futureHint')}</small>
+            </label>
+          </div>
+        </Card>
+
+        <Card class="tool-card lab-card">
+          <div class="field-heading">
+            <b>{t('lab.market.paramsTitle')}</b>
+            <output class="lab-changed" data-lab-changed>{t('lab.market.untouched')}</output>
+          </div>
+          <div class="lab-presets" role="group" aria-label={t('lab.market.presetLabel')}>
+            {labPresets.map((preset) => (
+              <button type="button" class="lab-preset" data-lab-preset={preset.id} aria-pressed={preset.id === 'published'}>
+                {t(preset.label)}
+              </button>
+            ))}
+            <button type="button" class="lab-preset lab-preset-reset" data-lab-reset>
+              <Icon name="lucide:rotate-ccw" size={14} />{t('lab.market.resetAll')}
+            </button>
+          </div>
+
+          {labGroups.map((group) => (
+            <details class="lab-group" data-lab-group={group.id} open={group.id === 'volatility' || group.id === 'grid'}>
+              <summary>
+                <b>{t(group.label)}</b>
+                <span>{t(group.note)}</span>
+                <i data-lab-group-reset={group.id} role="button" tabindex="0" title={t('lab.market.resetGroup')}>
+                  <Icon name="lucide:undo-2" size={14} />
+                </i>
+              </summary>
+              <div class="lab-group-fields">
+                {labFields.filter((field) => field.group === group.id).map((field) => {
+                  const id = `lab-${field.key}${field.index === undefined ? '' : field.index}`
+                  return (
+                    <div class="lab-slider" data-lab-field={field.key} data-lab-index={String(field.index ?? '')}>
+                      <div class="field-heading">
+                        <label for={id}>{t(field.label)}</label>
+                        <output for={id}>
+                          <input
+                            id={id}
+                            class="lab-slider-number"
+                            type="number"
+                            min={field.min}
+                            max={field.max}
+                            step={field.step}
+                            value={field.fallback.toFixed(decimalsOf(field.step))}
+                            aria-label={t(field.label)}
+                          />
+                          <span class="lab-unit">{t(unitOf(String(field.key)))}</span>
+                        </output>
+                      </div>
+                      <input
+                        class="lab-slider-range"
+                        type="range"
+                        min={field.min}
+                        max={field.max}
+                        step={field.step}
+                        value={field.fallback}
+                        data-lab-range={field.key}
+                        data-lab-index={String(field.index ?? '')}
+                        aria-label={t(field.label)}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </details>
+          ))}
+        </Card>
+      </div>
+
+      <div class="lab-results">
+        <Card class="tool-card lab-card lab-chart-card">
+          <div class="field-heading"><b>{t('lab.market.chartTitle')}</b><span data-lab-chart-note>{t('lab.market.chartNote')}</span></div>
+          <div class="candle-chart lab-chart" data-lab-chart>
+            <div class="candle-chart-plot" data-lab-plot></div>
+          </div>
+        </Card>
+
+        <Card class="tool-card lab-card">
+          <div class="field-heading"><b>{t('lab.market.statsTitle')}</b><span data-lab-window></span></div>
+          <dl class="lab-stats" data-lab-stats></dl>
+        </Card>
+
+        <Card class="tool-card lab-card">
+          <div class="field-heading"><b>{t('lab.market.checksTitle')}</b><span>{t('lab.market.checksHint')}</span></div>
+          <ul class="lab-checks" data-lab-checks></ul>
+        </Card>
+
+        <Card class="tool-card lab-card">
+          <div class="field-heading">
+            <b>{t('lab.market.tableTitle')}</b>
+            <button type="button" class="lab-copy" data-lab-copy>
+              <Icon name="lucide:copy" size={14} />{t('lab.market.copyJson')}
+            </button>
+          </div>
+          <p class="lab-table-hint" data-lab-table-hint></p>
+          <div class="lab-table-wrap">
+            <table class="lab-table">
+              <thead>
+                <tr>
+                  <th>{t('lab.market.tableTime')}</th>
+                  <th>O</th><th>H</th><th>L</th><th>C</th>
+                  <th>{t('lab.market.tableChange')}</th>
+                  <th>{t('lab.market.unitVolume')}</th>
+                </tr>
+              </thead>
+              <tbody data-lab-table></tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import '../../scripts/market-lab'
+</script>

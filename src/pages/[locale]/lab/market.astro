@@ -1,0 +1,11 @@
+---
+import MarketLabPage from '../../../components/lab/MarketLabPage.astro'
+import { localeMeta, prefixedLocales } from '../../../i18n/config'
+
+export function getStaticPaths() {
+  // the route param is the URL prefix (e.g. zh-tw), not the locale id
+  return prefixedLocales.map((locale) => ({ params: { locale: localeMeta[locale].prefix } }))
+}
+---
+
+<MarketLabPage />
