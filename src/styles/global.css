@@ -6898,3 +6898,342 @@ html.zen-mode .zen-bar {
 .trade-dialog.is-narrow {
   max-width: 27rem;
 }
+
+/* ---------------------------------------------------------------- ffmpeg builder
+   The form is the command line laid out in the order the flags have to appear, so
+   each stage is a band with its own heading and its own controls. */
+.ffmpeg-field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: 0;
+}
+
+.ffmpeg-field-wide {
+  grid-column: 1 / -1;
+}
+
+.ffmpeg-workspace .tool-field-grid {
+  margin-bottom: 0;
+}
+
+.ffmpeg-workspace .tool-option-section + .tool-option-section {
+  margin-top: var(--spacing-lg);
+}
+
+.ffmpeg-workspace .tool-option-grid {
+  margin-top: var(--spacing-sm);
+}
+
+.tool-field-hint {
+  color: var(--content-meta);
+  font-size: 0.68rem;
+  line-height: 1.6;
+}
+
+/* The command stays in view while the options below it are changed, which is the
+   whole point of editing a command rather than a form. */
+.ffmpeg-preview {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  gap: 2px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--line-divider);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+}
+
+.ffmpeg-preview-label,
+.ffmpeg-recipe-label,
+.ffmpeg-chain-label {
+  color: var(--content-meta);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ffmpeg-preview code {
+  overflow-x: auto;
+  color: var(--primary-strong);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+/* A recipe is an alias for a set of flags, so it is a row of names and nothing
+   more, and the strip stays out of the way of the stages below it. */
+.ffmpeg-recipe-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-md);
+  align-items: center;
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--line-divider);
+}
+
+.ffmpeg-chips {
+  display: flex;
+  flex: 1 1 20rem;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.ffmpeg-chip {
+  display: inline-flex;
+  gap: 0.35em;
+  align-items: center;
+  padding: 0.3em 0.7em;
+  border: 1px solid var(--line-divider);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--content-main);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.ffmpeg-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+
+.ffmpeg-chip.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+.ffmpeg-recipe-more {
+  flex: 0 0 auto;
+}
+
+.ffmpeg-recipe-more > summary {
+  display: inline-flex;
+  gap: 0.3em;
+  align-items: center;
+  color: var(--content-meta);
+  font-size: 0.72rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ffmpeg-recipe-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ffmpeg-recipe-more[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.ffmpeg-recipe-more > .ffmpeg-chips {
+  flex-basis: 100%;
+  padding-top: var(--spacing-sm);
+}
+
+/* One band per stage of the pipeline, numbered the way the options are ordered. */
+.ffmpeg-stage {
+  padding-top: var(--spacing-xl);
+}
+
+.ffmpeg-stage + .ffmpeg-stage {
+  margin-top: var(--spacing-sm);
+  border-top: 1px solid var(--line-divider);
+}
+
+.ffmpeg-stage-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--spacing-md);
+  align-items: start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.ffmpeg-stage-index {
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ffmpeg-stage-head h2 {
+  margin: 0 0 0.15em;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.ffmpeg-stage-head p {
+  margin: 0;
+  color: var(--content-meta);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+/* The flags a stage owns, so the heading says which part of the command it is. */
+.ffmpeg-stage-flags {
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-align: right;
+  word-break: break-word;
+}
+
+.ffmpeg-dial {
+  margin-top: var(--spacing-lg);
+}
+
+/* The command is a single logical line that has to wrap rather than scroll, since a
+   horizontally scrolling command cannot be read before it is pasted. */
+.ffmpeg-command {
+  min-height: 7rem;
+  max-height: 22rem;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ffmpeg-issues {
+  margin-top: var(--spacing-md);
+  white-space: pre-line;
+}
+
+/* The filter stage is a chain, so the chain it produced is written back out. */
+.ffmpeg-chain {
+  display: grid;
+  gap: 2px;
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-left: 2px solid var(--primary);
+}
+
+.ffmpeg-chain code {
+  overflow-x: auto;
+  color: var(--primary-strong);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+/* A file is chosen rather than named. The control is a label around the real
+   file input, so the whole row is the click target and the browser's own
+   dialog does the rest. */
+.ffmpeg-workspace .tool-field-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ffmpeg-picker {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5em 0.9em;
+  border: 1px dashed var(--line-divider);
+  border-radius: var(--radius-sm);
+  color: var(--content-main);
+  font-size: 0.78rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.ffmpeg-picker:hover {
+  border-color: var(--primary);
+  background: var(--bg-subtle, rgb(0 0 0 / 3%));
+  color: var(--primary-strong);
+}
+
+.ffmpeg-picker input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ffmpeg-picker:focus-within {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in oklch, var(--primary) 30%, transparent);
+  outline-offset: 2px;
+}
+
+.ffmpeg-workspace .ffmpeg-field-wide .ffmpeg-picker + input {
+  margin-top: calc(-1 * var(--spacing-sm));
+}
+
+.ffmpeg-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md) var(--spacing-xl);
+  margin-top: 0;
+}
+
+/* Each flag is paired with the sentence that explains it, so the pair is one row and
+   the explanation wraps under the flag rather than pushing the list sideways. */
+.ffmpeg-flag-list {
+  display: grid;
+  gap: 1px;
+  background: var(--line-divider);
+  border-top: 1px solid var(--line-divider);
+}
+
+.ffmpeg-flag-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) 1fr;
+  gap: var(--spacing-lg);
+  align-items: baseline;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--card-bg);
+}
+
+.ffmpeg-flag-name {
+  overflow: hidden;
+  color: var(--primary-strong);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ffmpeg-flag-note {
+  color: var(--content-meta);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .ffmpeg-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .ffmpeg-dial {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ffmpeg-stage-head {
+    grid-template-columns: auto 1fr;
+  }
+
+  .ffmpeg-stage-flags {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .ffmpeg-flag-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-xs);
+  }
+
+  .ffmpeg-flag-name {
+    white-space: normal;
+    word-break: break-all;
+  }
+}
+

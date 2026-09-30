@@ -131,6 +131,14 @@ export const tools: Tool[] = [
     available: true
   },
   {
+    id: 'ffmpeg-builder',
+    category: 'media',
+    icon: 'lucide:film',
+    keywords: ['ffmpeg', 'ffprobe', 'video', 'audio', 'convert', 'transcode', 'codec', 'gif', '滤镜', '转码', '压缩', '裁剪', '水印', '字幕', '录屏', '動画', '音声', '変換', '命令行', 'コマンド'],
+    available: false,
+    preview: true
+  },
+  {
     id: 'uuid-generator',
     category: 'developer',
     icon: 'lucide:fingerprint',

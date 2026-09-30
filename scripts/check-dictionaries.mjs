@@ -26,7 +26,17 @@ const jaLatinAllow = new Set([
   'JavaScript', 'TypeScript', 'RegExp', 'Blob', 'URLSearchParams', 'CJK', 'Emoji', 'IME',
   'BigInt', 'base', 'kebab', 'camel', 'snake', 'pascal', 'train', 'dot', 'path', 'alternating',
   'uXXXX', 'uXXXXX', 'ASCII', 'UTF-8', 'encodeURIComponent', 'encodeURI', 'Person', 'Group', 'Org', 'DCE', 'MD', 'SHA', 'www', 'user', 'example', 'com', 'undefined', 'NaN', 'null',
-  'RAW', 'UTC', 'GMT', 'Enter', 'Esc', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
+  'RAW', 'UTC', 'GMT', 'Enter', 'Esc', 'Ctrl', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+  // ffmpeg vocabulary. The encoder, container and platform names have to appear
+  // verbatim or the reader cannot match them against the command they just
+  // generated. Runs shorter than a whole word come from names that carry digits
+  // in the middle, such as libmp3lame, x11grab and pcm_s16le.
+  'ffmpeg', 'ffprobe', 'CRF', 'AAC', 'aac', 'FLAC', 'flac', 'Opus', 'MPEG', 'mpeg', 'VP', 'VP9', 'AV', 'AV1',
+  'mp', 'av', 'vp', 'lame', 'le', 'pcm', 'grab', 'yuv', 'moov', 'libx', 'libvpx', 'libopus', 'libmp',
+  'libaom', 'hevc', 'nvenc', 'qsv', 'videotoolbox', 'VideoToolbox', 'avfoundation', 'gdigrab',
+  'ultrafast', 'veryfast', 'fast', 'medium', 'slow', 'veryslow',
+  'framerate', 'atempo', 'setpts', 'palettegen', 'paletteuse', 'drawtext',
+  'GIF', 'WebM', 'WAV', 'MP', 'NVIDIA', 'Intel', 'macOS', 'Linux', 'Windows'
 ])
 
 /**

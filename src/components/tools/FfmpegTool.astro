@@ -1,0 +1,272 @@
+---
+import { Icon } from 'astro-icon/components'
+import Button from '../ui/Button.astro'
+import Card from '../ui/Card.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import {
+  audioCodecs,
+  containers,
+  ffmpegPresets,
+  ffmpegStages,
+  qualityDial,
+  screenSources,
+  videoCodecs,
+  watermarkPositions,
+  type ChannelModeId,
+  type FfmpegPresetId,
+  type FfmpegStageId,
+  type MapModeId,
+  type WatermarkModeId
+} from '../../lib/ffmpeg'
+import { createTranslator, type MessageKey } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const containerOptions = containers.map((container) => ({ value: container.id, label: `${container.id.toUpperCase()} · .${container.extension}` }))
+// Dictionary keys reuse the raw ids, underscores and hyphens included, so the
+// key can be built by interpolation without widening to a plain string.
+const videoCodecOptions = videoCodecs.map((codec) => ({ value: codec, label: t(`toolUi.ffmpeg-builder.videoCodecs.${codec}`) }))
+const audioCodecOptions = audioCodecs.map((codec) => ({ value: codec, label: t(`toolUi.ffmpeg-builder.audioCodecs.${codec}`) }))
+const mapModeOptions = (['auto', 'video', 'audio', 'mute'] as MapModeId[]).map((mode) => ({ value: mode, label: t(`toolUi.ffmpeg-builder.mapModes.${mode}`) }))
+const channelModeOptions = (['default', 'mono', 'stereo'] as ChannelModeId[]).map((mode) => ({ value: mode, label: t(`toolUi.ffmpeg-builder.channelModes.${mode}`) }))
+const watermarkModeOptions = (['none', 'image', 'text'] as WatermarkModeId[]).map((mode) => ({ value: mode, label: t(`toolUi.ffmpeg-builder.watermarkModes.${mode}`) }))
+const watermarkPositionOptions = watermarkPositions.map((position) => ({ value: position, label: t(`toolUi.ffmpeg-builder.watermarkPositions.${position}`) }))
+const screenSourceOptions = screenSources.map((source) => ({ value: source, label: t(`toolUi.ffmpeg-builder.screenSources.${source}`) }))
+
+// Every remaining option is a list of answers, not a field to type into. The
+// value is what the builder wants and the label is what the choice means.
+const choice = <K extends string>(group: K, value: string) => t(`toolUi.ffmpeg-builder.${group}.${value}` as MessageKey)
+const sizeOptions = ['keep', 'uhd', 'qhd', 'fhd', 'hd', 'sd', 'portrait'].map((value) => ({ value, label: choice('size', value) }))
+const fpsOptions = ['keep', 'f24', 'f25', 'f30', 'f60'].map((value) => ({ value, label: choice('fps', value) }))
+const speedOptions = ['slow', 'slight', 'quick', 'double', 'quad'].map((value) => ({ value, label: choice('speed', value) }))
+const volumeOptions = ['quiet', 'half', 'loud', 'double'].map((value) => ({ value, label: choice('volume', value) }))
+const audioBitrateOptions = ['auto', 'k96', 'k128', 'k192', 'k256'].map((value) => ({ value, label: choice('audioBitrate', value) }))
+const startOptions = ['begin', 's5', 's10', 's30', 'm1', 'm2'].map((value) => ({ value, label: choice('start', value) }))
+const durationOptions = ['all', 's5', 's15', 's30', 'm1', 'm2'].map((value) => ({ value, label: choice('duration', value) }))
+
+// A recipe is only an alias for a set of flags, which is how ffmpeg's own presets
+// work, so it is a strip of names rather than a mode the rest of the form sits in.
+const offered = ffmpegPresets.filter((preset) => preset.id !== 'custom').sort((left, right) => left.order - right.order)
+const primaryRecipes = offered.filter((preset) => preset.primary)
+const moreRecipes = offered.filter((preset) => !preset.primary)
+const recipeLabel = (preset: FfmpegPresetId) => t(`toolUi.ffmpeg-builder.presets.${preset}`)
+const dialOptions = qualityDial.map((entry) => ({ ...entry, label: t(`toolUi.ffmpeg-builder.qualityDial.${entry.id}`) }))
+
+const stageLabel = (stage: FfmpegStageId) => t(`toolUi.ffmpeg-builder.stages.${stage}.label`)
+const stageHint = (stage: FfmpegStageId) => t(`toolUi.ffmpeg-builder.stages.${stage}.hint`)
+const stageIndex = (stage: FfmpegStageId) => ffmpegStages.findIndex((entry) => entry.id === stage) + 1
+---
+
+<section class="tool-workspace ffmpeg-workspace">
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>{t('categories.media')}</span><b>/</b><strong>{t('tools.ffmpeg-builder.name')}</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name="lucide:film" size={25} /></span>
+        <div><h1>{t('tools.ffmpeg-builder.name')}</h1><p>{t('toolUi.ffmpeg-builder.subtitle')}</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{t('toolUi.ffmpeg-builder.notice')}</div>
+
+  <!-- The command is the point of the page, so it stays in view while the options
+       below it are changed, in the same order the form is laid out. -->
+  <div class="ffmpeg-preview" id="ffmpeg-preview" hidden>
+    <span class="ffmpeg-preview-label">{t('toolUi.ffmpeg-builder.previewLabel')}</span>
+    <code id="ffmpeg-preview-command"></code>
+  </div>
+
+  <Card class="tool-card">
+    <input id="ffmpeg-preset" type="hidden" value="transcode" />
+    <div class="ffmpeg-recipe-bar" id="ffmpeg-recipes">
+      <span class="ffmpeg-recipe-label">{t('toolUi.ffmpeg-builder.recipeLabel')}</span>
+      <div class="ffmpeg-chips">
+        {primaryRecipes.map((preset) => (
+          <button class="ffmpeg-chip" type="button" data-preset={preset.id}>
+            <Icon name={preset.icon} size={15} />
+            <span>{recipeLabel(preset.id)}</span>
+          </button>
+        ))}
+      </div>
+      <details class="ffmpeg-recipe-more">
+        <summary><Icon name="lucide:chevron-down" size={14} />{t('toolUi.ffmpeg-builder.moreGoals')}</summary>
+        <div class="ffmpeg-chips">
+          {moreRecipes.map((preset) => (
+            <button class="ffmpeg-chip" type="button" data-preset={preset.id}>
+              <Icon name={preset.icon} size={15} />
+              <span>{recipeLabel(preset.id)}</span>
+            </button>
+          ))}
+        </div>
+      </details>
+    </div>
+
+    <div class="security-error" id="ffmpeg-error" role="alert" hidden></div>
+
+    <!-- The form is the pipeline: the same order the options have to appear on the
+         command line, so a flag found in a section is where it belongs in the
+         command, and the command can be read off the page from top to bottom. -->
+    {ffmpegStages.map((stage) => (
+      <section class="ffmpeg-stage" id={`ffmpeg-stage-${stage.id}`}>
+        <div class="ffmpeg-stage-head">
+          <span class="ffmpeg-stage-index">{stageIndex(stage.id)}</span>
+          <div>
+            <h2>{stageLabel(stage.id)}</h2>
+            <p>{stageHint(stage.id)}</p>
+          </div>
+          <code class="ffmpeg-stage-flags">{stage.flags.join(' ')}</code>
+        </div>
+
+        {stage.id === 'global' && (
+          <div class="tool-option-grid ffmpeg-switches">
+            <CheckboxField id="ffmpeg-overwrite" label={t('toolUi.ffmpeg-builder.optOverwrite')} checked />
+            <CheckboxField id="ffmpeg-hide-banner" label={t('toolUi.ffmpeg-builder.optHideBanner')} />
+            <CheckboxField id="ffmpeg-shortest" label={t('toolUi.ffmpeg-builder.optShortest')} />
+          </div>
+        )}
+
+        {stage.id === 'input' && (
+          <div class="ffmpeg-field-grid">
+            <div class="tool-field ffmpeg-field-wide" id="ffmpeg-input-field">
+              <span class="tool-field-label">{t('toolUi.ffmpeg-builder.inputLabel')}</span>
+              <label class="ffmpeg-picker" for="ffmpeg-input-file">
+                <Icon name="lucide:folder-open" size={16} />
+                <span>{t('toolUi.ffmpeg-builder.filePick')}</span>
+                <input id="ffmpeg-input-file" type="file" />
+              </label>
+              <input id="ffmpeg-input" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.ffmpeg-builder.inputPlaceholder')} aria-label={t('toolUi.ffmpeg-builder.inputLabel')} />
+              <span class="tool-field-hint">{t('toolUi.ffmpeg-builder.pathHint')}</span>
+            </div>
+            <div class="tool-field" id="ffmpeg-screen-field" hidden>
+              <SelectField id="ffmpeg-screen-source" label={t('toolUi.ffmpeg-builder.screenSourceLabel')} options={screenSourceOptions} value="macos" />
+              <span class="tool-field-hint" id="ffmpeg-screen-hint"></span>
+            </div>
+            <SelectField id="ffmpeg-start" label={t('toolUi.ffmpeg-builder.startLabel')} options={startOptions} value="begin" />
+            <SelectField id="ffmpeg-duration" label={t('toolUi.ffmpeg-builder.durationLabel')} options={durationOptions} value="all" />
+          </div>
+        )}
+
+        {stage.id === 'streams' && (
+          <div class="ffmpeg-field-grid">
+            <SelectField id="ffmpeg-map-mode" label={t('toolUi.ffmpeg-builder.mapModeLabel')} options={mapModeOptions} value="auto" />
+            <SelectField id="ffmpeg-video-codec" label={t('toolUi.ffmpeg-builder.videoCodecLabel')} options={videoCodecOptions} value="libx264" />
+            <SelectField id="ffmpeg-audio-codec" label={t('toolUi.ffmpeg-builder.audioCodecLabel')} options={audioCodecOptions} value="aac" />
+          </div>
+        )}
+
+        {stage.id === 'filters' && (
+          <>
+            <div class="tool-option-section">
+              <span class="tool-option-heading">{t('toolUi.ffmpeg-builder.videoLabel')}</span>
+              <div class="ffmpeg-field-grid">
+                <div class="tool-field">
+                  <SelectField id="ffmpeg-size" label={t('toolUi.ffmpeg-builder.sizeLabel')} options={sizeOptions} value="keep" />
+                  <span class="tool-field-hint">{t('toolUi.ffmpeg-builder.sizeHint')}</span>
+                </div>
+                <SelectField id="ffmpeg-fps" label={t('toolUi.ffmpeg-builder.fpsLabel')} options={fpsOptions} value="keep" />
+                <SelectField id="ffmpeg-speed" label={t('toolUi.ffmpeg-builder.speedLabel')} options={speedOptions} value="keep" />
+                <SelectField id="ffmpeg-watermark" label={t('toolUi.ffmpeg-builder.watermarkLabel')} options={watermarkModeOptions} value="none" />
+                <div class="tool-field ffmpeg-field-wide" id="ffmpeg-watermark-image-field" hidden>
+                  <span class="tool-field-label">{t('toolUi.ffmpeg-builder.watermarkImageLabel')}</span>
+                  <label class="ffmpeg-picker" for="ffmpeg-watermark-image-file">
+                    <Icon name="lucide:folder-open" size={16} />
+                    <span>{t('toolUi.ffmpeg-builder.filePick')}</span>
+                    <input id="ffmpeg-watermark-image-file" type="file" accept="image/*" />
+                  </label>
+                  <input id="ffmpeg-watermark-image" type="text" spellcheck="false" autocomplete="off" placeholder="logo.png" aria-label={t('toolUi.ffmpeg-builder.watermarkImageLabel')} />
+                </div>
+                <div class="tool-field" id="ffmpeg-watermark-text-field" hidden>
+                  <label for="ffmpeg-watermark-text">{t('toolUi.ffmpeg-builder.watermarkTextLabel')}</label>
+                  <input id="ffmpeg-watermark-text" type="text" spellcheck="false" autocomplete="off" />
+                </div>
+                <div class="tool-field" id="ffmpeg-watermark-position-field" hidden>
+                  <SelectField id="ffmpeg-watermark-position" label={t('toolUi.ffmpeg-builder.watermarkPositionLabel')} options={watermarkPositionOptions} value="bottom-right" />
+                </div>
+                <div class="tool-field ffmpeg-field-wide">
+                  <span class="tool-field-label">{t('toolUi.ffmpeg-builder.subtitleLabel')}</span>
+                  <label class="ffmpeg-picker" for="ffmpeg-subtitle-file">
+                    <Icon name="lucide:folder-open" size={16} />
+                    <span>{t('toolUi.ffmpeg-builder.filePick')}</span>
+                    <input id="ffmpeg-subtitle-file" type="file" accept=".srt,.ass,.ssa,.vtt,text/vtt" />
+                  </label>
+                  <input id="ffmpeg-subtitle" type="text" spellcheck="false" autocomplete="off" placeholder="subtitles.srt" aria-label={t('toolUi.ffmpeg-builder.subtitleLabel')} />
+                </div>
+              </div>
+              <div class="tool-option-grid">
+                <CheckboxField id="ffmpeg-gif-palette" label={t('toolUi.ffmpeg-builder.optGifPalette')} checked />
+              </div>
+            </div>
+
+            <div class="tool-option-section">
+              <span class="tool-option-heading">{t('toolUi.ffmpeg-builder.audioLabel')}</span>
+              <div class="ffmpeg-field-grid">
+                <SelectField id="ffmpeg-volume" label={t('toolUi.ffmpeg-builder.volumeLabel')} options={volumeOptions} value="keep" />
+              </div>
+            </div>
+
+            <!-- The chain is the filter stage, so the chain is shown. -->
+            <div class="ffmpeg-chain" id="ffmpeg-chain" hidden>
+              <span class="ffmpeg-chain-label">{t('toolUi.ffmpeg-builder.filterChainLabel')}</span>
+              <code id="ffmpeg-chain-command"></code>
+            </div>
+          </>
+        )}
+
+        {stage.id === 'output' && (
+          <>
+            <div class="ffmpeg-field-grid">
+              <div class="tool-field" id="ffmpeg-output-field">
+                <label for="ffmpeg-output">{t('toolUi.ffmpeg-builder.outputLabel')}</label>
+                <input id="ffmpeg-output" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.ffmpeg-builder.outputPlaceholder')} />
+              </div>
+              <SelectField id="ffmpeg-container" label={t('toolUi.ffmpeg-builder.containerLabel')} options={containerOptions} value="mp4" />
+              <SelectField id="ffmpeg-audio-bitrate" label={t('toolUi.ffmpeg-builder.audioBitrateLabel')} options={audioBitrateOptions} value="auto" />
+              <SelectField id="ffmpeg-channels" label={t('toolUi.ffmpeg-builder.channelsLabel')} options={channelModeOptions} value="default" />
+            </div>
+
+            <div class="ffmpeg-dial" id="ffmpeg-quality-dial">
+              {dialOptions.map((entry) => (
+                <button class="ffmpeg-dial-option" type="button" data-quality={entry.id} aria-pressed="false">
+                  <span>{entry.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    ))}
+
+    <div class="action-row">
+      <Button id="ffmpeg-generate" class="calculate-button" variant="primary" icon="lucide:terminal"><span>{t('toolUi.ffmpeg-builder.generateButton')}</span></Button>
+      <Button id="ffmpeg-reset" icon="lucide:rotate-ccw">{t('toolUi.ffmpeg-builder.resetButton')}</Button>
+      <span class="action-row-hint">{t('toolUi.ffmpeg-builder.generateHint')}</span>
+    </div>
+  </Card>
+
+  <Card id="ffmpeg-result" class="result-card" hidden>
+    <div class="result-heading">
+      <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+      <span id="ffmpeg-result-status">{t('workspace.waiting')}</span>
+    </div>
+    <div class="result-subheading"><strong>{t('toolUi.ffmpeg-builder.commandTitle')}</strong><span>{t('workspace.readonly')}</span></div>
+    <textarea id="ffmpeg-output-command" class="tool-output ffmpeg-command" data-empty="true" readonly spellcheck="false" aria-label={t('toolUi.ffmpeg-builder.commandTitle')}></textarea>
+    <div class="tool-result-actions">
+      <Button id="ffmpeg-copy" icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+      <Button id="ffmpeg-download" icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
+    </div>
+    <div class="security-error ffmpeg-issues" id="ffmpeg-issues" role="status" hidden></div>
+    <!-- The explanations are the reassuring part for someone who does not know
+         ffmpeg, so they are one click away rather than dumped on the result. -->
+    <details class="ffmpeg-more">
+      <summary><Icon name="lucide:circle-help" size={15} />{t('toolUi.ffmpeg-builder.flagsTitle')}</summary>
+      <div class="ffmpeg-flag-list" id="ffmpeg-flag-list"></div>
+    </details>
+  </Card>
+</section>
+
+<script>
+  import '../../scripts/ffmpeg'
+</script>
