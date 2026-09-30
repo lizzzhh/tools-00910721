@@ -26,7 +26,13 @@ const search = `${tool.name} ${tool.description} ${tool.keywords.join(' ')}`
     <div class="catalog-tool-link">
       <span class="catalog-tool-icon"><Icon name={tool.icon} size={21} /></span>
       <span class="catalog-tool-info"><strong>{tool.name}</strong><small>{tool.description}</small><em>{categoryName(tool.category, t)}</em></span>
-      <span class="catalog-planned-label">{t('sidebar.soon')}</span>
+      {tool.preview ? (
+        <span class="catalog-planned-label is-preview" role="button" tabindex="0" data-planned-preview={tool.id} aria-label={`${tool.name} · ${t('sidebar.soon')}`}>
+          {t('sidebar.soon')}
+        </span>
+      ) : (
+        <span class="catalog-planned-label">{t('sidebar.soon')}</span>
+      )}
     </div>
   )}
   {tool.available && <button class="catalog-favorite" type="button" data-favorite aria-label={t('catalog.favoriteLabel', { name: tool.name })} aria-pressed="false"><span class="favorite-icon-empty"><Icon name="lucide:star" size={16} /></span><span class="favorite-icon-filled"><Icon name="mdi:star" size={16} /></span></button>}

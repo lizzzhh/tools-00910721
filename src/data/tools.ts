@@ -10,6 +10,13 @@ export type Tool = {
   /** Language-neutral search tokens; all locales are merged in so search works in any language. */
   keywords: string[]
   available: boolean
+  /**
+   * A tool that is still being built can be opened anyway by tapping its
+   * "开发中" badge three times in a row. Off by default: a tool nobody can reach
+   * yet is not a tool, and a badge that quietly does something would be worse
+   * than one that does nothing.
+   */
+  preview?: boolean
 }
 
 export type LocalizedTool = Tool & { name: string; description: string }

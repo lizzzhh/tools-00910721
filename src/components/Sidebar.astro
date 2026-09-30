@@ -48,6 +48,17 @@ const searchIndex = localized.map((tool) => `${tool.name} ${tool.description} ${
               </a>
             )
           }
+          // A disabled button cannot hold a badge that responds to clicks, so the
+          // one tool that can be previewed gets a plain row instead of a button.
+          if (tool.preview) {
+            return (
+              <div class="tool-item disabled" data-search={search}>
+                <span class="tool-icon"><Icon name={tool.icon} size={19} /></span>
+                <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
+                <em class="is-preview" role="button" tabindex="0" data-planned-preview={tool.id} aria-label={`${tool.name} · ${t('sidebar.soon')}`}>{t('sidebar.soon')}</em>
+              </div>
+            )
+          }
           return (
             <button class="tool-item disabled" type="button" disabled data-search={search}>
               <span class="tool-icon"><Icon name={tool.icon} size={19} /></span>
