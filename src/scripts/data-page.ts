@@ -76,13 +76,19 @@ function mount() {
   if (!root || root.dataset.ready === 'true') return
   root.dataset.ready = 'true'
 
-  const status = root.querySelector<HTMLElement>('[data-data-status]')!
+  // The page is assembled from a template, so these exist as long as the markup
+  // and this script agree. A mismatch has to leave a page that still works rather
+  // than an exception on load, which would also stop the page being remounted
+  // after a client-side navigation.
+  const required = <T extends HTMLElement>(selector: string): T | null => root.querySelector<T>(selector)
+  const status = required<HTMLElement>('[data-data-status]')
+  const empty = required<HTMLElement>('[data-data-empty]')
+  const totalLine = required<HTMLElement>('[data-data-total]')
+  const list = required<HTMLElement>('.data-rows')
+  const template = required<HTMLTemplateElement>('[data-data-row-template]')
+  if (!status || !empty || !totalLine || !list || !template) return
+  const fileInput = required<HTMLInputElement>('[data-data-file]')
   const table = storage()
-  const empty = root.querySelector<HTMLElement>('[data-data-empty]')!
-  const totalLine = root.querySelector<HTMLElement>('[data-data-total]')!
-  const list = root.querySelector<HTMLElement>('.data-rows')!
-  const template = root.querySelector<HTMLTemplateElement>('[data-data-row-template]')!
-  const fileInput = root.querySelector<HTMLInputElement>('[data-data-file]')!
 
   // The rows the build already knows, so a key that turns up later can join them
   // without a selector and without anyone having to register it here.
@@ -111,14 +117,19 @@ function mount() {
         row.dataset.dataKey = key
         // A key the build did not name, such as a per-tab layout record, is
         // introduced by its own name.
-        row.querySelector<HTMLElement>('.data-row-name')!.textContent = key
-        row.querySelector<HTMLElement>('.data-row-key')!.textContent = key
+        const name = row.querySelector<HTMLElement>('.data-row-name')
+        const label = row.querySelector<HTMLElement>('.data-row-key')
+        if (!name || !label) continue
+        name.textContent = key
+        label.textContent = key
         rows.set(key, row)
         list.append(row)
       }
+      const sizeCell = row.querySelector<HTMLElement>('[data-data-size]')
+      const box = row.querySelector<HTMLElement>('[data-data-value]')
+      if (!sizeCell || !box) continue
       row.hidden = false
-      row.querySelector<HTMLElement>('[data-data-size]')!.textContent = formatSize(byteLength(value))
-      const box = row.querySelector<HTMLElement>('[data-data-value]')!
+      sizeCell.textContent = formatSize(byteLength(value))
       showValue(box, value)
       // The box scrolls, so it can be reached by keyboard, and the key it
       // belongs to is the name a screen reader should announce for it.
@@ -142,9 +153,9 @@ function mount() {
     say('data.exported')
   })
 
-  root.querySelector('[data-data-action="import"]')?.addEventListener('click', () => fileInput.click())
+  root.querySelector('[data-data-action="import"]')?.addEventListener('click', () => fileInput?.click())
 
-  fileInput.addEventListener('change', async () => {
+  fileInput?.addEventListener('change', async () => {
     const file = fileInput.files?.[0]
     fileInput.value = ''
     if (!file) return
@@ -164,10 +175,11 @@ function mount() {
   // takes a second press: the first reveals the question and the buttons that
   // answer it, and only the second one clears. Anything that closes the question
   // without answering it puts the button back the way it was.
-  const clearButton = root.querySelector<HTMLButtonElement>('[data-data-action="clear"]')!
-  const confirm = root.querySelector<HTMLElement>('[data-data-confirm]')!
-  const confirmYes = root.querySelector<HTMLButtonElement>('[data-data-confirm-yes]')!
-  const confirmNo = root.querySelector<HTMLButtonElement>('[data-data-confirm-no]')!
+  const clearButton = required<HTMLButtonElement>('[data-data-action="clear"]')
+  const confirm = required<HTMLElement>('[data-data-confirm]')
+  const confirmYes = required<HTMLButtonElement>('[data-data-confirm-yes]')
+  const confirmNo = required<HTMLButtonElement>('[data-data-confirm-no]')
+  if (!clearButton || !confirm || !confirmYes || !confirmNo) return
 
   const setConfirming = (on: boolean) => {
     clearButton.hidden = on

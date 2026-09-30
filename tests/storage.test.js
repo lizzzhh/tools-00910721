@@ -81,6 +81,39 @@ test('a value already in the table is not overwritten by the old store', () => {
   assert.deepEqual(migrated, {})
 })
 
+test('a store that refuses a write is reported, and the value is tried again', async () => {
+  let refuse = true
+  const entries = new Map()
+  const failed = []
+  const table = new StorageTable({
+    backend: {
+      async readAll() {
+        return []
+      },
+      async write(rows) {
+        if (refuse) throw new Error('quota exceeded')
+        for (const [key, value] of rows) entries.set(key, value)
+      },
+      async remove() {}
+    },
+    onWriteError: (keys) => failed.push(keys)
+  })
+  await table.ready
+
+  table.set(storageKeys.theme, 'dark')
+  await table.flush()
+  assert.deepEqual(failed, [[storageKeys.theme]])
+  assert.equal(entries.has(storageKeys.theme), false)
+
+  // The batch is still queued, so the next write carries it again rather than
+  // the value being lost with nothing left to retry.
+  refuse = false
+  table.set(storageKeys.locale, 'ja')
+  await table.flush()
+  assert.equal(entries.get(storageKeys.theme), 'dark')
+  assert.equal(entries.get(storageKeys.locale), 'ja')
+})
+
 test('a write from another tab arrives, and so does a deletion', async () => {
   const backend = memoryBackend()
   const bus = loopbackBus()

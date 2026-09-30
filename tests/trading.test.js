@@ -24,6 +24,7 @@ import {
   slippageRate,
   slippedPrice,
 } from '../src/lib/trading.ts'
+import { marketEpoch } from '../src/lib/candles.ts'
 
 const T0 = Date.UTC(2024, 3, 1, 0, 0, 0)
 const HOUR = 3_600_000
@@ -434,6 +435,47 @@ test('a snapshot that cannot be understood is refused', () => {
   assert.equal(loadAccount(JSON.stringify({ version: 99, savedAt: T0, account: {} })), null)
   assert.equal(loadAccount(JSON.stringify({ version: 1, savedAt: T0, account: { balance: 0 } })), null)
   assert.equal(loadHistory('not json', createAccount()).trades.length, 0)
+})
+
+test('a snapshot without a settled moment still replays, and only a recent stretch', () => {
+  // NaN compares false against every moment, so a missing savedAt used to skip
+  // the whole replay: resting orders, stops and liquidations the market reached
+  // were dropped, and the account was then saved as settled at the wrong end of
+  // the gap so they could never be replayed afterwards. A week is settled
+  // instead, which is recent enough for those orders to still fire and short
+  // enough that the walk stays out of the way.
+  const account = funded()
+  const snapshot = JSON.parse(saveAccount(account, T0))
+  delete snapshot.savedAt
+  const now = T0 + 30 * HOUR
+
+  const restored = loadAccount(JSON.stringify(snapshot), now)
+  assert.ok(restored)
+  assert.equal(Number.isFinite(restored.savedAt), true, `savedAt came back as ${restored.savedAt}`)
+  assert.equal(restored.savedAt, now - 7 * 86_400_000)
+  assert.ok(restored.savedAt < T0, 'and it is settled from before the account was written')
+  assert.ok(restored.savedAt > marketEpoch, 'but never before the market began')
+
+  const replayed = advanceTo(restored, now, seededMarket(restored.seed, restored.startPrice))
+  assert.equal(replayed.savedAt, now, 'the replay runs and the moment is repaired')
+})
+
+test('a snapshot whose settled moment is a string is treated as missing', () => {
+  const account = funded()
+  const snapshot = JSON.parse(saveAccount(account, T0))
+  snapshot.savedAt = 'yesterday'
+  const now = T0 + 30 * HOUR
+  const restored = loadAccount(JSON.stringify(snapshot), now)
+  assert.ok(restored)
+  assert.equal(Number.isFinite(restored.savedAt), true)
+  assert.equal(restored.savedAt, now - 7 * 86_400_000)
+})
+
+test('a moment written after the market starts is kept as it is', () => {
+  const account = funded()
+  const restored = loadAccount(saveAccount(account, T0), T0 + 30 * HOUR)
+  assert.ok(restored)
+  assert.equal(restored.savedAt, T0, 'a valid moment is not moved')
 })
 
 test('the deposit is a plain sum that the account reports back', () => {

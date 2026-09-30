@@ -80,6 +80,28 @@ const SEED_LENGTH = 64
 const normalize = (value: string) => value.normalize('NFKD')
 
 /**
+ * Whether the text holds a surrogate that cannot be encoded, as opposed to a
+ * pair that can. Emoji and rarer CJK characters are ordinary astral characters
+ * written as two halves, and they are valid passphrase material. A half on its
+ * own is not: encoding it substitutes U+FFFD, so the seed would quietly come
+ * from a passphrase the reader never typed.
+ */
+function hasLoneSurrogate(value: string): boolean {
+  const isHigh = (code: number) => code >= 0xd800 && code <= 0xdbff
+  const isLow = (code: number) => code >= 0xdc00 && code <= 0xdfff
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (isHigh(code)) {
+      if (!isLow(value.charCodeAt(index + 1))) return true
+      index += 1
+    } else if (isLow(code)) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Wordlists are ~200 KB of text in total, so each one is code-split and only
  * fetched when a mnemonic is actually generated, converted, or validated in
  * that language. The module map keeps the dynamic imports statically analysable.
@@ -112,6 +134,24 @@ function isLatin(value: string): boolean {
 }
 
 /**
+ * Caches a load so concurrent callers share one fetch, and drops it again if the
+ * load failed. A wordlist that failed to arrive — a chunk that 404s after a
+ * deploy, an offline reload, a blocked dynamic import — would otherwise be
+ * remembered as broken and every later attempt would reuse the same rejection,
+ * leaving the tool dead until the page was reloaded.
+ */
+function cacheLoad<T>(cache: Map<Bip39Language, Promise<T>>, language: Bip39Language, load: () => Promise<T>): Promise<T> {
+  const cached = cache.get(language)
+  if (cached) return cached
+  const pending = load()
+  pending.catch(() => {
+    if (cache.get(language) === pending) cache.delete(language)
+  })
+  cache.set(language, pending)
+  return pending
+}
+
+/**
  * Loads a wordlist and the search index for it, including romanised readings
  * where the list has them.
  *
@@ -119,13 +159,11 @@ function isLatin(value: string): boolean {
  * entropy conversion, checksum validation — never pull the extra table in.
  */
 export function loadWordlistIndex(language: Bip39Language): Promise<WordlistIndex> {
-  const cached = indexCache.get(language)
-  if (cached) return cached
-  const pending = Promise.all([loadWordlist(language), readingLoaders[language]?.() ?? null]).then(
-    ([words, readings]) => createWordlistIndex(words, readings ?? undefined)
+  return cacheLoad(indexCache, language, () =>
+    Promise.all([loadWordlist(language), readingLoaders[language]?.() ?? null]).then(([words, readings]) =>
+      createWordlistIndex(words, readings ?? undefined)
+    )
   )
-  indexCache.set(language, pending)
-  return pending
 }
 
 export function isBip39Language(value: string): value is Bip39Language {
@@ -134,14 +172,12 @@ export function isBip39Language(value: string): value is Bip39Language {
 
 /** Returns the 2048 words of a language, fetching and caching them on first use. */
 export function loadWordlist(language: Bip39Language): Promise<string[]> {
-  const cached = wordlistCache.get(language)
-  if (cached) return cached
-  const pending = loaders[language]().then((words) => {
-    if (words.length !== 2048) throw new Error(`wordlist ${language} has ${words.length} entries`)
-    return words
-  })
-  wordlistCache.set(language, pending)
-  return pending
+  return cacheLoad(wordlistCache, language, () =>
+    loaders[language]().then((words) => {
+      if (words.length !== 2048) throw new Error(`wordlist ${language} has ${words.length} entries`)
+      return words
+    })
+  )
 }
 
 function isStrength(value: number): value is Bip39Strength {
@@ -769,10 +805,13 @@ export function detectLanguage(
  * string "mnemonic" plus the optional passphrase, NFKD-normalised on both sides.
  */
 export function mnemonicToSeed(mnemonic: string, passphrase = ''): Uint8Array {
-  const normalizedPassphrase = normalize(passphrase)
-  if (normalizedPassphrase.length > 0 && /[\uD800-\uDFFF]/.test(normalizedPassphrase)) {
+  // Checked on the passphrase as typed, before normalising: NFKD replaces an
+  // unpaired surrogate with U+FFFD, so by the time it is normalised the evidence
+  // is gone and the seed would come from a passphrase nobody typed.
+  if (passphrase.length > 0 && hasLoneSurrogate(passphrase)) {
     throw new Bip39Error('badPassphrase')
   }
+  const normalizedPassphrase = normalize(passphrase)
   return pbkdf2(sha512, utf8ToBytes(normalize(mnemonic)), utf8ToBytes(`mnemonic${normalizedPassphrase}`), {
     c: PBKDF2_ROUNDS,
     dkLen: SEED_LENGTH

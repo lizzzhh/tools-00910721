@@ -49,6 +49,33 @@ test('rejects invalid timestamps and dates', () => {
   if (!outOfRange.ok) assert.equal(outOfRange.code, 'outOfValidRange')
 })
 
+test('refuses a day the month does not have instead of moving it', () => {
+  // The Date constructor would answer 2023-03-03, which reads like a date the
+  // reader chose rather than one that never existed.
+  for (const input of ['2023-02-31', '2026-04-31', '2025-02-29', '2023-13-01']) {
+    const result = parseDateInput(input)
+    assert.equal(result.ok, false, input)
+    if (!result.ok) assert.equal(result.code, 'outOfValidRange', input)
+  }
+  const leap = parseDateInput('2024-02-29', true)
+  assert.equal(leap.ok, true)
+  if (leap.ok) assert.equal(leap.output, '2024-02-29T00:00:00.000Z')
+})
+
+test('a year below 100 is the year written, not 19xx', () => {
+  const plain = parseDateInput('0099-01-01', true)
+  assert.equal(plain.ok, true)
+  if (plain.ok) assert.equal(plain.output, '0099-01-01T00:00:00.000Z')
+
+  const zoned = parseDateInput('0099-06-15T08:30:00Z')
+  assert.equal(zoned.ok, true)
+  if (zoned.ok) assert.equal(zoned.output, '0099-06-15T08:30:00.000Z')
+
+  const offset = parseDateInput('0099-06-15T08:30:00+02:00')
+  assert.equal(offset.ok, true)
+  if (offset.ok) assert.equal(offset.output, '0099-06-15T06:30:00.000Z')
+})
+
 test('describes a date in ISO, UTC and local forms', () => {
   const date = new Date('2026-01-31T08:30:00.000Z')
   const parts = describeDate(date)

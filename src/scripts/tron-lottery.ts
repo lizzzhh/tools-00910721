@@ -314,7 +314,15 @@ function init() {
   }
 
   async function run(source: string, replay: boolean) {
-    const list = await drawFromSource(source)
+    let list: Awaited<ReturnType<typeof drawFromSource>>
+    try {
+      list = await drawFromSource(source)
+    } catch {
+      // The wordlist that decides the addresses never arrived, so there is no
+      // round to show and nothing to count. The previous one stays on screen.
+      showError(errorBox, t('toolUi.tron-lottery.errors.drawFailed'))
+      return
+    }
     entries = list
     currentSource = source
     if (dialog?.open) dialog.close('cancel')

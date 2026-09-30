@@ -117,3 +117,22 @@ test('reports locale-neutral repair codes with params', () => {
   assert.equal(duplicate.params.key, 'name')
   assert.equal(result.repairs.every((repair) => typeof repair.code === 'string'), true)
 })
+
+test('names a document nested past the depth limit instead of running out of stack', () => {
+  // Parsing and serialising both walk the structure with the call stack, so a
+  // document this deep used to end as a failure reported at line 1.
+  const deep = (levels) => `${'['.repeat(levels)}1${']'.repeat(levels)}`
+
+  const tooDeep = parseJson(deep(4000))
+  assert.equal(tooDeep.ok, false)
+  if (!tooDeep.ok) assert.equal(tooDeep.code, 'nestingTooDeep')
+
+  // Ordinary nesting is nowhere near the limit.
+  const fine = formatJson(deep(200))
+  assert.equal(fine.ok, true)
+  if (fine.ok) assert.equal(fine.stats.depth, 201)
+
+  const formatted = formatJson(deep(4000))
+  assert.equal(formatted.ok, false)
+  if (!formatted.ok) assert.equal(formatted.code, 'nestingTooDeep')
+})

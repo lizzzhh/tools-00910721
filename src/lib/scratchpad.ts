@@ -353,6 +353,11 @@ function readView(value: unknown): ScratchpadView | null {
  * migrated into a one-sheet state, and a sheet with a damaged field is dropped
  * rather than taking the whole state down with it. A box or a collapsed flag
  * left over from an older build is ignored: those live in the other store now.
+ *
+ * The stack is capped here as well as when a note is added. A backup is a file
+ * someone can edit, and every sheet past the cap would be turned into a floating
+ * panel on every page of the site — a tab that cannot be used and that clearing
+ * the store is the only way out of.
  */
 export function parseScratchpadState(raw: string | null | undefined): ScratchpadState | null {
   if (!raw) return null
@@ -369,6 +374,7 @@ export function parseScratchpadState(raw: string | null | undefined): Scratchpad
     const seen = new Set<string>()
     const notes: ScratchpadContent[] = []
     for (const entry of record.notes) {
+      if (notes.length >= scratchpadMaxNotes) break
       const note = readContent(entry)
       if (!note || seen.has(note.id)) continue
       seen.add(note.id)

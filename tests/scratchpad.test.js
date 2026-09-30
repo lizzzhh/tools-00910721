@@ -16,6 +16,7 @@ import {
   scratchpadCascadeStep,
   scratchpadHeadReserve,
   scratchpadMaxHeight,
+  scratchpadMaxNotes,
   scratchpadMinHeight,
   scratchpadMinWidth,
   scratchpadViewportMargin,
@@ -282,6 +283,15 @@ test('missing note fields fall back to the defaults', () => {
   const parsed = parseScratchpadState('{"notes":[{"id":"n1","text":"a","monospace":false}]}')
   assert.equal(parsed?.notes[0].title, '')
   assert.equal(parsed?.notes[0].monospace, false)
+})
+
+test('stops at the cap when the stored stack is longer than it should be', () => {
+  // A backup file can be edited by hand, and every sheet past the cap would be
+  // built as a floating panel on every page of the site.
+  const notes = Array.from({ length: scratchpadMaxNotes + 40 }, (_, index) => ({ id: `n${index}`, text: 'x' }))
+  const parsed = parseScratchpadState(JSON.stringify({ notes }))
+  assert.equal(parsed?.notes.length, scratchpadMaxNotes)
+  assert.equal(parsed?.notes[scratchpadMaxNotes - 1].id, `n${scratchpadMaxNotes - 1}`)
 })
 
 test('an empty stack is a valid state', () => {

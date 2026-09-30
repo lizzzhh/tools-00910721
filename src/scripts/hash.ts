@@ -111,8 +111,11 @@ function init() {
   function stopCalculation() {
     runId += 1
     window.cancelAnimationFrame(liveFrame)
-    void activeReader?.cancel()
+    // The reader may already be in a failed state, in which case cancelling it
+    // rejects as well; the failure being reported is the one that caused it.
+    const reader = activeReader
     activeReader = undefined
+    void reader?.cancel().catch(() => {})
     setCalculating(false)
     if (status) status.textContent = currentTranslator()('toolUi.hash.runtime.stopped')
     if (progressLabel) progressLabel.textContent = currentTranslator()('toolUi.hash.runtime.stopped')
@@ -219,7 +222,17 @@ function init() {
       if (!ids.length) return
       const value = input?.value ?? ''
       const bytes = encoder.encode(value)
-      const computedResults = await hashBytes(ids, bytes, id)
+      // Nothing awaits this frame, so a failure has to be caught here: the
+      // calculate button reports one, and this path would otherwise leave the
+      // results waiting with nothing in the console to explain it.
+      let computedResults: Map<HashAlgorithmId, string> | undefined
+      try {
+        computedResults = await hashBytes(ids, bytes, id)
+      } catch {
+        if (id !== runId) return
+        showToast(currentTranslator()('toolUi.hash.runtime.failed'))
+        return
+      }
       if (!computedResults || id !== runId) return
       computed(computedResults, currentTranslator()('toolUi.hash.runtime.liveCalc', { bytes: formatBytes(bytes.byteLength) }))
     })

@@ -1,5 +1,6 @@
 import {
   activeSpan,
+  Bip39Error,
   bip39LanguageLabels,
   completionOptions,
   bip39Languages,
@@ -33,14 +34,26 @@ import type { MessageKey } from '../i18n'
 
 const mountedRoots = new WeakSet<HTMLElement>()
 
+/**
+ * Caches a load so concurrent callers share one fetch, and forgets it again if
+ * the fetch failed: a chunk that never arrived would otherwise be remembered as
+ * broken, and every later attempt would reuse the same rejection.
+ */
+function cacheLoad<T>(cache: Map<Bip39Language, Promise<T>>, language: Bip39Language, load: () => Promise<T>): Promise<T> {
+  const cached = cache.get(language)
+  if (cached) return cached
+  const pending = load()
+  pending.catch(() => {
+    if (cache.get(language) === pending) cache.delete(language)
+  })
+  cache.set(language, pending)
+  return pending
+}
+
 /** Cached wordlists, so switching language repeatedly does not refetch. */
 const wordlistCache = new Map<Bip39Language, Promise<string[]>>()
 function words(language: Bip39Language): Promise<string[]> {
-  const cached = wordlistCache.get(language)
-  if (cached) return cached
-  const pending = loadWordlist(language)
-  wordlistCache.set(language, pending)
-  return pending
+  return cacheLoad(wordlistCache, language, () => loadWordlist(language))
 }
 
 /**
@@ -56,15 +69,13 @@ let everyListReady = false
 function wordIndex(language: Bip39Language): Promise<WordlistIndex> {
   const ready = wordIndexes.get(language)
   if (ready) return Promise.resolve(ready)
-  const cached = wordIndexCache.get(language)
-  if (cached) return cached
-  const pending = loadWordlistIndex(language).then((index) => {
-    wordIndexes.set(language, index)
-    if (wordIndexes.size === bip39Languages.length) everyListReady = true
-    return index
-  })
-  wordIndexCache.set(language, pending)
-  return pending
+  return cacheLoad(wordIndexCache, language, () =>
+    loadWordlistIndex(language).then((index) => {
+      wordIndexes.set(language, index)
+      if (wordIndexes.size === bip39Languages.length) everyListReady = true
+      return index
+    })
+  )
 }
 
 /**
@@ -681,6 +692,11 @@ function init() {
       renderMnemonic()
       void refreshConversion()
       scheduleDerive(0)
+    } catch {
+      // A wordlist that would not load leaves nothing to check the words
+      // against, so the paste is kept in the field and the reason is shown
+      // instead of a diagnosis built from lists that are not there.
+      showError(errorBox, t('toolUi.bip39.errors.wordlistFailed'))
     } finally {
       renderEditor()
     }
@@ -813,37 +829,61 @@ function init() {
       showError(errorBox, t('toolUi.bip39.errors.noMnemonic'))
       return
     }
-    const list = await words(currentLanguage)
+    let list: string[]
+    try {
+      list = await words(currentLanguage)
+    } catch {
+      showError(errorBox, t('toolUi.bip39.errors.wordlistFailed'))
+      return
+    }
     if (!validateMnemonic(currentMnemonic, list).valid) {
       showError(errorBox, t('toolUi.bip39.errors.invalidMnemonic'))
       return
     }
     clearError(errorBox)
     const account = readAccount()
+    let seedLength = 0
 
-    // The seed stays inside this function; only its fingerprint is ever shown.
-    const seed = mnemonicToSeed(currentMnemonic, passphrase?.value ?? '')
+    try {
+      // The seed stays inside this function; only its fingerprint is ever shown.
+      const seed = mnemonicToSeed(currentMnemonic, passphrase?.value ?? '')
+      seedLength = seed.length
 
-    const entries: DerivedEntry[] = []
-    for (const chain of chains) {
-      const fallback = `m/44'/${chain.coinType}'/${account}'/0/0`
-      try {
-        entries.push(deriveChainEntry(seed, chain, pathFor(chain.id, account), account))
-      } catch {
-        // A malformed custom path should not blank the whole table; fall back
-        // to the chain default and let the field keep showing the mistake.
-        entries.push(deriveChainEntry(seed, chain, fallback, account))
+      const entries: DerivedEntry[] = []
+      for (const chain of chains) {
+        const fallback = `m/44'/${chain.coinType}'/${account}'/0/0`
+        try {
+          entries.push(deriveChainEntry(seed, chain, pathFor(chain.id, account), account))
+        } catch {
+          // A malformed custom path should not blank the whole table; fall back
+          // to the chain default and let the field keep showing the mistake.
+          entries.push(deriveChainEntry(seed, chain, fallback, account))
+        }
       }
+      lastEntries = entries
+    } catch (error) {
+      // Whatever went wrong, the addresses still on screen were derived from
+      // different settings, so they are taken down rather than left to be read as
+      // the result of the passphrase now in the box.
+      lastEntries = []
+      renderChains()
+      toggleHidden(resultCard, true)
+      showError(
+        errorBox,
+        error instanceof Bip39Error && error.code === 'badPassphrase'
+          ? t('toolUi.bip39.errors.badPassphrase')
+          : t('toolUi.bip39.errors.deriveFailed')
+      )
+      return
     }
-    lastEntries = entries
     renderChains()
 
-    const addressTotal = entries.reduce((sum, entry) => sum + entry.addresses.length, 0)
-    setText(statChains, String(entries.length))
+    const addressTotal = lastEntries.reduce((sum, entry) => sum + entry.addresses.length, 0)
+    setText(statChains, String(lastEntries.length))
     setText(statAddresses, String(addressTotal))
-    setText(statSeed, `${seed.length * 8} ${t('toolUi.bip39.bitsUnit')}`)
-    setText(statFingerprint, entries[0]?.fingerprint ?? '—')
-    setText(resultStatus, t('toolUi.bip39.statusDerived').replace('{count}', String(entries.length)))
+    setText(statSeed, `${seedLength * 8} ${t('toolUi.bip39.bitsUnit')}`)
+    setText(statFingerprint, lastEntries[0]?.fingerprint ?? '—')
+    setText(resultStatus, t('toolUi.bip39.statusDerived').replace('{count}', String(lastEntries.length)))
     toggleHidden(resultCard, false)
     renderWarnings()
     recordUsage()
@@ -1001,8 +1041,10 @@ function init() {
 
   // Prime the selected list so the first keystroke can offer candidates without
   // waiting on a ~50 KB wordlist fetch. The remaining three load on the first
-  // edit, which is when the marks start needing them.
-  void wordIndex(selectedLanguage())
+  // edit, which is when the marks start needing them. Warming the cache is best
+  // effort: a list that will not load is reported where it is actually needed,
+  // so the failure here is deliberately not shown.
+  void wordIndex(selectedLanguage()).catch(() => {})
   renderMnemonic()
   renderWarnings()
 }

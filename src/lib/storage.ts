@@ -29,6 +29,7 @@ import {
   storageChannelName,
   storageDbName,
   storageDbVersion,
+  storageKeys,
   storageStoreName,
   type StorageEntries
 } from './storage-schema.ts'
@@ -63,6 +64,8 @@ export type StorageTableOptions = {
   retire?: (entries: StorageEntries) => void
   /** Called whenever a mirrored value changes, to refresh the cookie copy. */
   mirror?: (entries: StorageEntries) => void
+  /** Called when a batch could not reach the database, with the keys it carried. */
+  onWriteError?: (keys: string[], error: unknown) => void
 }
 
 /**
@@ -192,9 +195,15 @@ export class StorageTable {
     try {
       await this.options.backend.write(writes)
       await this.options.backend.remove(removals)
-    } catch {
-      // Losing a write is bad, but throwing here would break the feature that
-      // asked for it, and the next write of the key carries the newer value.
+    } catch (error) {
+      // Throwing here would break the feature that asked for the write, so the
+      // batch goes back on the queue to be tried again by the next write. Only
+      // one pending attempt per key is kept, so a store that stays full costs a
+      // map entry per key rather than growing without end.
+      for (const [key, value] of batch) {
+        if (!this.queue.has(key)) this.queue.set(key, value)
+      }
+      this.options.onWriteError?.([...batch.keys()], error)
     }
   }
 
@@ -246,7 +255,22 @@ export function createIdbBackend(name = storageDbName, version = storageDbVersio
           const db = request.result
           if (!db.objectStoreNames.contains(storageStoreName)) db.createObjectStore(storageStoreName)
         }
-        request.onsuccess = () => resolve(request.result)
+        request.onsuccess = () => {
+          const db = request.result
+          // Another tab opening a newer build closes this connection under us,
+          // and a connection that is already closed rejects every transaction
+          // with InvalidStateError. Handing it back instead would turn one tab's
+          // upgrade into this tab losing its writes, so the handle is dropped and
+          // the next call opens the new database.
+          db.onversionchange = () => {
+            db.close()
+            handle = null
+          }
+          db.onclose = () => {
+            handle = null
+          }
+          resolve(db)
+        }
         request.onerror = () => reject(request.error ?? new Error('indexeddb could not be opened'))
         request.onblocked = () => reject(new Error('indexeddb is blocked by another tab'))
       })
@@ -261,8 +285,17 @@ export function createIdbBackend(name = storageDbName, version = storageDbVersio
   const write = async (mode: IDBTransactionMode, body: (store: IDBObjectStore) => void) => {
     const db = await open()
     return new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(storageStoreName, mode)
-      body(tx.objectStore(storageStoreName))
+      let tx: IDBTransaction
+      try {
+        tx = db.transaction(storageStoreName, mode)
+        body(tx.objectStore(storageStoreName))
+      } catch (error) {
+        // A connection closed between the open and the transaction throws here
+        // rather than rejecting later, and the handle it belonged to is dead.
+        handle = null
+        reject(error)
+        return
+      }
       tx.oncomplete = () => resolve()
       tx.onerror = () => reject(tx.error ?? new Error('indexeddb transaction failed'))
       tx.onabort = () => reject(tx.error ?? new Error('indexeddb transaction aborted'))
@@ -274,7 +307,14 @@ export function createIdbBackend(name = storageDbName, version = storageDbVersio
       const db = await open()
       const rows: Array<[string, string]> = []
       return new Promise<Array<[string, string]>>((resolve, reject) => {
-        const tx = db.transaction(storageStoreName, 'readonly')
+        let tx: IDBTransaction
+        try {
+          tx = db.transaction(storageStoreName, 'readonly')
+        } catch (error) {
+          handle = null
+          reject(error)
+          return
+        }
         const request = tx.objectStore(storageStoreName).openCursor()
         request.onsuccess = () => {
           const cursor = request.result
@@ -375,11 +415,15 @@ function readLegacyLocal(): StorageEntries {
   return entries
 }
 
-/** The old per-tab layout record, which is a session key rather than a local one. */
+/**
+ * The old per-tab layout record, which was a session key rather than a local one.
+ * It is put under this tab's own key on the way in, because that is where the
+ * table keeps it now.
+ */
 function readLegacySession(): StorageEntries {
   try {
-    const view = sessionStorage.getItem('code-space-scratchpad-view')
-    return view ? { [scratchpadViewKey(currentTabId())]: view } : {}
+    const view = sessionStorage.getItem(storageKeys.scratchpadView)
+    return view ? { [viewStorageKey()]: view } : {}
   } catch {
     return {}
   }
@@ -439,7 +483,11 @@ export function storage(): StorageTable {
       bus: createChannelBus(),
       legacy: () => ({ ...readLegacyLocal(), ...readLegacySession() }),
       retire: retireLegacy,
-      mirror: createMirror()
+      mirror: createMirror(),
+      // A store that will not take a write has to be said out loud: the snapshot
+      // still reads back what the page just saved, and only a reload reveals that
+      // it was never stored at all.
+      onWriteError: (keys, error) => console.error('storage could not save', keys, error)
     })
     // A tab on its way out still has to hand its writes over.
     addEventListener('pagehide', () => void table?.flush())
@@ -459,9 +507,29 @@ export function readValue(key: string): string | undefined {
  * Runs a callback once the snapshot is full. Anything that reads a stored value
  * while the page is being built would otherwise read an empty table, because
  * opening the database takes a moment and nothing else on the page waits for it.
+ *
+ * A reader that throws, or that comes back as a rejected promise, is reported
+ * and dropped: the other readers still paint, and nothing escapes as an unhandled
+ * rejection that says nothing about which panel it came from.
  */
 export function whenStorageReady(run: () => void) {
-  storage().ready.then(run, run)
+  storage().ready.then(
+    () => runReader(run),
+    () => runReader(run)
+  )
+}
+
+function runReader(run: () => void) {
+  try {
+    const result = run() as unknown
+    if (result instanceof Promise) void result.catch(reportFailure)
+  } catch (error) {
+    reportFailure(error)
+  }
+}
+
+function reportFailure(error: unknown) {
+  console.error('a stored value could not be read back', error)
 }
 
 /** Writes a value to the snapshot and queues it for the database. */

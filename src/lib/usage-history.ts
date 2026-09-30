@@ -27,6 +27,14 @@ export const usageDayHistory = 90
 const recentLimit = 6
 
 /**
+ * Tool ids are slugs, so a log that names anything else did not come from a run
+ * of this site. Backups are hand-editable and mergeable, so the shape of the
+ * store is checked here rather than trusted: an id carrying markup would
+ * otherwise end up in the dashboard's recent list.
+ */
+const toolIdPattern = /^[a-z0-9][a-z0-9-]{0,63}$/
+
+/**
  * Keeps the events that really are runs of a tool: a tool id and a moment that
  * parses. Anything else came from a hand-edited backup and is dropped rather
  * than drawn. The result is oldest first, so a log merged in out of order still
@@ -38,7 +46,7 @@ export function readEvents(value: unknown): UsageEvent[] {
   for (const entry of value) {
     if (!entry || typeof entry !== 'object') continue
     const { id, at } = entry as Partial<UsageEvent>
-    if (typeof id !== 'string' || !id) continue
+    if (typeof id !== 'string' || !toolIdPattern.test(id)) continue
     if (typeof at !== 'string' || Number.isNaN(Date.parse(at))) continue
     events.push({ id, at })
   }

@@ -14,6 +14,7 @@ export type JsonStats = {
 export type JsonErrorCode =
   | 'parseFailed'
   | 'emptyInput'
+  | 'nestingTooDeep'
   | 'invalidUnicodeEscape'
   | 'invalidEscapeCharacter'
   | 'unescapedControlCharacter'
@@ -125,6 +126,9 @@ type Token = {
   end: number
 }
 type NormalizedParseOptions = Required<JsonParseOptions>
+
+/** How many levels of objects and arrays a document may nest. */
+const jsonMaxDepth = 512
 type FormatSettings = {
   indent: JsonIndent
   sortKeys: boolean
@@ -404,6 +408,7 @@ function tokenize(source: string, options: NormalizedParseOptions) {
 
 class ValueParser {
   private index = 0
+  private depth = 0
   private readonly repairs: JsonRepair[]
   private readonly commentCount: number
   private readonly source: string
@@ -464,6 +469,25 @@ class ValueParser {
     return { value: parsed.value, repairs: this.repairs, commentCount: this.commentCount }
   }
 
+  /**
+   * Parses a nested object or array one level deeper, refusing to go past the
+   * depth limit. Both the parse and the serialisation that follows it walk the
+   * structure with the call stack, so a document nested a few thousand levels
+   * deep would run out of it. The limit is far above anything real — a browser
+   * parsing megabytes of JSON stops at a few hundred — and hitting it names the
+   * problem, where the exhausted stack could only be reported as a failure at
+   * line 1.
+   */
+  private parseNested(read: () => unknown): unknown {
+    if (this.depth >= jsonMaxDepth) this.fail('nestingTooDeep')
+    this.depth += 1
+    try {
+      return read()
+    } finally {
+      this.depth -= 1
+    }
+  }
+
   private parseValue(): ParsedValue {
     const token = this.current()
     if (token.kind === 'string' || token.kind === 'number') {
@@ -486,8 +510,8 @@ class ValueParser {
       this.consume()
       return { value: null, missing: false }
     }
-    if (this.isPunctuation('{')) return { value: this.parseObject(), missing: false }
-    if (this.isPunctuation('[')) return { value: this.parseArray(), missing: false }
+    if (this.isPunctuation('{')) return { value: this.parseNested(() => this.parseObject()), missing: false }
+    if (this.isPunctuation('[')) return { value: this.parseNested(() => this.parseArray()), missing: false }
     if (this.isPunctuation('}') || this.isPunctuation(']') || this.isPunctuation(',') || this.isPunctuation(':') || token.kind === 'eof') {
       return { value: null, missing: true }
     }

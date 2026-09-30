@@ -127,24 +127,25 @@ export function parseBackup(raw: string): StorageEntries | null {
 
 /** The legacy layout: everything the table used to keep in localStorage. */
 export type LegacyStorage = {
+  /**
+   * Site keys from the old stores, already carrying their final names. The one
+   * session entry is a per-tab layout record, and it is keyed by this tab's id
+   * before it gets here, so it migrates like any other key rather than through a
+   * rule of its own.
+   */
   local?: StorageEntries | null
-  session?: StorageEntries | null
 }
 
 /**
- * What has to move to reach an empty table: any local key the site owns, and the
- * one session key that is a per-tab layout rather than a hand-off. Values already
- * in the table win, so running this twice is harmless.
+ * What has to move to reach an empty table: any local key the site owns and the
+ * table does not have yet. Values already in the table win, so running this twice
+ * is harmless.
  */
 export function planMigration(legacy: LegacyStorage, current: StorageEntries): StorageEntries {
   const entries: StorageEntries = {}
   for (const [key, value] of Object.entries(legacy.local ?? {})) {
     if (!isStorageKey(key) || typeof value !== 'string' || key in current) continue
     entries[key] = value
-  }
-  const view = legacy.session?.[storageKeys.scratchpadView]
-  if (typeof view === 'string' && !Object.keys(current).some((key) => key.startsWith(`${storageKeys.scratchpadView}:`))) {
-    entries[storageKeys.scratchpadView] = view
   }
   return entries
 }

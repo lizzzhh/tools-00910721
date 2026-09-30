@@ -96,6 +96,28 @@ export function parseTimestamp(input: string, unit: TimestampUnit = 'auto'): Tim
 
 const dateTimePattern = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\.(\d{1,3}))?\s*(Z|[+-]\d{2}:?\d{2})?)?$/
 
+/** Days in a month, leap years included, so `2023-02-31` is refused rather than moved. */
+function daysInMonth(year: number, month: number): number {
+  return [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month]
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+}
+
+type DateNumbers = { year: number; month: number; day: number; hour: number; minute: number; second: number; millisecond: number }
+
+/**
+ * Builds a UTC moment from the numbers as written, for the same reason the local
+ * path corrects the year: `Date.UTC` reads 0-99 as 19xx.
+ */
+function buildUtc(numbers: DateNumbers, offsetMs: number): Date {
+  const date = new Date(0)
+  date.setUTCFullYear(numbers.year, numbers.month, numbers.day)
+  date.setUTCHours(numbers.hour, numbers.minute, numbers.second, numbers.millisecond)
+  return new Date(date.getTime() + offsetMs)
+}
+
 export function parseDateInput(input: string, assumeUtc = false): TimestampResult {
   const value = input.trim()
   if (!value) return { ok: false, code: 'needDateTime' }
@@ -117,10 +139,13 @@ export function parseDateInput(input: string, assumeUtc = false): TimestampResul
   }
 
   const invalid =
+    numbers.year < 1 ||
     numbers.month < 0 ||
     numbers.month > 11 ||
+    // A day that the month does not have is not a date: the Date constructor
+    // would carry it into the next month and answer 2023-03-03 for 2023-02-31.
     numbers.day < 1 ||
-    numbers.day > 31 ||
+    numbers.day > daysInMonth(numbers.year, Math.max(numbers.month, 0)) ||
     numbers.hour > 23 ||
     numbers.minute > 59 ||
     numbers.second > 59
@@ -133,11 +158,14 @@ export function parseDateInput(input: string, assumeUtc = false): TimestampResul
   let date: Date
   if (hasZone) {
     const shift = normalizedZone === 'Z' ? 0 : (normalizedZone[0] === '-' ? -1 : 1) * (Number(normalizedZone.slice(1, 3)) * 60 + Number(normalizedZone.slice(3)))
-    date = new Date(Date.UTC(numbers.year, numbers.month, numbers.day, numbers.hour, numbers.minute, numbers.second, numbers.millisecond) - shift * 60000)
+    date = buildUtc(numbers, -shift * 60000)
   } else if (assumeUtc) {
-    date = new Date(Date.UTC(numbers.year, numbers.month, numbers.day, numbers.hour, numbers.minute, numbers.second, numbers.millisecond))
+    date = buildUtc(numbers, 0)
   } else {
     date = new Date(numbers.year, numbers.month, numbers.day, numbers.hour, numbers.minute, numbers.second, numbers.millisecond)
+    // Years below 100 are read as 19xx by the Date constructor, so 0099 would
+    // come back as 1999. setFullYear takes the year as written.
+    if (numbers.year < 100) date.setFullYear(numbers.year)
   }
 
   if (Number.isNaN(date.getTime())) return { ok: false, code: 'outOfValidRange' }

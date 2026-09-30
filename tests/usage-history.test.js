@@ -21,6 +21,14 @@ test('keeps the runs that name a tool and a real moment', () => {
   assert.deepEqual(readEvents(undefined), [])
 })
 
+test('refuses an id that is not a tool id, whatever a backup claims', () => {
+  // The dashboard prints the recent list as markup, and a backup is a file
+  // anyone can edit, so an id carrying markup has to be dropped on the way in.
+  const hostile = used('<img src=x onerror=alert(1)>', '2026-09-27T10:00:00')
+  assert.deepEqual(readEvents([hostile]), [])
+  assert.deepEqual(readEvents([used('json-format', '2026-09-27T10:00:00')]), [used('json-format', '2026-09-27T10:00:00')])
+})
+
 test('puts a log that arrived out of order back in the order it happened', () => {
   const events = readEvents([used('hash', '2026-09-27T09:00:00'), used('json', '2026-09-25T09:00:00'), used('uuid', '2026-09-26T09:00:00')])
 

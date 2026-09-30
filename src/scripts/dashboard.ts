@@ -21,6 +21,10 @@ const fortunes: Fortune[] = [
 
 const fortuneStorageKey = 'code-space-daily-fortune'
 
+/** The list is assembled as markup, so everything read from the store goes in escaped. */
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
 /** Long enough for any window the chart draws, short enough to stay readable. */
 const fortuneHistoryDays = 90
 
@@ -149,7 +153,7 @@ function initDashboard() {
       activityList.innerHTML = usage.recent.map((item) => {
         const tool = localized.find((candidate) => candidate.id === item.id)
         const time = new Intl.DateTimeFormat(currentIntlLocale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(item.at))
-        return `<li><span class="activity-icon"><svg><use href="#icon-hash"></use></svg></span><span><strong>${tool?.name ?? item.id}</strong><small>${t('home.activity.usedAt', { time })}</small></span></li>`
+        return `<li><span class="activity-icon"><svg><use href="#icon-hash"></use></svg></span><span><strong>${escapeHtml(tool?.name ?? item.id)}</strong><small>${escapeHtml(t('home.activity.usedAt', { time }))}</small></span></li>`
       }).join('')
     }
   }

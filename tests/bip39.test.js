@@ -206,6 +206,23 @@ test('a passphrase changes the seed but not the words', () => {
   )
 })
 
+test('a passphrase outside the basic plane is a passphrase, not an error', () => {
+  // Emoji and rarer CJK characters are two halves written as one character. They
+  // encode, they normalise, and they are valid seed material.
+  const withEmoji = mnemonicToSeedHex(ABANDON, 'TREZOR🔑')
+  assert.notEqual(withEmoji, mnemonicToSeedHex(ABANDON, 'TREZOR'))
+  assert.equal(withEmoji, mnemonicToSeedHex(ABANDON, 'TREZOR🔑'))
+})
+
+test('a passphrase holding half a character is refused rather than mangled', () => {
+  // Encoding a lone surrogate substitutes U+FFFD, so the seed would come from a
+  // passphrase nobody typed.
+  assert.throws(() => mnemonicToSeed(ABANDON, '\uD83D'), (error) => error.code === 'badPassphrase')
+  assert.throws(() => mnemonicToSeed(ABANDON, 'key\uDE00'), (error) => error.code === 'badPassphrase')
+  // The pair around it is fine, so only the half is the problem.
+  assert.equal(mnemonicToSeed(ABANDON, '🔑').length, 64)
+})
+
 test('japanese separators U+3000, U+0020 and mixed all give one seed', () => {
   const japanese = wordlists.get('japanese')
   const wide = generateMnemonic(32, japanese, '　')

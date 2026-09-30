@@ -1134,12 +1134,24 @@ const isDeposit = (value: unknown): value is Deposit => {
 }
 
 /**
+ * How far back an account is settled when its snapshot came back without the
+ * moment it had been settled up to.
+ *
+ * The moment is what says how much of the market still has to be walked, and a
+ * snapshot without one cannot be replayed from the start of the market without
+ * reading a couple of years of prices for an account that was simply saved by an
+ * older build. A week is settled instead: recent stops and targets still fire,
+ * and the walk stays short enough to be invisible.
+ */
+const lostSettlementWindow = 7 * 86_400_000
+
+/**
  * Reads a snapshot back, and refuses anything it does not understand. A stored
  * account is the user's money, so a shape that has changed is discarded rather
  * than guessed at, and the reader starts from a clean wallet instead of a broken
  * one.
  */
-export function loadAccount(stored: string | null): Account | null {
+export function loadAccount(stored: string | null, now: number = Date.now()): Account | null {
   if (!stored) return null
   try {
     const parsed = JSON.parse(stored) as Snapshot
@@ -1166,7 +1178,14 @@ export function loadAccount(stored: string | null): Account | null {
       ),
       trades: [],
       deposits: [],
-      savedAt: Math.max(parsed.savedAt, marketEpoch),
+      // A missing or unreadable moment would otherwise come back as NaN, which
+      // compares false against every time and quietly skips the whole replay:
+      // resting orders, stops and liquidations that the market did reach would
+      // be dropped, and the account would be saved as settled at the wrong end of
+      // the gap so they could never be replayed afterwards.
+      savedAt: Number.isFinite(parsed.savedAt)
+        ? Math.max(parsed.savedAt, marketEpoch)
+        : Math.max(now - lostSettlementWindow, marketEpoch),
     }
   } catch {
     return null

@@ -287,6 +287,14 @@ function askForTransfer(panel: Panel, amount: string): void {
   else dialog.setAttribute('open', '')
 }
 
+/** Closes the same dialog, whichever way it was opened. */
+function closeTransfer(panel: Panel): void {
+  const dialog = find<HTMLDialogElement>(panel, '[data-wire-dialog]')
+  if (!dialog) return
+  if (typeof dialog.close === 'function') dialog.close()
+  else dialog.removeAttribute('open')
+}
+
 /** Every live panel, so a page swap can let go of them. */
 const panels = new Set<Panel>()
 
@@ -655,9 +663,10 @@ function message(panel: Panel, key?: string): void {
  * balance, and is told the log is short rather than losing both.
  */
 function persist(panel: Panel, account: Account): void {
-  // The table is the site's one store, so a write cannot fail the way a
-  // localStorage write could when the quota ran out: the account is kept whole
-  // unless the whole store is gone, which the hint below is there to say.
+  // Serialising is what can fail here — a value the JSON format cannot express —
+  // and the two halves are stored separately so that one of them failing does not
+  // cost the other. The table itself queues the write and retries it; a store
+  // that keeps refusing is reported by the storage layer rather than swallowed.
   let state = true
   try {
     writeValue(accountStorageKey, saveAccount(account))
@@ -1124,7 +1133,7 @@ function setup(panel: Panel): void {
     button.addEventListener('click', () => {
       const form = readForm(panel)
       const share = Number(button.dataset.sizePreset ?? '25') / 100
-      const size = maxSize(panel, account, price, form) * (share / 100)
+      const size = maxSize(panel, account, price, form) * share
       writeSize(panel, size, price, account, form)
       renderQuote(panel, account, form, price)
     })
@@ -1152,7 +1161,7 @@ function setup(panel: Panel): void {
     pressChip(panel, '[data-amount]', 'amount', null)
   })
   let topUps = 0
-  find(panel, '[data-wire-done]')?.addEventListener('click', () => find(panel, '[data-wire-dialog]')?.close())
+  find(panel, '[data-wire-done]')?.addEventListener('click', () => closeTransfer(panel))
   find(panel, '[data-deposit-form]')?.addEventListener('submit', (event) => {
     event.preventDefault()
     const input = find<HTMLInputElement>(panel, '[data-deposit-amount]')
