@@ -25,7 +25,7 @@ mountWorkspace('json-schema-validator', (refs, run) => {
       return
     }
     try {
-      parsedDocument = JSON.parse(document_.value ?? '') as unknown
+      parsedDocument = JSON.parse(document_?.value ?? '') as unknown
     } catch (error) {
       run.failure(`${run.t('toolUi.json-schema-validator.errors.invalidJson')}: ${error instanceof Error ? error.message : String(error)}`)
       return

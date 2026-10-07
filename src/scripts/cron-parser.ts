@@ -1,8 +1,18 @@
 import { describeField, describeFrequency, nextRuns, parseCron, type CronFrequency } from '../lib/cron'
 import { mountWorkspace } from './tool-workspace'
 
+export type CronFrequencyLabel =
+  | 'everySecond'
+  | 'everyMinute'
+  | 'everyHour'
+  | 'everyDay'
+  | 'everyWeek'
+  | 'everyMonth'
+  | 'everyYear'
+  | 'custom'
+
 /** How often the expression fires, in words a person would use. */
-function frequencyName(frequency: CronFrequency): string {
+function frequencyName(frequency: CronFrequency): CronFrequencyLabel {
   if (frequency.perMatchingDay >= 86_400) return 'everySecond'
   if (frequency.perMatchingDay >= 1_440) return 'everyMinute'
   if (frequency.perMatchingDay >= 24) return 'everyHour'

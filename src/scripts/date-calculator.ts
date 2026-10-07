@@ -51,8 +51,8 @@ mountWorkspace(
       }
       const amount = Math.trunc(run.number('amount', 30))
       const operation = run.option('operation')
-      const first = start.value
-      const second = end.value
+      const first = start.day
+      const second = end.day
       const days = diffDays(first, second)
       const weeks = Math.trunc(days / 7)
       const life = age(first, today())

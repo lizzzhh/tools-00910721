@@ -49,7 +49,6 @@ const SKIP_PATTERNS = [
 ]
 
 const CJK = /[\u4e00-\u9fff\u3005\u3007]/
-const CJK_G = /[\u4e00-\u9fff\u3005\u3007]+/g
 
 function walk(dir) {
   const out = []

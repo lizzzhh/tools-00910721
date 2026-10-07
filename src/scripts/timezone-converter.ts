@@ -10,7 +10,6 @@ import {
   offsetMinutes,
   type ZoneId
 } from '../lib/timezone'
-import { currentIntlLocale } from '../i18n/client'
 import { mountWorkspace } from './tool-workspace'
 
 /** `datetime-local` gives `YYYY-MM-DDTHH:MM[:SS]`, read as a wall clock time. */
@@ -40,7 +39,7 @@ mountWorkspace(
     const list = refs.el<HTMLDataListElement>('zones')
     if (list) list.innerHTML = allZones().map((id) => `<option value="${id}"></option>`).join('')
     const now = new Date()
-    if (moment && moment.value === '') moment.value = write(formatZoned(convert(now, localZone(), 'UTC').source, 'en-CA'))
+    if (moment && moment.value === '') moment.value = write(formatZoned(convert(now, localZone(), 'UTC').source))
     if (source && source.value === '') source.value = localZone()
     if (target && target.value === '') target.value = 'UTC'
 
@@ -57,11 +56,10 @@ mountWorkspace(
         return
       }
       const result = convert(at, from, to)
-      const locale = currentIntlLocale()
       const shifted = crossesDay(result.source, result.target)
 
-      run.stat('source', formatZoned(result.source, locale))
-      run.stat('target', formatZoned(result.target, locale))
+      run.stat('source', formatZoned(result.source))
+      run.stat('target', formatZoned(result.target))
       run.stat('sourceOffset', offsetLabel(from, at))
       run.stat('targetOffset', offsetLabel(to, at))
       run.stat('difference', `${result.shiftMinutes >= 0 ? '+' : ''}${Math.round(result.shiftMinutes / 60)}h`)
@@ -71,10 +69,10 @@ mountWorkspace(
       const neighbours = allZones().filter((id) => offsetMinutes(id, at) === targetOffset).slice(0, 14)
       const rows = [to, ...neighbours]
         .filter((id, index, all) => all.indexOf(id) === index)
-        .map((id) => `${id.padEnd(24)} ${formatZoned(convert(at, from, id).target, locale)}${crossesDay(result.source, convert(at, from, id).target) ? ' ←' : ''}`)
+        .map((id) => `${id.padEnd(24)} ${formatZoned(convert(at, from, id).target)}${crossesDay(result.source, convert(at, from, id).target) ? ' ←' : ''}`)
 
       run.success(
-        [`${formatZoned(result.source, locale)} ${from}`, `${formatZoned(result.target, locale)} ${to}`, '', ...rows].join('\n'),
+        [`${formatZoned(result.source)} ${from}`, `${formatZoned(result.target)} ${to}`, '', ...rows].join('\n'),
         run.t('toolUi.timezone-converter.doneStatus', { zone: to })
       )
     }

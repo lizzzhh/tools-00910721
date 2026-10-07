@@ -6,17 +6,11 @@ import {
   toHex,
   toHsl,
   toHslText,
-  toOklch,
   toOklchText,
   toRgbText,
-  type Rgb
 } from '../lib/color'
 import { mountWorkspace } from './tool-workspace'
 
-function readRgb(value: string): Rgb | null {
-  const parsed = parseColor(value)
-  return parsed.ok ? parsed.rgb : null
-}
 
 mountWorkspace(
   'color-converter',
@@ -43,7 +37,6 @@ mountWorkspace(
       const short = run.checked('shortHex')
       const alpha = run.checked('withAlpha')
       const hsl = toHsl(rgb)
-      const oklch = toOklch(rgb)
       const ink = readableInk(rgb)
 
       run.stat('hex', toHex(rgb, { short, alpha }))

@@ -1,12 +1,25 @@
 ---
 import ToolShell from '../ui/ToolShell.astro'
 import ToolWorkbench from '../ui/ToolWorkbench.astro'
-import CheckboxField from '../ui/CheckboxField.astro'
 import SelectField from '../ui/SelectField.astro'
 import { createTranslator } from '../../i18n'
 import { jsonPathExamples } from '../../lib/json-path'
 
 const t = createTranslator(Astro.locals.locale)
+
+// The examples are named for what they show, so the picker reads as a sentence
+// instead of a wall of punctuation. Keyed by id to keep both sides in step.
+const exampleLabels: Record<(typeof jsonPathExamples)[number]['id'], string> = {
+  root: t('toolUi.json-path.examples.root'),
+  keys: t('toolUi.json-path.examples.keys'),
+  first: t('toolUi.json-path.examples.first'),
+  recursive: t('toolUi.json-path.examples.recursive'),
+  deepName: t('toolUi.json-path.examples.deepName'),
+  filter: t('toolUi.json-path.examples.filter'),
+  exists: t('toolUi.json-path.examples.exists'),
+  length: t('toolUi.json-path.examples.length'),
+  names: t('toolUi.json-path.examples.names')
+}
 
 const props = {
   tool: 'json-path',
@@ -30,7 +43,7 @@ const props = {
       <label for="json-path-option-expression">{t('toolUi.json-path.opt.expression')}</label>
       <input id="json-path-option-expression" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.json-path.expressionPlaceholder')} />
     </div>
-    <SelectField slot="options" id="json-path-option-example" label={t('toolUi.json-path.opt.example')} options={jsonPathExamples.map((example) => ({ value: example.expression, label: example.label ?? example.expression }))} />
+    <SelectField slot="options" id="json-path-option-example" label={t('toolUi.json-path.opt.example')} options={jsonPathExamples.map((example) => ({ value: example.expression, label: exampleLabels[example.id] }))} />
 
       <div><span>{t('toolUi.json-path.stat.matches')}</span><strong id="json-path-stat-matches">—</strong></div>
       <div><span>{t('toolUi.json-path.stat.kind')}</span><strong id="json-path-stat-kind">—</strong></div>

@@ -18,7 +18,7 @@ export const GET: APIRoute = ({ site }) => {
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls
-  .map(({ path, locale }) => {
+  .map(({ path }) => {
     const alternates = locales
       .map((candidate) => `    <xhtml:link rel="alternate" hreflang="${localeMeta[candidate].htmlLang}" href="${origin}${localePath(candidate, path)}" />`)
       .join('\n')

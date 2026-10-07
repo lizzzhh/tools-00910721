@@ -48,7 +48,6 @@ export const xmlIndentOptions = ['  ', '    ', '\t'] as const
 /** Names that may not have a closing tag, per the XML spec. */
 const voidNames = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'])
 
-const declaration = /^\s*<\?xml\s[\s\S]*?\?>/
 const doctypePattern = /^\s*<!DOCTYPE[\s\S]*?(?:\[[\s\S]*?\])?\s*>/i
 
 /** True when a tag closes itself, which `name/` and the HTML-style list both do. */

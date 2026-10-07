@@ -247,8 +247,18 @@ export function nextRuns(fields: Record<CronFieldId, number[]>, from: Date, coun
   return out
 }
 
+export type CronPresetId =
+  | 'everyMinute'
+  | 'everyFiveMinutes'
+  | 'everyHour'
+  | 'everyDay'
+  | 'everyWeekday'
+  | 'everyWeek'
+  | 'everyMonth'
+  | 'everyYear'
+
 /** Common expressions offered as one-click recipes, matching what people write. */
-export const cronPresets: { id: string; expression: string }[] = [
+export const cronPresets: { id: CronPresetId; expression: string }[] = [
   { id: 'everyMinute', expression: '* * * * *' },
   { id: 'everyFiveMinutes', expression: '*/5 * * * *' },
   { id: 'everyHour', expression: '0 * * * *' },

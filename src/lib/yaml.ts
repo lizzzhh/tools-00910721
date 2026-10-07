@@ -38,7 +38,7 @@ export type YamlParseResult =
   | { ok: false; code: YamlErrorCode; line: number; errors: YamlError[] }
 
 export type YamlFormatOptions = {
-  indent?: number
+  indent?: number | string
   /** Keep blank lines between blocks, which is what a person typed on purpose. */
   keepBlankLines?: boolean
   /** Drop comments instead of moving them. */
@@ -598,6 +598,7 @@ export function parseYaml(source: string): YamlParseResult {
  */
 export function formatYaml(source: string, options: YamlFormatOptions = {}): YamlFormatResult {
   const width = options.indent ?? 2
+  const pad = (depth: number) => (typeof width === 'number' ? ' '.repeat(depth * width) : String(width).repeat(depth))
   const parsed = parseYaml(source)
   const lines = readLines(source)
   const out: string[] = []
@@ -619,12 +620,12 @@ export function formatYaml(source: string, options: YamlFormatOptions = {}): Yam
       // the same stack without opening a block of its own.
       if (options.stripComments) continue
       while (stack.length > 0 && line.indent < stack[stack.length - 1]) stack.pop()
-      out.push(`${' '.repeat(stack.length * width)}${line.text}`)
+      out.push(`${pad(stack.length)}${line.text}`)
       continue
     }
 
     while (stack.length > 0 && line.indent <= stack[stack.length - 1]) stack.pop()
-    out.push(`${' '.repeat(stack.length * width)}${line.text}`)
+    out.push(`${pad(stack.length)}${line.text}`)
     stack.push(line.indent)
   }
 

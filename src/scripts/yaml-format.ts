@@ -12,7 +12,7 @@ mountWorkspace(
       }
       const indent = run.option('indent') === '4' ? 4 : run.option('indent') === 'tab' ? '\t' : 2
       const parsed = parseYaml(source)
-      const formatted = formatYaml(source, { indent, keepComments: run.checked('keepComments') })
+      const formatted = formatYaml(source, { indent, stripComments: !run.checked('keepComments') })
 
       run.stat('format', parsed.ok ? run.t('toolUi.yaml-format.formatOk') : run.t('toolUi.yaml-format.formatBad'))
       run.stat('lines', String(formatted.lines))

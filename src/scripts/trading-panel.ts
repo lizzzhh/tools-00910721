@@ -7,7 +7,6 @@ import {
   historyStorageKey,
   loadAccount,
   loadHistory,
-  liquidityFor,
   makerFeeRate,
   maxLeverage,
   maxNotionalFor,
@@ -32,7 +31,7 @@ import {
   type Trade
 } from '../lib/trading.ts'
 import { defaultSeed } from '../lib/candles.ts'
-import { readValue, storage, whenStorageReady, writeValue } from '../lib/storage.ts'
+import { readValue, whenStorageReady, writeValue } from '../lib/storage.ts'
 import { marketKeys } from '../lib/storage-schema.ts'
 
 import {
@@ -44,7 +43,6 @@ import {
   sizeTicker,
   sizeToUnits,
   sizeUnits,
-  tradedAsset
 } from '../lib/units.ts'
 import type { SizeUnit } from '../lib/units.ts'
 import { currentIntlLocale, translateNow } from '../i18n/client'
@@ -428,7 +426,7 @@ function restoreOrderConfig(panel: Panel): void {
  * where it can do the job it is there for, and a button that would set a price
  * which is already past is a button that is not offered.
  */
-function paintPriceChips(panel: Panel, mark: number, side: Side, kind?: string): void {
+function paintPriceChips(panel: Panel, side: Side, kind?: string): void {
   for (const group of panel.querySelectorAll<HTMLElement>('[data-price-chips]')) {
     if (kind && group.dataset.priceKind !== kind) continue
     // A stop is a floor for a long and a ceiling for a short; a target is the
@@ -458,7 +456,7 @@ function paintPriceChips(panel: Panel, mark: number, side: Side, kind?: string):
  * and a box that let the reader type a smaller number would be offering to close
  * a fraction of a position the engine has no way to carry.
  */
-function askToClose(panel: Panel, position: Position, price: number): void {
+function askToClose(panel: Panel, position: Position): void {
   const dialog = find<HTMLDialogElement>(panel, '[data-close-dialog]')
   if (!dialog) return
   dialog.dataset.closePosition = position.id
@@ -470,7 +468,7 @@ function askToClose(panel: Panel, position: Position, price: number): void {
   setPressed(panel, '[data-close-kind]', 'closeKind', 'market')
   // Closing a long is a sell, so its chips point up: they are there to price a
   // close that waits rather than one that fills at once.
-  paintPriceChips(panel, price, long ? 'sell' : 'buy')
+  paintPriceChips(panel, long ? 'sell' : 'buy')
   const limitField = find(panel, '[data-close-limit-field]')
   if (limitField) limitField.hidden = true
   const box = find<HTMLInputElement>(panel, '[data-close-limit]')
@@ -860,7 +858,7 @@ function render(panel: Panel, account: Account, price: number): void {
   const form = readForm(panel)
   // The chips are a distance from the mark and the mark moves, so they are pointed
   // on every repaint rather than only when the reader changes side.
-  paintPriceChips(panel, price, form.side)
+  paintPriceChips(panel, form.side)
   renderFigures(panel, view, account)
   renderPositions(panel, view)
   renderOrders(panel, view)
@@ -944,7 +942,7 @@ function setup(panel: Panel): void {
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-side]')) {
     button.addEventListener('click', () => {
       setPressed(panel, '[data-side]', 'side', button.dataset.side ?? 'buy')
-      paintPriceChips(panel, price, button.dataset.side === 'sell' ? 'sell' : 'buy')
+      paintPriceChips(panel, button.dataset.side === 'sell' ? 'sell' : 'buy')
       renderQuote(panel, account, readForm(panel), price)
     })
   }
@@ -1001,7 +999,7 @@ function setup(panel: Panel): void {
       if (targetBox) targetBox.value = readPending(panel, '[data-take-profit]')
       setProtectionContext(panel, say(long ? 'long' : 'short'))
     }
-    paintPriceChips(panel, price, long ? 'buy' : 'sell')
+    paintPriceChips(panel, long ? 'buy' : 'sell')
     protection.showModal()
   }
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-close-kind]')) {
@@ -1225,7 +1223,7 @@ function setup(panel: Panel): void {
     if (close?.dataset.close) {
       const position = account.positions.find((held) => held.id === close.dataset.close)
       if (!position) return
-      askToClose(panel, position, price)
+      askToClose(panel, position)
       return
     }
     // A stop or target listed among the orders is taken off the same way a

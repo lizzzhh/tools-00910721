@@ -974,9 +974,7 @@ test('a limit close rests and fills at its price when the market reaches it', ()
   assert.equal(fill.price, 110_000, 'a resting close fills at the price it asked for')
 })
 
-test('a limit close for a position that is already gone is refused', () => {
-  const vee = stub(() => FLAT)
-  const account = funded()
+test('a limit close for a position that is already gone is refused', () => {  const account = funded()
   const quote = quoteOrder(
     account,
     { side: 'sell', kind: 'limit', price: 110_000, size: 1, purpose: 'close', positionId: 'no-such-position' },

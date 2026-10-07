@@ -124,7 +124,7 @@ export function buildToc(markdown: string, options: TocOptions = {}): TocResult 
   }
 
   const numbers: number[] = []
-  const rendered = headings.map((heading, position) => {
+  const rendered = headings.map((heading) => {
     while (numbers.length > heading.level - 1) numbers.pop()
     if (numbers.length === heading.level - 1) numbers.push(1)
     else numbers[heading.level - 1] += 1

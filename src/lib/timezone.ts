@@ -180,7 +180,7 @@ export function crossesDay(source: ZonedParts, target: ZonedParts) {
   return source.year !== target.year || source.month !== target.month || source.day !== target.day
 }
 
-export function formatZoned(parts: ZonedParts, locale: string): string {
+export function formatZoned(parts: ZonedParts): string {
   const pad = (value: number) => String(value).padStart(2, '0')
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)} ${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`
 }

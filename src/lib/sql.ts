@@ -542,8 +542,6 @@ export function describeSql(source: string, dialect: SqlDialect = 'standard'): {
 /** A list head whose items may be aligned under each other instead of the indent. */
 const LIST_HEADS = new Set(['select', 'from', 'set', 'values', 'returning', 'into'])
 
-/** The clause heads that sit one level in, under the statement they belong to. */
-const NESTED_HEADS = new Set(['and', 'or'])
 
 function render(token: SqlToken, settings: Required<SqlFormatOptions>): string {
   if (token.kind !== 'keyword') return token.text
@@ -603,7 +601,6 @@ export function formatSql(source: string, options: SqlFormatOptions = {}): SqlFo
   let line = ''
   let depth = 0
   let previous: SqlToken | null = null
-  let previousLine = 1
   /** Column a list's first item starts at, remembered for as long as the list lasts. */
   let listAlign = -1
   /** Set only while continuing a wrapped list, so a clause break drops the indent. */
@@ -611,7 +608,6 @@ export function formatSql(source: string, options: SqlFormatOptions = {}): SqlFo
   let listDepth = -1
   let forceBreak = false
 
-  const pad = () => (align >= 0 && depth === listDepth ? ' '.repeat(align) : ' '.repeat(depth * settings.indent))
 
   const flush = () => {
     if (line === '') return
@@ -623,7 +619,6 @@ export function formatSql(source: string, options: SqlFormatOptions = {}): SqlFo
     if (line !== '' && withSpace) line += ' '
     line += text
     previous = token
-    previousLine = token.line
   }
 
   for (let at = 0; at < tokens.length; at += 1) {
@@ -638,7 +633,6 @@ export function formatSql(source: string, options: SqlFormatOptions = {}): SqlFo
         flush()
         line = `${' '.repeat(depth * settings.indent)}${text}`
         previous = token
-        previousLine = token.line
       }
       forceBreak = true
       continue
@@ -683,7 +677,6 @@ export function formatSql(source: string, options: SqlFormatOptions = {}): SqlFo
         listAlign = line.length + 1
       }
       previous = last
-      previousLine = last.line
       at += words.length - 1
       forceBreak = false
       continue

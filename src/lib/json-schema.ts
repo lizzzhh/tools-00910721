@@ -162,11 +162,7 @@ class Validator {
     if (Array.isArray(value)) issues.push(...this.array(value, schema, path))
     if (isRecord(value)) issues.push(...this.object(value, schema, path))
 
-    for (const [keyword, collect] of [
-      ['allOf', (subs: unknown[]) => subs],
-      ['anyOf', (subs: unknown[]) => subs],
-      ['oneOf', (subs: unknown[]) => subs]
-    ] as const) {
+    for (const keyword of ['allOf', 'anyOf', 'oneOf'] as const) {
       const branches = schema[keyword]
       if (!Array.isArray(branches) || branches.length === 0) continue
       const results = branches.map((branch) => this.check(value, branch, path))

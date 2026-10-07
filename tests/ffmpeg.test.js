@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { advancePreviewClicks, previewClicks, takePreviewRun } from '../src/lib/planned-preview.ts'
-import { allTools } from '../src/data/tools.ts'
+import { allTools, plannedTools, tools } from '../src/data/tools.ts'
 import {
   applyPreset,
   atempoFactors,
@@ -811,12 +811,22 @@ test('opens a tool that is still in development after three clicks in a row', ()
   assert.equal(opens(0, 5_000, 9_000, 9_100), false)
 })
 
-test('only the ffmpeg tool can be opened before it is finished', () => {
-  // The other in-development tools have to stay shut, so the exception is a flag
-  // on one tool rather than something the badge decides on its own.
+test('only a tool with a page of its own can be opened before it is finished', () => {
+  // A tool that is still being built stays shut. Having a page of its own is
+  // what earns the badge an opt-in: such a tool sets `preview`, and the label
+  // does not decide anything by itself. A planned tool has no page to open, so
+  // no amount of tapping takes it anywhere.
   const previewable = allTools.filter((tool) => tool.preview)
-  assert.deepEqual(previewable.map((tool) => tool.id), ['ffmpeg-builder'])
-  for (const tool of previewable) assert.equal(tool.available, false, 'a finished tool needs no preview')
+  for (const tool of previewable) {
+    assert.ok(tools.includes(tool), `${tool.id} is marked preview without a page of its own`)
+    assert.equal(tool.available, false, 'a finished tool needs no preview')
+  }
+  assert.deepEqual(
+    previewable.map((tool) => tool.id),
+    tools.filter((tool) => !tool.available).map((tool) => tool.id),
+    'every unfinished tool that has a page should be reachable from its badge'
+  )
+  for (const tool of plannedTools) assert.equal(tool.preview, undefined, `${tool.id} is not built, so it stays shut`)
 
   // A badge that does not name a tool is not wired to the sequence at all, which
   // is what keeps the other badges from being links. Both places a planned tool is
