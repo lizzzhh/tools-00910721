@@ -69,6 +69,14 @@ const en: Dictionary = {
       drawn: "Drawn for today",
       idle: 'Not drawn yet',
       idleMessage: 'You can draw your fortune once a day.',
+      delta: 'vs yesterday {value}',
+      sealed: 'SEALED',
+      unlock: "Reveal today's fortune",
+      chart: {
+        label: 'Four hour candles, last {count} days',
+        peak: 'Peak {value}',
+        candle: 'O {open} · H {high} · L {low} · C {close}'
+      },
       trend: {
         label: 'Score per day, last {count} days',
         empty: "Draw today's fortune and every day's score lands on the line here",

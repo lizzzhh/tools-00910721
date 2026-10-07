@@ -67,6 +67,14 @@ const zhCN = {
       drawn: '今日已解锁',
       idle: '等待今日签到',
       idleMessage: '每天可以抽取一次今日运势。',
+      delta: '较昨日 {value}',
+      sealed: '待揭晓',
+      unlock: '解锁今日运势',
+      chart: {
+        label: '4 小时走势 · 近 {count} 天',
+        peak: '最高 {value}',
+        candle: '开 {open} · 高 {high} · 低 {low} · 收 {close}'
+      },
       trend: {
         label: '每日得分 · 近 {count} 天',
         empty: '抽取今日运势后，这里会画出每天的得分曲线',

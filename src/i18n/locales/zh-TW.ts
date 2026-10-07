@@ -69,6 +69,14 @@ const zhTW: Dictionary = {
       drawn: '今日已解鎖',
       idle: '等待今日簽到',
       idleMessage: '每天可以抽取一次今日運勢。',
+      delta: '較昨日 {value}',
+      sealed: '待揭曉',
+      unlock: '解鎖今日運勢',
+      chart: {
+        label: '4 小時走勢 · 近 {count} 天',
+        peak: '最高 {value}',
+        candle: '開 {open} · 高 {high} · 低 {low} · 收 {close}'
+      },
       trend: {
         label: '每日得分 · 近 {count} 天',
         empty: '抽取今日運勢後，這裡會畫出每天的得分曲線',

@@ -69,6 +69,14 @@ const ja: Dictionary = {
       drawn: '今日はもう引きました',
       idle: 'まだ引いていません',
       idleMessage: '運勢は 1 日 1 回引けます。',
+      delta: '昨日比 {value}',
+      sealed: '未公開',
+      unlock: '今日の運勢を明かす',
+      chart: {
+        label: '4 時間足 · 直近 {count} 日間',
+        peak: '最大 {value}',
+        candle: '始 {open} · 高 {high} · 安 {low} · 終 {close}'
+      },
       trend: {
         label: '1 日あたりの点数 · 直近 {count} 日間',
         empty: '今日の運勢を引くと、その日の点数がこの曲線に加わります',
