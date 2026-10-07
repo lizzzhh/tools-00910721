@@ -1,0 +1,51 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'contrast-checker',
+  category: 'efficiency' as const,
+  icon: 'lucide:contrast',
+  live: true,
+  notice: t('toolUi.contrast-checker.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.contrast-checker.inputLabel')}
+    placeholder={t('toolUi.contrast-checker.placeholder')}
+    runLabel={t('toolUi.contrast-checker.runButton')}
+    outputTitle={t('toolUi.contrast-checker.outputTitle')}
+    outputAria={t('toolUi.contrast-checker.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="contrast-checker-option-foreground">{t('toolUi.contrast-checker.opt.foreground')}</label>
+      <input id="contrast-checker-option-foreground" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.contrast-checker.foregroundPlaceholder')} />
+    </div>
+    <div slot="options" class="tool-field">
+      <label for="contrast-checker-option-background">{t('toolUi.contrast-checker.opt.background')}</label>
+      <input id="contrast-checker-option-background" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.contrast-checker.backgroundPlaceholder')} />
+    </div>
+    <SelectField slot="options" id="contrast-checker-option-textSize" label={t('toolUi.contrast-checker.opt.textSize')} options={[
+        { value: 'normal', label: t('toolUi.contrast-checker.opt.textSizeValues.normalText') },
+        { value: 'large', label: t('toolUi.contrast-checker.opt.textSizeValues.largeText') }
+      ]
+    } value="normal" />
+
+      <div><span>{t('toolUi.contrast-checker.stat.ratioLabel')}</span><strong id="contrast-checker-stat-ratio">—</strong></div>
+      <div><span>{t('toolUi.contrast-checker.stat.gradeLabel')}</span><strong id="contrast-checker-stat-grade">—</strong></div>
+      <div><span>{t('toolUi.contrast-checker.stat.foregroundLabel')}</span><strong id="contrast-checker-stat-foreground">—</strong></div>
+      <div><span>{t('toolUi.contrast-checker.stat.backgroundLabel')}</span><strong id="contrast-checker-stat-background">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/contrast-checker'
+</script>

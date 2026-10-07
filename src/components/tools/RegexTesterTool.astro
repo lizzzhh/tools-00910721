@@ -1,0 +1,56 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'regex-tester',
+  category: 'developer' as const,
+  icon: 'lucide:regex',
+  live: true,
+  notice: t('toolUi.regex-tester.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.regex-tester.inputLabel')}
+    placeholder={t('toolUi.regex-tester.placeholder')}
+    runLabel={t('toolUi.regex-tester.runButton')}
+    outputTitle={t('toolUi.regex-tester.outputTitle')}
+    outputAria={t('toolUi.regex-tester.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="regex-tester-option-pattern">{t('toolUi.regex-tester.opt.pattern')}</label>
+      <input id="regex-tester-option-pattern" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.regex-tester.patternPlaceholder')} />
+    </div>
+    <div slot="options" class="tool-option-section">
+      <span class="tool-option-heading">{t('toolUi.regex-tester.opt.flags')}</span>
+      <div class="tool-option-grid">
+        <CheckboxField id="regex-tester-flag-g" label={t('toolUi.regex-tester.opt.flagsValues.g')} checked />
+        <CheckboxField id="regex-tester-flag-i" label={t('toolUi.regex-tester.opt.flagsValues.i')}  />
+        <CheckboxField id="regex-tester-flag-m" label={t('toolUi.regex-tester.opt.flagsValues.m')}  />
+        <CheckboxField id="regex-tester-flag-s" label={t('toolUi.regex-tester.opt.flagsValues.s')}  />
+        <CheckboxField id="regex-tester-flag-u" label={t('toolUi.regex-tester.opt.flagsValues.u')}  />
+      </div>
+    </div>
+    <div slot="options" class="tool-field">
+      <label for="regex-tester-option-replacement">{t('toolUi.regex-tester.opt.replacement')}</label>
+      <input id="regex-tester-option-replacement" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.regex-tester.replacementPlaceholder')} />
+    </div>
+
+      <div><span>{t('toolUi.regex-tester.stat.matches')}</span><strong id="regex-tester-stat-matches">—</strong></div>
+      <div><span>{t('toolUi.regex-tester.stat.groups')}</span><strong id="regex-tester-stat-groups">—</strong></div>
+      <div><span>{t('toolUi.regex-tester.stat.replaced')}</span><strong id="regex-tester-stat-replaced">—</strong></div>
+      <div><span>{t('toolUi.regex-tester.stat.flags')}</span><strong id="regex-tester-stat-flags">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/regex-tester'
+</script>

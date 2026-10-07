@@ -1,0 +1,67 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+import { curlMethods } from '../../lib/curl'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'curl-builder',
+  category: 'developer' as const,
+  icon: 'lucide:terminal',
+  live: true,
+  notice: t('toolUi.curl-builder.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.curl-builder.inputLabel')}
+    placeholder={t('toolUi.curl-builder.placeholder')}
+    runLabel={t('toolUi.curl-builder.runButton')}
+    outputTitle={t('toolUi.curl-builder.outputTitle')}
+    outputAria={t('toolUi.curl-builder.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="curl-builder-option-url">{t('toolUi.curl-builder.opt.url')}</label>
+      <input id="curl-builder-option-url" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.curl-builder.urlPlaceholder')} />
+    </div>
+    <SelectField slot="options" id="curl-builder-option-method" label={t('toolUi.curl-builder.opt.method')} options={curlMethods.map((method) => ({ value: method, label: method }))} value="GET" />
+    <CheckboxField slot="options" id="curl-builder-option-pretty" label={t('toolUi.curl-builder.opt.pretty')} checked />
+    <div slot="options" class="tool-field">
+      <div class="field-heading">
+        <label for="curl-builder-option-headers">{t('toolUi.curl-builder.opt.headers')}</label>
+        <span>{t('toolUi.curl-builder.headersHint')}</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="curl-builder-option-headers" spellcheck="false" autocomplete="off" placeholder={t('toolUi.curl-builder.headersPlaceholder')}></textarea>
+      </div>
+    </div>
+    <div slot="options" class="tool-field">
+      <div class="field-heading">
+        <label for="curl-builder-option-body">{t('toolUi.curl-builder.opt.body')}</label>
+        <span>{t('toolUi.curl-builder.bodyHint')}</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="curl-builder-option-body" spellcheck="false" autocomplete="off" placeholder={t('toolUi.curl-builder.bodyPlaceholder')}></textarea>
+      </div>
+    </div>
+    <CheckboxField slot="options" id="curl-builder-option-followRedirects" label={t('toolUi.curl-builder.opt.followRedirects')} checked />
+    <CheckboxField slot="options" id="curl-builder-option-compressed" label={t('toolUi.curl-builder.opt.compressed')}  />
+    <CheckboxField slot="options" id="curl-builder-option-showErrors" label={t('toolUi.curl-builder.opt.showErrors')} checked />
+    <CheckboxField slot="options" id="curl-builder-option-insecure" label={t('toolUi.curl-builder.opt.insecure')}  />
+
+      <div><span>{t('toolUi.curl-builder.stat.flags')}</span><strong id="curl-builder-stat-flags">—</strong></div>
+      <div><span>{t('toolUi.curl-builder.stat.length')}</span><strong id="curl-builder-stat-length">—</strong></div>
+      <div><span>{t('toolUi.curl-builder.stat.query')}</span><strong id="curl-builder-stat-query">—</strong></div>
+      <div><span>{t('toolUi.curl-builder.stat.headers')}</span><strong id="curl-builder-stat-headers">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/curl-builder'
+</script>

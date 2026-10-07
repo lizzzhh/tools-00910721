@@ -1,0 +1,59 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'text-sort',
+  category: 'text' as const,
+  icon: 'lucide:list-ordered',
+  live: true,
+  notice: t('toolUi.text-sort.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.text-sort.inputLabel')}
+    placeholder={t('toolUi.text-sort.placeholder')}
+    runLabel={t('toolUi.text-sort.runButton')}
+    outputTitle={t('toolUi.text-sort.outputTitle')}
+    outputAria={t('toolUi.text-sort.outputAria')}
+  >
+    <SelectField slot="options" id="text-sort-option-order" label={t('toolUi.text-sort.opt.order')} options={[
+        { value: 'lexical', label: t('toolUi.text-sort.opt.orderValues.lexical') },
+        { value: 'natural', label: t('toolUi.text-sort.opt.orderValues.natural') },
+        { value: 'numeric', label: t('toolUi.text-sort.opt.orderValues.numeric') },
+        { value: 'length', label: t('toolUi.text-sort.opt.orderValues.length') },
+        { value: 'random', label: t('toolUi.text-sort.opt.orderValues.random') }
+      ]
+    } value="lexical" />
+    <SelectField slot="options" id="text-sort-option-direction" label={t('toolUi.text-sort.opt.direction')} options={[
+        { value: 'asc', label: t('toolUi.text-sort.opt.directionValues.asc') },
+        { value: 'desc', label: t('toolUi.text-sort.opt.directionValues.desc') }
+      ]
+    } value="asc" />
+    <CheckboxField slot="options" id="text-sort-option-caseSensitive" label={t('toolUi.text-sort.opt.caseSensitive')}  />
+    <CheckboxField slot="options" id="text-sort-option-trim" label={t('toolUi.text-sort.opt.trim')} checked />
+    <CheckboxField slot="options" id="text-sort-option-unique" label={t('toolUi.text-sort.opt.unique')}  />
+    <CheckboxField slot="options" id="text-sort-option-ignoreBlank" label={t('toolUi.text-sort.opt.ignoreBlank')} checked />
+    <div slot="options" class="tool-field">
+      <label for="text-sort-option-pinned">{t('toolUi.text-sort.opt.pinned')}</label>
+      <input id="text-sort-option-pinned" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.text-sort.pinnedPlaceholder')} />
+    </div>
+
+      <div><span>{t('toolUi.text-sort.stat.lines')}</span><strong id="text-sort-stat-lines">—</strong></div>
+      <div><span>{t('toolUi.text-sort.stat.sorted')}</span><strong id="text-sort-stat-sorted">—</strong></div>
+      <div><span>{t('toolUi.text-sort.stat.duplicates')}</span><strong id="text-sort-stat-duplicates">—</strong></div>
+      <div><span>{t('toolUi.text-sort.stat.blank')}</span><strong id="text-sort-stat-blank">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/text-sort'
+</script>

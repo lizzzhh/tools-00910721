@@ -1,0 +1,44 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+import { jsonPathExamples } from '../../lib/json-path'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'json-path',
+  category: 'encoding' as const,
+  icon: 'lucide:braces',
+  live: true,
+  notice: t('toolUi.json-path.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.json-path.inputLabel')}
+    placeholder={t('toolUi.json-path.placeholder')}
+    runLabel={t('toolUi.json-path.runButton')}
+    outputTitle={t('toolUi.json-path.outputTitle')}
+    outputAria={t('toolUi.json-path.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="json-path-option-expression">{t('toolUi.json-path.opt.expression')}</label>
+      <input id="json-path-option-expression" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.json-path.expressionPlaceholder')} />
+    </div>
+    <SelectField slot="options" id="json-path-option-example" label={t('toolUi.json-path.opt.example')} options={jsonPathExamples.map((example) => ({ value: example.expression, label: example.label ?? example.expression }))} />
+
+      <div><span>{t('toolUi.json-path.stat.matches')}</span><strong id="json-path-stat-matches">—</strong></div>
+      <div><span>{t('toolUi.json-path.stat.kind')}</span><strong id="json-path-stat-kind">—</strong></div>
+      <div><span>{t('toolUi.json-path.stat.resultPath')}</span><strong id="json-path-stat-path">—</strong></div>
+      <div><span>{t('toolUi.json-path.stat.depth')}</span><strong id="json-path-stat-depth">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/json-path'
+</script>

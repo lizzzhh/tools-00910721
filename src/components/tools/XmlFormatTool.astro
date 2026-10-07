@@ -1,0 +1,46 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'xml-format',
+  category: 'encoding' as const,
+  icon: 'lucide:code-xml',
+  live: false,
+  notice: t('toolUi.xml-format.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.xml-format.inputLabel')}
+    placeholder={t('toolUi.xml-format.placeholder')}
+    runLabel={t('toolUi.xml-format.runButton')}
+    outputTitle={t('toolUi.xml-format.outputTitle')}
+    outputAria={t('toolUi.xml-format.outputAria')}
+  >
+    <SelectField slot="options" id="xml-format-option-indent" label={t('toolUi.xml-format.opt.indent')} options={[
+        { value: '2', label: t('toolUi.xml-format.opt.indentValues.two') },
+        { value: '4', label: t('toolUi.xml-format.opt.indentValues.four') },
+        { value: 'tab', label: t('toolUi.xml-format.opt.indentValues.tab') }
+      ]
+    } value="2" />
+    <CheckboxField slot="options" id="xml-format-option-collapse" label={t('toolUi.xml-format.opt.collapse')} checked />
+
+      <div><span>{t('toolUi.xml-format.stat.format')}</span><strong id="xml-format-stat-format">—</strong></div>
+      <div><span>{t('toolUi.xml-format.stat.elements')}</span><strong id="xml-format-stat-elements">—</strong></div>
+      <div><span>{t('toolUi.xml-format.stat.attributes')}</span><strong id="xml-format-stat-attributes">—</strong></div>
+      <div><span>{t('toolUi.xml-format.stat.comments')}</span><strong id="xml-format-stat-comments">—</strong></div>
+      <div><span>{t('toolUi.xml-format.stat.textLength')}</span><strong id="xml-format-stat-text">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/xml-format'
+</script>

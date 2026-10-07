@@ -1,0 +1,60 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'date-calculator',
+  category: 'efficiency' as const,
+  icon: 'lucide:calendar-range',
+  live: true,
+  notice: t('toolUi.date-calculator.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.date-calculator.inputLabel')}
+    placeholder={t('toolUi.date-calculator.placeholder')}
+    runLabel={t('toolUi.date-calculator.runButton')}
+    outputTitle={t('toolUi.date-calculator.outputTitle')}
+    outputAria={t('toolUi.date-calculator.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="date-calculator-option-from">{t('toolUi.date-calculator.opt.from')}</label>
+      <input id="date-calculator-option-from" type="date" />
+    </div>
+    <div slot="options" class="tool-field">
+      <label for="date-calculator-option-to">{t('toolUi.date-calculator.opt.to')}</label>
+      <input id="date-calculator-option-to" type="date" />
+    </div>
+    <SelectField slot="options" id="date-calculator-option-operation" label={t('toolUi.date-calculator.opt.operation')} options={[
+        { value: 'diff', label: t('toolUi.date-calculator.opt.operationValues.diffDays') },
+        { value: 'plusDays', label: t('toolUi.date-calculator.opt.operationValues.plusDays') },
+        { value: 'plusMonths', label: t('toolUi.date-calculator.opt.operationValues.plusMonths') },
+        { value: 'age', label: t('toolUi.date-calculator.opt.operationValues.age') },
+        { value: 'business', label: t('toolUi.date-calculator.opt.operationValues.businessDays') },
+        { value: 'isoWeek', label: t('toolUi.date-calculator.opt.operationValues.isoWeek') }
+      ]
+    } value="diff" />
+    <div slot="options" class="tool-field">
+      <label for="date-calculator-option-amount">{t('toolUi.date-calculator.opt.amount')}</label>
+      <input id="date-calculator-option-amount" type="number" min="0" max="99" value={t('toolUi.date-calculator.amountValue')} />
+    </div>
+
+      <div><span>{t('toolUi.date-calculator.stat.resultLabel')}</span><strong id="date-calculator-stat-result">—</strong></div>
+      <div><span>{t('toolUi.date-calculator.stat.days')}</span><strong id="date-calculator-stat-days">—</strong></div>
+      <div><span>{t('toolUi.date-calculator.stat.weeks')}</span><strong id="date-calculator-stat-weeks">—</strong></div>
+      <div><span>{t('toolUi.date-calculator.stat.weekday')}</span><strong id="date-calculator-stat-weekday">—</strong></div>
+      <div><span>{t('toolUi.date-calculator.stat.isoWeekValue')}</span><strong id="date-calculator-stat-isoWeek">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/date-calculator'
+</script>

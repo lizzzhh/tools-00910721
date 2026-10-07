@@ -1,0 +1,45 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'color-converter',
+  category: 'efficiency' as const,
+  icon: 'lucide:palette',
+  live: true,
+  notice: t('toolUi.color-converter.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.color-converter.inputLabel')}
+    placeholder={t('toolUi.color-converter.placeholder')}
+    runLabel={t('toolUi.color-converter.runButton')}
+    outputTitle={t('toolUi.color-converter.outputTitle')}
+    outputAria={t('toolUi.color-converter.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="color-converter-option-color">{t('toolUi.color-converter.opt.color')}</label>
+      <input id="color-converter-option-color" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.color-converter.colorPlaceholder')} />
+    </div>
+    <CheckboxField slot="options" id="color-converter-option-shortHex" label={t('toolUi.color-converter.opt.shortHex')}  />
+    <CheckboxField slot="options" id="color-converter-option-withAlpha" label={t('toolUi.color-converter.opt.withAlpha')} checked />
+
+      <div><span>{t('toolUi.color-converter.stat.hexLabel')}</span><strong id="color-converter-stat-hex">—</strong></div>
+      <div><span>{t('toolUi.color-converter.stat.rgbLabel')}</span><strong id="color-converter-stat-rgb">—</strong></div>
+      <div><span>{t('toolUi.color-converter.stat.hslLabel')}</span><strong id="color-converter-stat-hsl">—</strong></div>
+      <div><span>{t('toolUi.color-converter.stat.oklchLabel')}</span><strong id="color-converter-stat-oklch">—</strong></div>
+      <div><span>{t('toolUi.color-converter.stat.luminanceLabel')}</span><strong id="color-converter-stat-luminance">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/color-converter'
+</script>

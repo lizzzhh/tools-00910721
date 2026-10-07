@@ -1,0 +1,44 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+import { cronPresets } from '../../lib/cron'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'cron-parser',
+  category: 'developer' as const,
+  icon: 'lucide:clock-3',
+  live: false,
+  notice: t('toolUi.cron-parser.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.cron-parser.inputLabel')}
+    placeholder={t('toolUi.cron-parser.placeholder')}
+    runLabel={t('toolUi.cron-parser.runButton')}
+    outputTitle={t('toolUi.cron-parser.outputTitle')}
+    outputAria={t('toolUi.cron-parser.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="cron-parser-option-expression">{t('toolUi.cron-parser.opt.expression')}</label>
+      <input id="cron-parser-option-expression" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.cron-parser.expressionPlaceholder')} />
+    </div>
+    <SelectField slot="options" id="cron-parser-option-preset" label={t('toolUi.cron-parser.opt.preset')} options={cronPresets.map((preset) => ({ value: preset.expression, label: t('toolUi.cron-parser.opt.presetValues.' + preset.id) }))} />
+
+      <div><span>{t('toolUi.cron-parser.stat.fields')}</span><strong id="cron-parser-stat-fields">—</strong></div>
+      <div><span>{t('toolUi.cron-parser.stat.matches')}</span><strong id="cron-parser-stat-matches">—</strong></div>
+      <div><span>{t('toolUi.cron-parser.stat.frequency')}</span><strong id="cron-parser-stat-frequency">—</strong></div>
+      <div><span>{t('toolUi.cron-parser.stat.seconds')}</span><strong id="cron-parser-stat-seconds">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/cron-parser'
+</script>

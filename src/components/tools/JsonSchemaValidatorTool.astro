@@ -1,0 +1,58 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'json-schema-validator',
+  category: 'encoding' as const,
+  icon: 'lucide:badge-check',
+  live: false,
+  notice: t('toolUi.json-schema-validator.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.json-schema-validator.inputLabel')}
+    placeholder={t('toolUi.json-schema-validator.placeholder')}
+    runLabel={t('toolUi.json-schema-validator.runButton')}
+    outputTitle={t('toolUi.json-schema-validator.outputTitle')}
+    outputAria={t('toolUi.json-schema-validator.outputAria')}
+  >
+    <div slot="options" class="tool-field-grid">
+      <div class="tool-field">
+      <div class="field-heading">
+        <label for="json-schema-validator-option-schema">{t('toolUi.json-schema-validator.schemaLabel')}</label>
+        <span>{t('toolUi.json-schema-validator.schemaHint')}</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="json-schema-validator-option-schema" spellcheck="false" autocomplete="off" placeholder={t('toolUi.json-schema-validator.schemaPlaceholder')}></textarea>
+      </div>
+      </div>
+      <div class="tool-field">
+      <div class="field-heading">
+        <label for="json-schema-validator-option-document">{t('toolUi.json-schema-validator.documentLabel')}</label>
+        <span>{t('toolUi.json-schema-validator.documentHint')}</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="json-schema-validator-option-document" spellcheck="false" autocomplete="off" placeholder={t('toolUi.json-schema-validator.documentPlaceholder')}></textarea>
+      </div>
+      </div>
+    </div>
+
+      <div><span>{t('toolUi.json-schema-validator.stat.result')}</span><strong id="json-schema-validator-stat-result">—</strong></div>
+      <div><span>{t('toolUi.json-schema-validator.stat.issues')}</span><strong id="json-schema-validator-stat-issues">—</strong></div>
+      <div><span>{t('toolUi.json-schema-validator.stat.keywords')}</span><strong id="json-schema-validator-stat-keywords">—</strong></div>
+      <div><span>{t('toolUi.json-schema-validator.stat.checked')}</span><strong id="json-schema-validator-stat-checked">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/json-schema-validator'
+</script>

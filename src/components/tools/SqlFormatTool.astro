@@ -1,0 +1,61 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'sql-format',
+  category: 'encoding' as const,
+  icon: 'lucide:database',
+  live: false,
+  notice: t('toolUi.sql-format.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.sql-format.inputLabel')}
+    placeholder={t('toolUi.sql-format.placeholder')}
+    runLabel={t('toolUi.sql-format.runButton')}
+    outputTitle={t('toolUi.sql-format.outputTitle')}
+    outputAria={t('toolUi.sql-format.outputAria')}
+  >
+    <SelectField slot="options" id="sql-format-option-dialect" label={t('toolUi.sql-format.opt.dialect')} options={[
+        { value: 'standard', label: t('toolUi.sql-format.opt.dialectValues.standard') },
+        { value: 'mysql', label: t('toolUi.sql-format.opt.dialectValues.mysql') },
+        { value: 'postgresql', label: t('toolUi.sql-format.opt.dialectValues.postgresql') },
+        { value: 'sqlite', label: t('toolUi.sql-format.opt.dialectValues.sqlite') }
+      ]
+    } value="standard" />
+    <SelectField slot="options" id="sql-format-option-keywordCase" label={t('toolUi.sql-format.opt.keywordCase')} options={[
+        { value: 'upper', label: t('toolUi.sql-format.opt.keywordCaseValues.upper') },
+        { value: 'lower', label: t('toolUi.sql-format.opt.keywordCaseValues.lower') },
+        { value: 'preserve', label: t('toolUi.sql-format.opt.keywordCaseValues.preserve') }
+      ]
+    } value="upper" />
+    <SelectField slot="options" id="sql-format-option-indent" label={t('toolUi.sql-format.opt.indent')} options={[
+        { value: '2', label: t('toolUi.sql-format.opt.indentValues.two') },
+        { value: '4', label: t('toolUi.sql-format.opt.indentValues.four') }
+      ]
+    } value="2" />
+    <CheckboxField slot="options" id="sql-format-option-wrapLists" label={t('toolUi.sql-format.opt.wrapLists')}  />
+    <CheckboxField slot="options" id="sql-format-option-logicalOnNewLine" label={t('toolUi.sql-format.opt.logicalOnNewLine')} checked />
+    <CheckboxField slot="options" id="sql-format-option-betweenQueries" label={t('toolUi.sql-format.opt.betweenQueries')} checked />
+
+      <div><span>{t('toolUi.sql-format.stat.statements')}</span><strong id="sql-format-stat-statements">—</strong></div>
+      <div><span>{t('toolUi.sql-format.stat.keywords')}</span><strong id="sql-format-stat-keywords">—</strong></div>
+      <div><span>{t('toolUi.sql-format.stat.tables')}</span><strong id="sql-format-stat-tables">—</strong></div>
+      <div><span>{t('toolUi.sql-format.stat.placeholders')}</span><strong id="sql-format-stat-placeholders">—</strong></div>
+      <div><span>{t('toolUi.sql-format.stat.linesIn')}</span><strong id="sql-format-stat-linesIn">—</strong></div>
+      <div><span>{t('toolUi.sql-format.stat.linesOut')}</span><strong id="sql-format-stat-linesOut">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/sql-format'
+</script>

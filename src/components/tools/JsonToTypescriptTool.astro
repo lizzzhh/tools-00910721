@@ -1,0 +1,51 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'json-to-typescript',
+  category: 'encoding' as const,
+  icon: 'lucide:file-code-2',
+  live: true,
+  notice: t('toolUi.json-to-typescript.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.json-to-typescript.inputLabel')}
+    placeholder={t('toolUi.json-to-typescript.placeholder')}
+    runLabel={t('toolUi.json-to-typescript.runButton')}
+    outputTitle={t('toolUi.json-to-typescript.outputTitle')}
+    outputAria={t('toolUi.json-to-typescript.outputAria')}
+  >
+    <SelectField slot="options" id="json-to-typescript-option-flavour" label={t('toolUi.json-to-typescript.opt.flavour')} options={[
+        { value: 'interface', label: t('toolUi.json-to-typescript.opt.flavourValues.interface') },
+        { value: 'type', label: t('toolUi.json-to-typescript.opt.flavourValues.type') }
+      ]
+    } value="interface" />
+    <SelectField slot="options" id="json-to-typescript-option-nullPolicy" label={t('toolUi.json-to-typescript.opt.nullPolicy')} options={[
+        { value: 'optional', label: t('toolUi.json-to-typescript.opt.nullPolicyValues.optional') },
+        { value: 'union', label: t('toolUi.json-to-typescript.opt.nullPolicyValues.union') }
+      ]
+    } value="optional" />
+    <CheckboxField slot="options" id="json-to-typescript-option-semicolons" label={t('toolUi.json-to-typescript.opt.semicolons')} checked />
+    <CheckboxField slot="options" id="json-to-typescript-option-exports" label={t('toolUi.json-to-typescript.opt.exports')}  />
+
+      <div><span>{t('toolUi.json-to-typescript.stat.types')}</span><strong id="json-to-typescript-stat-types">—</strong></div>
+      <div><span>{t('toolUi.json-to-typescript.stat.properties')}</span><strong id="json-to-typescript-stat-properties">—</strong></div>
+      <div><span>{t('toolUi.json-to-typescript.stat.nested')}</span><strong id="json-to-typescript-stat-nested">—</strong></div>
+      <div><span>{t('toolUi.json-to-typescript.stat.arrays')}</span><strong id="json-to-typescript-stat-arrays">—</strong></div>
+      <div><span>{t('toolUi.json-to-typescript.stat.lines')}</span><strong id="json-to-typescript-stat-lines">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/json-to-typescript'
+</script>

@@ -1,0 +1,47 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'scientific-calculator',
+  category: 'efficiency' as const,
+  icon: 'lucide:calculator',
+  live: true,
+  notice: t('toolUi.scientific-calculator.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.scientific-calculator.inputLabel')}
+    placeholder={t('toolUi.scientific-calculator.placeholder')}
+    runLabel={t('toolUi.scientific-calculator.runButton')}
+    outputTitle={t('toolUi.scientific-calculator.outputTitle')}
+    outputAria={t('toolUi.scientific-calculator.outputAria')}
+  >
+    <SelectField slot="options" id="scientific-calculator-option-angle" label={t('toolUi.scientific-calculator.opt.angle')} options={[
+        { value: 'deg', label: t('toolUi.scientific-calculator.opt.angleValues.degree') },
+        { value: 'rad', label: t('toolUi.scientific-calculator.opt.angleValues.radian') }
+      ]
+    } value="deg" />
+    <div slot="options" class="tool-field">
+      <label for="scientific-calculator-option-precision">{t('toolUi.scientific-calculator.opt.precision')}</label>
+      <input id="scientific-calculator-option-precision" type="number" min="0" max="99" value={t('toolUi.scientific-calculator.precisionValue')} />
+    </div>
+
+      <div><span>{t('toolUi.scientific-calculator.stat.valueLabel')}</span><strong id="scientific-calculator-stat-value">—</strong></div>
+      <div><span>{t('toolUi.scientific-calculator.stat.degreeLabel')}</span><strong id="scientific-calculator-stat-degree">—</strong></div>
+      <div><span>{t('toolUi.scientific-calculator.stat.radianLabel')}</span><strong id="scientific-calculator-stat-radian">—</strong></div>
+      <div><span>{t('toolUi.scientific-calculator.stat.expressionLabel')}</span><strong id="scientific-calculator-stat-expression">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/scientific-calculator'
+</script>

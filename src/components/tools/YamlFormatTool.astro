@@ -1,0 +1,46 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'yaml-format',
+  category: 'encoding' as const,
+  icon: 'lucide:file-cog',
+  live: false,
+  notice: t('toolUi.yaml-format.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.yaml-format.inputLabel')}
+    placeholder={t('toolUi.yaml-format.placeholder')}
+    runLabel={t('toolUi.yaml-format.runButton')}
+    outputTitle={t('toolUi.yaml-format.outputTitle')}
+    outputAria={t('toolUi.yaml-format.outputAria')}
+  >
+    <SelectField slot="options" id="yaml-format-option-indent" label={t('toolUi.yaml-format.opt.indent')} options={[
+        { value: '2', label: t('toolUi.yaml-format.opt.indentValues.two') },
+        { value: '4', label: t('toolUi.yaml-format.opt.indentValues.four') },
+        { value: 'tab', label: t('toolUi.yaml-format.opt.indentValues.tab') }
+      ]
+    } value="2" />
+    <CheckboxField slot="options" id="yaml-format-option-keepComments" label={t('toolUi.yaml-format.opt.keepComments')} checked />
+
+      <div><span>{t('toolUi.yaml-format.stat.format')}</span><strong id="yaml-format-stat-format">—</strong></div>
+      <div><span>{t('toolUi.yaml-format.stat.lines')}</span><strong id="yaml-format-stat-lines">—</strong></div>
+      <div><span>{t('toolUi.yaml-format.stat.keys')}</span><strong id="yaml-format-stat-keys">—</strong></div>
+      <div><span>{t('toolUi.yaml-format.stat.comments')}</span><strong id="yaml-format-stat-comments">—</strong></div>
+      <div><span>{t('toolUi.yaml-format.stat.documents')}</span><strong id="yaml-format-stat-documents">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/yaml-format'
+</script>

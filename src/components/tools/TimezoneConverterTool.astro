@@ -1,0 +1,53 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'timezone-converter',
+  category: 'efficiency' as const,
+  icon: 'lucide:globe',
+  live: true,
+  notice: t('toolUi.timezone-converter.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.timezone-converter.inputLabel')}
+    placeholder={t('toolUi.timezone-converter.placeholder')}
+    runLabel={t('toolUi.timezone-converter.runButton')}
+    outputTitle={t('toolUi.timezone-converter.outputTitle')}
+    outputAria={t('toolUi.timezone-converter.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <label for="timezone-converter-option-moment">{t('toolUi.timezone-converter.opt.moment')}</label>
+      <input id="timezone-converter-option-moment" type="datetime-local" step="1" />
+    </div>
+    <div slot="options" class="tool-field">
+      <label for="timezone-converter-option-source">{t('toolUi.timezone-converter.opt.source')}</label>
+      <input id="timezone-converter-option-source" type="text" list="timezone-converter-zones" spellcheck="false" autocomplete="off" />
+    </div>
+    <div slot="options" class="tool-field">
+      <label for="timezone-converter-option-target">{t('toolUi.timezone-converter.opt.target')}</label>
+      <input id="timezone-converter-option-target" type="text" list="timezone-converter-zones" spellcheck="false" autocomplete="off" />
+    </div>
+    <datalist slot="options" id="timezone-converter-zones"></datalist>
+
+      <div><span>{t('toolUi.timezone-converter.stat.sourceTime')}</span><strong id="timezone-converter-stat-source">—</strong></div>
+      <div><span>{t('toolUi.timezone-converter.stat.targetTime')}</span><strong id="timezone-converter-stat-target">—</strong></div>
+      <div><span>{t('toolUi.timezone-converter.stat.sourceOffset')}</span><strong id="timezone-converter-stat-sourceOffset">—</strong></div>
+      <div><span>{t('toolUi.timezone-converter.stat.targetOffset')}</span><strong id="timezone-converter-stat-targetOffset">—</strong></div>
+      <div><span>{t('toolUi.timezone-converter.stat.difference')}</span><strong id="timezone-converter-stat-difference">—</strong></div>
+      <div><span>{t('toolUi.timezone-converter.stat.dayShift')}</span><strong id="timezone-converter-stat-dayShift">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/timezone-converter'
+</script>

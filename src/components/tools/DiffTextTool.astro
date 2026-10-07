@@ -1,0 +1,62 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'diff-text',
+  category: 'text' as const,
+  icon: 'lucide:file-diff',
+  live: false,
+  notice: t('toolUi.diff-text.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.diff-text.inputLabel')}
+    placeholder={t('toolUi.diff-text.placeholder')}
+    runLabel={t('toolUi.diff-text.runButton')}
+    outputTitle={t('toolUi.diff-text.outputTitle')}
+    outputAria={t('toolUi.diff-text.outputAria')}
+  >
+    <div slot="options" class="tool-field">
+      <div class="field-heading">
+        <label for="diff-text-option-after">{t('toolUi.diff-text.opt.after')}</label>
+        <span>{t('toolUi.diff-text.afterHint')}</span>
+      </div>
+      <div class="textarea-wrap">
+        <textarea id="diff-text-option-after" spellcheck="false" autocomplete="off" placeholder={t('toolUi.diff-text.afterPlaceholder')}></textarea>
+      </div>
+    </div>
+    <SelectField slot="options" id="diff-text-option-mode" label={t('toolUi.diff-text.opt.mode')} options={[
+        { value: 'rows', label: t('toolUi.diff-text.opt.modeValues.rows') },
+        { value: 'unified', label: t('toolUi.diff-text.opt.modeValues.unified') }
+      ]
+    } value="rows" />
+    <SelectField slot="options" id="diff-text-option-ignore" label={t('toolUi.diff-text.opt.ignore')} options={[
+        { value: 'none', label: t('toolUi.diff-text.opt.ignoreValues.none') },
+        { value: 'space', label: t('toolUi.diff-text.opt.ignoreValues.space') },
+        { value: 'case', label: t('toolUi.diff-text.opt.ignoreValues.case') }
+      ]
+    } value="none" />
+    <div slot="options" class="tool-field">
+      <label for="diff-text-option-context">{t('toolUi.diff-text.opt.context')}</label>
+      <input id="diff-text-option-context" type="number" min="0" max="99" value={t('toolUi.diff-text.contextValue')} />
+    </div>
+
+      <div><span>{t('toolUi.diff-text.stat.same')}</span><strong id="diff-text-stat-same">—</strong></div>
+      <div><span>{t('toolUi.diff-text.stat.added')}</span><strong id="diff-text-stat-added">—</strong></div>
+      <div><span>{t('toolUi.diff-text.stat.removed')}</span><strong id="diff-text-stat-removed">—</strong></div>
+      <div><span>{t('toolUi.diff-text.stat.similarity')}</span><strong id="diff-text-stat-similarity">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/diff-text'
+</script>

@@ -1,0 +1,51 @@
+---
+import ToolShell from '../ui/ToolShell.astro'
+import ToolWorkbench from '../ui/ToolWorkbench.astro'
+import CheckboxField from '../ui/CheckboxField.astro'
+import SelectField from '../ui/SelectField.astro'
+import { createTranslator } from '../../i18n'
+
+const t = createTranslator(Astro.locals.locale)
+
+const props = {
+  tool: 'markdown-toc',
+  category: 'developer' as const,
+  icon: 'lucide:list',
+  live: true,
+  notice: t('toolUi.markdown-toc.notice')
+}
+---
+
+<ToolShell tool={props.tool} category={props.category} icon={props.icon} notice={props.notice} live={props.live}>
+  <ToolWorkbench
+    tool={props.tool}
+    inputLabel={t('toolUi.markdown-toc.inputLabel')}
+    placeholder={t('toolUi.markdown-toc.placeholder')}
+    runLabel={t('toolUi.markdown-toc.runButton')}
+    outputTitle={t('toolUi.markdown-toc.outputTitle')}
+    outputAria={t('toolUi.markdown-toc.outputAria')}
+  >
+    <SelectField slot="options" id="markdown-toc-option-depth" label={t('toolUi.markdown-toc.opt.depth')} options={[
+        { value: '2', label: t('toolUi.markdown-toc.opt.depthValues.depth2') },
+        { value: '3', label: t('toolUi.markdown-toc.opt.depthValues.depth3') },
+        { value: '4', label: t('toolUi.markdown-toc.opt.depthValues.depth4') },
+        { value: '6', label: t('toolUi.markdown-toc.opt.depthValues.depth6') }
+      ]
+    } value="2" />
+    <div slot="options" class="tool-field">
+      <label for="markdown-toc-option-marker">{t('toolUi.markdown-toc.opt.marker')}</label>
+      <input id="markdown-toc-option-marker" type="text" spellcheck="false" autocomplete="off" placeholder={t('toolUi.markdown-toc.markerPlaceholder')} />
+    </div>
+    <CheckboxField slot="options" id="markdown-toc-option-numbered" label={t('toolUi.markdown-toc.opt.numbered')}  />
+    <CheckboxField slot="options" id="markdown-toc-option-slugLinks" label={t('toolUi.markdown-toc.opt.slugLinks')} checked />
+
+      <div><span>{t('toolUi.markdown-toc.stat.headings')}</span><strong id="markdown-toc-stat-headings">—</strong></div>
+      <div><span>{t('toolUi.markdown-toc.stat.levels')}</span><strong id="markdown-toc-stat-levels">—</strong></div>
+      <div><span>{t('toolUi.markdown-toc.stat.maxDepth')}</span><strong id="markdown-toc-stat-depth">—</strong></div>
+      <div><span>{t('toolUi.markdown-toc.stat.lines')}</span><strong id="markdown-toc-stat-lines">—</strong></div>
+  </ToolWorkbench>
+</ToolShell>
+
+<script>
+  import '../../scripts/markdown-toc'
+</script>
