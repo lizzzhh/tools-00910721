@@ -1,0 +1,60 @@
+---
+import Button from './Button.astro'
+import Card from './Card.astro'
+import { createTranslator } from '../../i18n'
+
+interface Props {
+  /** Tool id, which prefixes every element id so the script can find them. */
+  tool: string
+  inputLabel: string
+  placeholder?: string
+  runLabel: string
+  outputTitle: string
+  outputAria: string
+  /** Shown under the buttons, for tools whose output is worth a warning about. */
+  hint?: string
+}
+
+const { tool, inputLabel, placeholder, runLabel, outputTitle, outputAria, hint } = Astro.props
+const t = createTranslator(Astro.locals.locale)
+---
+
+<Card class="tool-card">
+  <div class="tool-options">
+    <slot name="options" />
+  </div>
+  <div class="field-heading">
+    <label for={`${tool}-input`}>{inputLabel}</label>
+    <span><b id={`${tool}-chars`}>0</b> {t('common.charactersUnit')}</span>
+  </div>
+  <div class="textarea-wrap">
+    <textarea id={`${tool}-input`} placeholder={placeholder} spellcheck="false" autocomplete="off" autofocus></textarea>
+  </div>
+  <div class="security-error" id={`${tool}-error`} role="alert" hidden></div>
+  <div class="action-row">
+    <Button id={`${tool}-run`} variant="primary" icon="lucide:play">{runLabel}</Button>
+    <slot name="actions" />
+    <Button id={`${tool}-clear`} icon="lucide:trash-2">{t('common.clear')}</Button>
+    {hint && <span class="action-row-hint">{hint}</span>}
+  </div>
+</Card>
+
+<Card id={`${tool}-result`} class="result-card" hidden>
+  <div class="result-heading">
+    <div><span class="status-dot"></span><strong>{t('workspace.result')}</strong></div>
+    <span id={`${tool}-status`}>{t('workspace.waiting')}</span>
+  </div>
+  <slot name="extras" />
+  <div class="result-subheading">
+    <strong>{outputTitle}</strong>
+    <span>{t('workspace.readonly')}</span>
+  </div>
+  <textarea id={`${tool}-output`} class="encoding-output" data-empty="true" readonly spellcheck="false" aria-label={outputAria}></textarea>
+  <div class="encoding-result-actions">
+    <Button id={`${tool}-copy`} icon="lucide:copy" disabled>{t('workspace.copyResult')}</Button>
+    <Button id={`${tool}-download`} icon="lucide:download" disabled>{t('workspace.downloadResult')}</Button>
+  </div>
+  <div class="encoding-stats">
+    <slot name="stats" />
+  </div>
+</Card>

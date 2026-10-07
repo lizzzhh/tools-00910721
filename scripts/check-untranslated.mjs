@@ -30,7 +30,7 @@ const SKIP_PATTERNS = [
   /keywords:/, // multilingual search index
   // Registry entries inline multilingual search keywords on one line; those are
   // data, not UI copy, so CJK there is expected in every locale.
-  /^\s*(?:plannedTool|tool)\(/,
+  /^\s*(?:plannedTool|previewTool|tool)\(/,
   // Conversion samples for the fullwidth/halfwidth tool intentionally mix
   // scripts, so CJK in the English dictionary is correct on these keys.
   /placeholderTo(?:Half|Full):/,

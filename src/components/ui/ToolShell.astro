@@ -1,0 +1,39 @@
+---
+import { Icon } from 'astro-icon/components'
+import { createTranslator, type MessageKey } from '../../i18n'
+import type { ToolCategoryId } from '../../data/tools'
+
+interface Props {
+  /** Tool id, which is also the dictionary key: `tools.<tool>` and `toolUi.<tool>`. */
+  tool: string
+  category: ToolCategoryId
+  icon: string
+  notice: string
+  /** Extra class on the workspace, for the handful of tools that need their own. */
+  class?: string
+  live?: boolean
+}
+
+const { tool, category, icon, notice, class: className, live = false } = Astro.props
+const t = createTranslator(Astro.locals.locale)
+const name = t(`tools.${tool}.name` as MessageKey)
+const subtitle = t(`toolUi.${tool}.subtitle` as MessageKey)
+const categoryLabel = t(`categories.${category}`)
+---
+
+<section class:list={['tool-workspace', `${tool}-workspace`, className]} aria-live={live ? 'polite' : undefined}>
+  <div class="workspace-header">
+    <div>
+      <div class="breadcrumb"><span>{categoryLabel}</span><b>/</b><strong>{name}</strong></div>
+      <div class="title-line">
+        <span class="title-icon"><Icon name={icon} size={25} /></span>
+        <div><h1>{name}</h1><p>{subtitle}</p></div>
+      </div>
+    </div>
+    <span class="privacy-badge"><Icon name="lucide:shield-check" size={16} />{t('common.localOnly')}</span>
+  </div>
+
+  <div class="security-notice"><Icon name="lucide:info" size={16} />{notice}</div>
+
+  <slot />
+</section>

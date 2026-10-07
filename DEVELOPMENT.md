@@ -148,7 +148,8 @@ src/
 | `code-space-theme` | 明暗主题 |
 | `code-space-locale` | 界面语言 |
 | `code-space-usage` | 工具使用记录 |
-| `code-space-daily-fortune` | 每日运势结果 |
+| `code-space-fortune-seed` | 本机运势的随机种子（每人一份） |
+| `code-space-fortune-unlock` | 已解锁今日运势的本地日期 `YYYY-MM-DD`（每天一次） |
 | `code-space-favorites` | 收藏工具列表 |
 | `code-space-scratchpad` | 草稿纸的标题、正文与字体（跨标签页共享） |
 | `code-space-scratchpad-view:<tabId>` | 草稿纸的位置与折叠状态（按标签页独立） |
@@ -171,6 +172,30 @@ src/
   这一随机标签页身份，不是用户数据。
 - 存储不可用（隐私模式、配额满）时不能阻塞页面功能：`StorageTable` 会退回空
   快照，页面照常工作。
+
+### 今日运势的每日解锁
+
+首页运势卡默认是**封**的：K 线、分数、较昨日涨跌和文案都是真实值，只是被
+`filter: blur()` 和降透明度盖住（`--fortune-seal-*`），点击一次才揭晓。这是刻意的
+取舍——模糊真实值而不是替换成假值，读者揭晓时看到的才是本来就在等他的那份运势，
+不会出现「揭晓时换了一个人」的错觉。
+
+`code-space-fortune-unlock` 只存**一个**本地日期 `YYYY-MM-DD`，就是最近一次解锁的
+那天，日期键规则与 `src/lib/day-series.ts` 相同（用本地日期部分拼，不经过 UTC）。
+只存一天就够：判断只需要「存的那天是不是今天」，不存历史，所以清表只会让读者多点
+一次，而不会丢掉记录。
+
+几条约定：
+
+- 判定逻辑在 `src/lib/fortune-unlock.ts`，纯函数 + 表读写，node 里可测。
+- 日期键走本地日历，而 K 线也是按本地午夜切的（`localOffsetMs`），两者必须同时翻页，
+  否则东八区的读者会在 UTC 午夜后被提前八小时要求再点一次。
+- 这是**一天**而不是一段时长：一周后再回来仍然是封的，这才是这条规则的意义。
+- 封着的卡里那几个块带 `inert`（`.fortune-reveal` 与图表 figure），因为模糊做不到
+  「移出 Tab 序」；解锁按钮居中盖在整张卡上，是唯一留在 Tab 序里的东西。
+- 图形的 tooltip、峰值读数和 ECharts 的 aria 描述都由 `renderFortuneChart` 的第四个
+  参数 `sealed` 关掉：模糊管不到 canvas 自己交出去的数字。
+- 写走 `storage()`，同一读者的其他标签页会收到广播并跟着封上。
 
 ### 工具使用记录
 

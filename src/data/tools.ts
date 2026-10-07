@@ -138,6 +138,24 @@ export const tools: Tool[] = [
     available: false,
     preview: true
   },
+  // Built and reachable, still labelled 开发中: see `previewTool` below.
+  previewTool('yaml-format', 'encoding', 'lucide:file-cog', ['yaml', 'yml', 'format', 'validate', '格式化', '校验', '整形']),
+  previewTool('xml-format', 'encoding', 'lucide:code-xml', ['xml', 'format', 'validate', '格式化', '校验', '整形']),
+  previewTool('sql-format', 'encoding', 'lucide:database', ['sql', 'format', 'query', '格式化', '数据库', '整形']),
+  previewTool('json-path', 'encoding', 'lucide:braces', ['jsonpath', 'json', 'query', '查询', '节点', 'クエリ']),
+  previewTool('json-to-typescript', 'encoding', 'lucide:file-code-2', ['json', 'typescript', 'types', '类型', '转换', '型定義']),
+  previewTool('json-schema-validator', 'encoding', 'lucide:badge-check', ['json', 'schema', 'validate', '校验', '验证', '検証']),
+  previewTool('cron-parser', 'developer', 'lucide:clock-3', ['cron', 'schedule', '定时', '任务', '表达式', 'スケジュール']),
+  previewTool('regex-tester', 'developer', 'lucide:regex', ['regex', 'regexp', 'match', 'test', '正则', '匹配', '测试', '正規表現']),
+  previewTool('curl-builder', 'developer', 'lucide:terminal', ['curl', 'http', 'api', '命令', 'api']),
+  previewTool('markdown-toc', 'developer', 'lucide:list', ['markdown', 'toc', '目录', '文档', '目次']),
+  previewTool('diff-text', 'text', 'lucide:file-diff', ['diff', 'compare', '对比', '差异', '文本', '差分']),
+  previewTool('text-sort', 'text', 'lucide:list-ordered', ['sort', 'order', '排序', '文本', '行', '並べ替え']),
+  previewTool('timezone-converter', 'efficiency', 'lucide:globe', ['timezone', 'time', '时区', '时间', '转换', 'タイムゾーン']),
+  previewTool('date-calculator', 'efficiency', 'lucide:calendar-range', ['date', 'calculator', '日期', '计算', '工作日', '日付']),
+  previewTool('scientific-calculator', 'efficiency', 'lucide:calculator', ['calculator', 'math', '计算器', '数学', '科学', '計算機']),
+  previewTool('color-converter', 'efficiency', 'lucide:palette', ['color', 'hex', 'rgb', 'hsl', '颜色', '转换', 'カラー']),
+  previewTool('contrast-checker', 'efficiency', 'lucide:contrast', ['contrast', 'accessibility', '颜色', '对比度', '无障碍', '检查', 'コントラスト']),
   {
     id: 'uuid-generator',
     category: 'developer',
@@ -196,6 +214,15 @@ export const tools: Tool[] = [
   }
 ]
 
+/**
+ * A tool that is built and has a page, but is still marked 开发中 in the catalog.
+ * It is reachable only by tapping its badge three times in a row, which is the
+ * same deal as ffmpeg: the label stays, the shortcut is deliberate.
+ */
+function previewTool(id: string, category: ToolCategoryId, icon: string, keywords: string[]): Tool {
+  return { id, category, icon, keywords, available: false, preview: true }
+}
+
 type PlannedToolInput = Omit<Tool, 'available'>
 
 function plannedTool(id: string, category: ToolCategoryId, icon: string, keywords: string[]): PlannedToolInput {
@@ -203,27 +230,10 @@ function plannedTool(id: string, category: ToolCategoryId, icon: string, keyword
 }
 
 export const plannedTools: Tool[] = [
-  plannedTool('yaml-format', 'encoding', 'lucide:file-cog', ['yaml', 'yml', 'format', 'validate', '格式化', '校验', '整形']),
-  plannedTool('xml-format', 'encoding', 'lucide:code-xml', ['xml', 'format', 'validate', '格式化', '校验', '整形']),
-  plannedTool('sql-format', 'encoding', 'lucide:database', ['sql', 'format', 'query', '格式化', '数据库', '整形']),
-  plannedTool('json-path', 'encoding', 'lucide:braces', ['jsonpath', 'json', 'query', '查询', '节点', 'クエリ']),
-  plannedTool('json-to-typescript', 'encoding', 'lucide:file-code-2', ['json', 'typescript', 'types', '类型', '转换', '型定義']),
-  plannedTool('json-schema-validator', 'encoding', 'lucide:badge-check', ['json', 'schema', 'validate', '校验', '验证', '検証']),
-  plannedTool('cron-parser', 'developer', 'lucide:clock-3', ['cron', 'schedule', '定时', '任务', '表达式', 'スケジュール']),
-  plannedTool('regex-tester', 'developer', 'lucide:regex', ['regex', 'regexp', 'match', 'test', '正则', '匹配', '测试', '正規表現']),
   plannedTool('markdown-preview', 'developer', 'lucide:file-text', ['markdown', 'md', 'preview', '预览', '文档', 'プレビュー']),
-  plannedTool('curl-builder', 'developer', 'lucide:terminal', ['curl', 'http', 'api', '命令', 'api']),
   plannedTool('http-request', 'developer', 'lucide:globe', ['http', 'api', 'request', 'debug', '请求', '调试', 'リクエスト']),
   plannedTool('code-beautify', 'developer', 'lucide:wand-sparkles', ['code', 'format', 'beautify', '代码', '格式化', '美化', '整形']),
   plannedTool('openapi-viewer', 'developer', 'lucide:file-chart-column', ['openapi', 'swagger', 'api', '文档', '仕様書']),
-  plannedTool('markdown-toc', 'developer', 'lucide:list', ['markdown', 'toc', '目录', '文档', '目次']),
-  plannedTool('diff-text', 'text', 'lucide:file-diff', ['diff', 'compare', '对比', '差异', '文本', '差分']),
-  plannedTool('text-sort', 'text', 'lucide:list-ordered', ['sort', 'order', '排序', '文本', '行', '並べ替え']),
-  plannedTool('timezone-converter', 'efficiency', 'lucide:globe', ['timezone', 'time', '时区', '时间', '转换', 'タイムゾーン']),
-  plannedTool('date-calculator', 'efficiency', 'lucide:calendar-range', ['date', 'calculator', '日期', '计算', '工作日', '日付']),
-  plannedTool('scientific-calculator', 'efficiency', 'lucide:calculator', ['calculator', 'math', '计算器', '数学', '科学', '計算機']),
-  plannedTool('color-converter', 'efficiency', 'lucide:palette', ['color', 'hex', 'rgb', 'hsl', '颜色', '转换', 'カラー']),
-  plannedTool('contrast-checker', 'efficiency', 'lucide:contrast', ['contrast', 'accessibility', '颜色', '对比度', '无障碍', '检查', 'コントラスト']),
   plannedTool('qr-code', 'media', 'lucide:qr-code', ['qr', 'code', '二维码', '生成', '图片', 'QR']),
   plannedTool('image-compressor', 'media', 'lucide:image', ['image', 'compress', '图片', '压缩', '优化', '画像']),
   plannedTool('image-cropper', 'media', 'lucide:crop', ['image', 'crop', '图片', '裁剪', '尺寸', '切り抜き']),

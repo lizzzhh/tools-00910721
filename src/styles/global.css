@@ -76,6 +76,17 @@
   --duration-normal: 150ms;
   --duration-medium: 200ms;
   --duration-slow: 250ms;
+  /* Longer than the rest, because a flash has to be read before the next tick
+     replaces it rather than merely started. */
+  --fortune-flash-duration: 620ms;
+  /* The seal. Wide enough that a two digit score and a one pixel candle are both
+     past reading, dimmed as well because a blur alone still leaves the direction
+     of a move legible as colour. */
+  --fortune-seal-blur: 14px;
+  --fortune-seal-blur-plot: 11px;
+  --fortune-seal-dim: 0.4;
+  /* Long enough to read as the card being uncovered rather than as a toggle. */
+  --fortune-seal-duration: 620ms;
   --page-width: 95rem;
   --sidebar-width: 19rem;
   --z-navbar: 20;
@@ -1782,12 +1793,8 @@ input[type='number']:focus::-webkit-outer-spin-button {
   flex-direction: column;
 }
 
-/* Stretching is right for the block children, not for the button, which keeps
+/* Stretching is right for the block children, not for the caption, which keeps
    the width of its own label. */
-.fortune-card > .secondary-button {
-  align-self: flex-start;
-}
-
 .dashboard-card-heading {
   display: flex;
   align-items: flex-start;
@@ -1860,6 +1867,66 @@ input[type='number']:focus::-webkit-outer-spin-button {
   transition: width var(--duration-medium);
 }
 
+/* The score ticks once a second and a hundredth of a hundred is not something a
+   reader can see change in, so a change of direction is the one thing on this
+   card that says itself: green while it is up, red while it is down, and then
+   back to the card's own colour before the next tick. The meter gets its own
+   pair because it paints a background rather than a colour, and a keyframe that
+   set both would put a coloured box behind the number. */
+@keyframes fortune-flash-up {
+  from { color: var(--success-strong); }
+  to { color: var(--primary-strong); }
+}
+
+@keyframes fortune-flash-down {
+  from { color: var(--danger-strong); }
+  to { color: var(--primary-strong); }
+}
+
+@keyframes fortune-meter-flash-up {
+  from { background: var(--success); }
+  to { background: var(--primary); }
+}
+
+@keyframes fortune-meter-flash-down {
+  from { background: var(--danger); }
+  to { background: var(--primary); }
+}
+
+.fortune-flash-up {
+  animation: fortune-flash-up var(--fortune-flash-duration) ease-out;
+}
+
+.fortune-flash-down {
+  animation: fortune-flash-down var(--fortune-flash-duration) ease-out;
+}
+
+.fortune-meter-flash-up {
+  animation: fortune-meter-flash-up var(--fortune-flash-duration) ease-out;
+}
+
+.fortune-meter-flash-down {
+  animation: fortune-meter-flash-down var(--fortune-flash-duration) ease-out;
+}
+
+/* How far today sits from the same moment yesterday. It is a sign rather than a
+   flash: the number above it already says which way the last step went, and a
+   line that changed colour on a timer as well would say two things at once. */
+.fortune-delta {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--content-meta);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.fortune-delta[data-tone='up'] {
+  color: var(--success-strong);
+}
+
+.fortune-delta[data-tone='down'] {
+  color: var(--danger-strong);
+}
+
 .fortune-copy {
   min-height: 5.4rem;
   margin: var(--spacing-2xl) 0 var(--spacing-lg);
@@ -1876,6 +1943,74 @@ input[type='number']:focus::-webkit-outer-spin-button {
   color: var(--content-meta);
   font-size: 0.9rem;
   line-height: 1.8;
+}
+
+.fortune-body {
+  position: relative;
+  display: flex;
+  /* Grows into whatever the card has left over, which is what keeps the plot
+     pinned to the card's bottom edge and on the baseline of the card beside it.
+     It has to be a flex column of its own for that: `margin-top: auto` only
+     absorbs free space inside a flex container, so the pinning the figure used
+     to do itself would quietly stop doing anything from inside a plain block. */
+  flex: 1;
+  flex-direction: column;
+}
+
+/* The wrapper that carries the bottom pinning this card shares with the one
+   beside it, and the block that lets the plot take its own lighter blur than the
+   number and the wording above it. */
+.fortune-plot {
+  position: relative;
+  display: flex;
+  margin-top: auto;
+  flex-direction: column;
+}
+
+.fortune-plot > .trend-chart {
+  margin-top: 0;
+}
+
+/* The seal itself: the two halves of the card that carry numbers, blurred past
+   reading and dimmed with them, and the gate centred over both of them. A blur
+   alone still leaves the direction of a move legible as colour, so the opacity is
+   what finishes the job, and both properties lift together so that opening the
+   card reads as uncovering it rather than as two separate toggles. The card
+   behind the seal is the real one — the same number on the same bars — so what
+   the click uncovers is the fortune that was waiting, never a different one put
+   in its place. */
+.fortune-reveal,
+.fortune-plot > .trend-chart {
+  transition: filter var(--fortune-seal-duration) var(--ease-standard),
+    opacity var(--fortune-seal-duration) var(--ease-standard);
+}
+
+.fortune-body[data-sealed='true'] .fortune-reveal {
+  filter: blur(var(--fortune-seal-blur));
+  opacity: var(--fortune-seal-dim);
+  user-select: none;
+}
+
+/* A narrower blur on the plot than on the number, for a reason of legibility
+   rather than of secrecy: a candle is a one pixel line, and at the radius that
+   dissolves four digits it dissolves the candles into nothing at all, so the
+   chart stops reading as a chart waiting to be opened. */
+.fortune-body[data-sealed='true'] .fortune-plot > .trend-chart {
+  filter: blur(var(--fortune-seal-blur-plot));
+  opacity: var(--fortune-seal-dim);
+  user-select: none;
+}
+
+.fortune-gate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg) var(--spacing-2xl);
+  /* Translucent rather than solid: the redacted bars behind it are the tease, and
+     an opaque panel would replace them with a flat rectangle. */
+  background: color-mix(in srgb, var(--card-bg) 62%, transparent);
 }
 
 .usage-metrics {

@@ -1,12 +1,13 @@
 ---
 import { Icon } from 'astro-icon/components'
 import { localizeTools, plannedTools, tools } from '../data/tools'
-import Button from './ui/Button.astro'
 import Card from './ui/Card.astro'
+import FortuneChart from './ui/FortuneChart.astro'
 import SectionHeading from './ui/SectionHeading.astro'
 import TrendChart from './ui/TrendChart.astro'
 import { createTranslator } from '../i18n'
 import { localePath } from '../i18n/config'
+import { fortuneBarCount, fortuneBarSeconds, fortuneRefreshMs } from '../lib/fortune'
 
 const locale = Astro.locals.locale
 const t = createTranslator(locale)
@@ -15,6 +16,10 @@ const localizedPlanned = localizeTools(plannedTools, t)
 const toolsHref = localePath(locale, '/tools/')
 /** How many days both trend charts show along their x axis. */
 const trendDays = 14
+/** How many days of four hour candles the fortune card draws. */
+const fortuneDays = Math.round((fortuneBarCount * fortuneBarSeconds) / 86_400)
+/** Read from the same constant the ticking is driven by, so the two cannot drift. */
+const fortuneRefreshSeconds = Math.round(fortuneRefreshMs / 1000)
 ---
 
 <section class="dashboard-workspace" data-locale={locale}>
@@ -30,26 +35,55 @@ const trendDays = 14
   <div class="dashboard-grid">
     <Card class="fortune-card">
       <SectionHeading eyebrow={t('home.fortune.eyebrow')} title={t('home.fortune.title')}>
-        <span class="random-label">ONE DAILY</span>
+        <!--
+          Two badges rather than one rewritten one: the live caption is built
+          from the refresh constant, and the sealed one is prose. Which of the
+          two is showing is the seal made visible, so it is markup the script
+          flips rather than a string it formats.
+        -->
+        <span class="random-label" data-fortune-live hidden>LIVE / {fortuneRefreshSeconds}S</span>
+        <span class="random-label" data-fortune-sealed>{t('home.fortune.sealed')}</span>
       </SectionHeading>
-      <div class="fortune-score-row">
-        <strong id="fortune-score">--</strong><span>/ 100</span>
-        <div class="fortune-meter"><i id="fortune-meter"></i></div>
+      <!--
+        Sealed by default in the markup rather than opened by it. Whether the
+        reader has already paid for today can only be read out of the table,
+        which takes a moment to open, and a card that briefly showed its number
+        would have shown it before the seal was even checked.
+      -->
+      <div class="fortune-body" data-fortune-body data-sealed="true">
+        <div class="fortune-reveal" data-fortune-reveal inert>
+          <div class="fortune-score-row" tabindex="-1">
+            <strong id="fortune-score">--.--</strong><span>/ 100</span>
+            <div class="fortune-meter"><i id="fortune-meter"></i></div>
+          </div>
+          <p class="fortune-delta" id="fortune-delta" data-tone="flat" hidden></p>
+          <div class="fortune-copy">
+            <span id="fortune-label">{t('home.fortune.idle')}</span>
+            <p id="fortune-message">{t('home.fortune.idleMessage')}</p>
+          </div>
+        </div>
+        <!--
+          The wrapper carries the bottom pinning this card shares with the one
+          beside it, so the `auto` moved here, and it is the block that lets the
+          plot take its own blur while the number and the wording take a heavier
+          one. The gate is a sibling of both rather than a child of either: the
+          button is centred on the card rather than on any one of the halves, so
+          it sits on the blurred copy the way it would sit on a sealed envelope.
+        -->
+        <div class="fortune-plot">
+          <FortuneChart
+            id="fortune-candles"
+            label={t('home.fortune.chart.label', { count: fortuneDays })}
+            peakKey="home.fortune.chart.peak"
+            bars={fortuneBarCount}
+          />
+        </div>
+        <div class="fortune-gate" data-fortune-gate>
+          <button class="primary-button" type="button" data-fortune-unlock>
+            <Icon name="lucide:lock-keyhole-open" size={17} />{t('home.fortune.unlock')}
+          </button>
+        </div>
       </div>
-      <div class="fortune-copy">
-        <span id="fortune-label">{t('home.fortune.idle')}</span>
-        <p id="fortune-message">{t('home.fortune.idleMessage')}</p>
-      </div>
-      <Button id="draw-fortune" icon="lucide:sparkles">{t('home.fortune.draw')}</Button>
-      <TrendChart
-        id="fortune-trend"
-        label={t('home.fortune.trend.label', { count: trendDays })}
-        empty={t('home.fortune.trend.empty')}
-        peakKey="home.fortune.trend.peak"
-        days={trendDays}
-        fill="recorded"
-        max={100}
-      />
     </Card>
 
     <Card class="usage-card">

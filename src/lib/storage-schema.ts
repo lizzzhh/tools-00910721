@@ -27,7 +27,9 @@ export const storageKeys = {
   theme: 'code-space-theme',
   locale: 'code-space-locale',
   usage: 'code-space-usage',
-  fortune: 'code-space-daily-fortune',
+  fortuneSeed: 'code-space-fortune-seed',
+  /** The local `YYYY-MM-DD` of the last day the reader opened their fortune. */
+  fortuneUnlock: 'code-space-fortune-unlock',
   favorites: 'code-space-favorites',
   scratchpad: 'code-space-scratchpad',
   /** Per tab, so the base key is followed by a tab id: `<key>:<tabId>`. */

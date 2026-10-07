@@ -1,0 +1,36 @@
+---
+import type { MessageKey } from '../../i18n'
+
+interface Props {
+  /** Anchors the figure so the dashboard script can find it. */
+  id: string
+  /** Names the chart for assistive technology and for the axis caption. */
+  label: string
+  /** Message key for the peak readout, so the client can localise it too. */
+  peakKey: MessageKey
+  /** How many bars the chart draws. */
+  bars?: number
+}
+
+const { id, label, peakKey, bars = 24 } = Astro.props
+---
+
+<!--
+  The same box as the line trend beside it, so the two cards keep one baseline
+  and one plot height. What is inside it is decided by the script: a candle per
+  four hours, cut at the reader's own midnight.
+-->
+<figure
+  id={id}
+  class="trend-chart"
+  data-fortune-chart
+  data-label={label}
+  data-bars={bars}
+  data-peak-key={peakKey}
+>
+  <figcaption class="trend-chart-caption">
+    <span>{label}</span>
+    <b data-fortune-peak hidden></b>
+  </figcaption>
+  <div class="trend-chart-plot" data-fortune-plot hidden></div>
+</figure>
